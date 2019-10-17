@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/jaholtz/code/cobot_simulator/cobot_msgs/build/devel/setup.sh
