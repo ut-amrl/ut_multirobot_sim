@@ -10,21 +10,24 @@ You can install all the dependencies on *buntu using:
 sudo apt install libgoogle-glog-dev libpopt-dev
 ```
 
-Add  to path
-`export ROS_PACKAGE_PATH=PATH_TO_DIRECTORY:PATH_TO_DIRECTORY/cobot_linux:$ROS_PACKAGE_PATH`
+Add the project directory to `ROS_PACKAGE_PATH`:
+```
+export ROS_PACKAGE_PATH=MYDIRECTORY:$ROS_PACKAGE_PATH
+```
+(Replace `MYDIRECTORY` with the actual directory)
+You can also add this to your `~/.bashrc` file so that you don't have to do 
+this every time you open a new terminal.
 
-Move into the cobot_linux directory
-`cd PATH_TO_DIRECTORY/cobot_linux`
 
-Install required system packages
-`./InstallPackages`
+## Build
 
-Build the messages directory
-`make messages`
 
 Build the program
 
 `make`
+
+
+## Run
 
 Run
 
