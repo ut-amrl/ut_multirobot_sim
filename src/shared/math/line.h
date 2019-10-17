@@ -144,19 +144,23 @@ public:
 
 #ifdef LazyCaching
   inline const GVector::vector2d<num>& Dir() const {
-    if(updateRequired) calcValues(); return dir;
+    if(updateRequired) calcValues(); 
+    return dir;
   }
 
   inline const GVector::vector2d<num>& Perp() const {
-    if(updateRequired) calcValues(); return perp;
+    if(updateRequired) calcValues(); 
+    return perp;
   }
 
   inline const num Length() const {
-    if(updateRequired) calcValues(); return length;
+    if(updateRequired) calcValues(); 
+    return length;
   }
 
   inline const num Angle() const {
-    if(updateRequired) calcValues(); return dir.angle();
+    if(updateRequired) calcValues(); 
+    return dir.angle();
   }
 
 #else

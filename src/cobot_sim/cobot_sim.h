@@ -25,15 +25,13 @@
 #include "proghelp.h"
 #include "timer.h"
 #include "geometry.h"
-#include "hardware/drive.h"
 #include "vector_map.h"
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <tf/transform_datatypes.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
-#include "cobot_msgs/CobotDriveMsg.h"
-#include "cobot_msgs/AckermanDriveMsg.h"
+#include "f1tenth_simulator/AckermanDriveMsg.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/PoseStamped.h"
@@ -43,6 +41,27 @@
 #define COBOT_SIM_H
 
 using namespace std;
+
+class AccelLimits{
+  public:
+    double max_accel;  // acceleration limit from 0 to max_vel
+    double max_deccel; // acceleration limit from max_vel to 0
+    double max_vel;    // maximum velocity along dimension
+    
+  public:
+    void set(double a,double d,double v)
+    {max_accel=a; max_deccel=d; max_vel=v;}
+    
+    // return new limits with all parameters scaled by <f>
+    AccelLimits operator*(double f) const
+    {AccelLimits r; r.set(max_accel*f,max_deccel*f,max_vel*f); return(r);}
+    
+    // scale all parameters by <f> in-place
+    AccelLimits &operator*=(double f);
+    
+    // set limits to <al> with all parameters scaled by <f>
+    AccelLimits &set(const AccelLimits &al,double f);
+};
 
 class CobotSim{
   vector2d loc;
@@ -93,8 +112,8 @@ private:
   void initVizMarker(visualization_msgs::Marker& vizMarker, string ns, int id, string type, geometry_msgs::PoseStamped p, geometry_msgs::Point32 scale, double duration, vector<float> color);
   void initCobotSimVizMarkers();
   void loadAtlas();
-  void cobotDriveCallback(const cobot_msgs::CobotDriveMsgConstPtr& msg);
-  void AckermanDriveCallback(const cobot_msgs::AckermanDriveMsgConstPtr& msg);
+  void AckermanDriveCallback(
+      const f1tenth_simulator::AckermanDriveMsgConstPtr& msg);
   void publishOdometry();
   void publishLaser();
   void publishVisualizationMarkers();

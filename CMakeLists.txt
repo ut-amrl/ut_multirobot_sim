@@ -1,9 +1,6 @@
-PROJECT(cobot_simulator)
+PROJECT(f1tenth_simulator)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-SET(arch ${})
-
-# MESSAGE(STATUS "Compiling Cobot sources...")
 MESSAGE(STATUS "Compilers found: ${CMAKE_CXX_COMPILER_LIST}")
 MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
@@ -13,8 +10,7 @@ SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -g -rdynamic")
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Release")
   MESSAGE(STATUS "Additional Flags for Release mode")
-  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fopenmp -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free -O3 -DNDEBUG")
-  SET(BUILD_SPECIFIC_LIBRARIES "tcmalloc")
+  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fopenmp -O3 -DNDEBUG")
 ELSEIF(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   MESSAGE(STATUS "Additional Flags for Debug mode")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g -rdynamic")
@@ -36,10 +32,11 @@ SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/hardware)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/map)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/shared/math)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/shared/util)
+
+ROSBUILD_GENMSG()
 
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src/cobot_sim)
 

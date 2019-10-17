@@ -1,4 +1,14 @@
-# cobot_simulator
+# F1/10 Simulator
+
+## Dependencies
+
+1. glog
+1. popt
+
+You can install all the dependencies on *buntu using:
+```
+sudo apt install libgoogle-glog-dev libpopt-dev
+```
 
 Add  to path
 `export ROS_PACKAGE_PATH=PATH_TO_DIRECTORY:PATH_TO_DIRECTORY/cobot_linux:$ROS_PACKAGE_PATH`

@@ -23,8 +23,8 @@
 #include "cobot_sim.h"
 #include <math.h>
 
-using cobot_msgs::AckermanDriveMsgConstPtr;
-using cobot_msgs::AckermanDriveMsg;
+using f1tenth_simulator::AckermanDriveMsgConstPtr;
+using f1tenth_simulator::AckermanDriveMsg;
 
 const double CobotSim::baseRadius = 0.18;
 const double CobotSim::robotHeight = 0.36;
@@ -179,11 +179,12 @@ void CobotSim::initCobotSimVizMarkers() {
 
 void CobotSim::loadAtlas() {
   static const bool debug = false;
-  string atlas_path = ros::package::getPath("cobot_linux").append("/../maps/atlas.txt");
+  string atlas_path = "./maps/atlas.txt";
 
   FILE* fid = fopen(atlas_path.c_str(),"r");
   if(fid==NULL) {
     TerminalWarning("Unable to load Atlas!");
+    exit(1);
     return;
   }
   char mapName[4096];
@@ -192,7 +193,7 @@ void CobotSim::loadAtlas() {
   maps.clear();
   while(fscanf(fid,"%d %s\n",&mapNum,mapName)==2) {
     if(debug) printf("Loading map %s\n",mapName);
-    maps.push_back(VectorMap(mapName,ros::package::getPath("cobot_linux").append("/../maps").c_str(),false));
+    maps.push_back(VectorMap(mapName,"./maps",false));
   }
   curMapIdx = -1;
   if(maps.size()>0) {
@@ -216,52 +217,6 @@ void CobotSim::loadAtlas() {
     lineListMarker.points.push_back(p0);
     lineListMarker.points.push_back(p1);
   }
-}
-
-void CobotSim::cobotDriveCallback(const cobot_msgs::CobotDriveMsgConstPtr& msg) {
-
-  if (!isfinite(msg->v) || !isfinite(msg->w)) {
-    printf("Ignoring non-finite drive values: %f %f\n", msg->v, msg->w);
-    return;
-  }
-
-  double dt = DT;
-  double desiredTransSpeed = msg->v;
-  double desiredRotSpeed = msg->w;
-
-  //Abide by limits
-  if(fabs(desiredTransSpeed) > transLimits.max_vel) {
-    desiredTransSpeed = transLimits.max_vel;
-  }
-  double dvMax = 0.0;
-  if(desiredTransSpeed > vel) {
-    dvMax = dt * transLimits.max_accel;
-  } else {
-    dvMax = dt * transLimits.max_deccel;
-  }
-  double dv = desiredTransSpeed - vel;
-  if(fabs(dv) > dvMax) {
-    dv = sign(dv) * dvMax;
-  }
-  vel = vel + dv;
-
-  if(fabs(desiredRotSpeed) > rotLimits.max_vel) {
-    desiredRotSpeed = sign(desiredRotSpeed) * rotLimits.max_vel;
-  }
-  double drMax = dt * rotLimits.max_accel;
-  double dr = desiredRotSpeed - angVel;
-  if(fabs(dr) > drMax) {
-    dr = sign(dr) * drMax;
-  }
-  angVel = angVel + dr;
-
-  curLoc.x += vel * cos(curAngle) * dt;
-  curLoc.y += vel * sin(curAngle) * dt;
-  curAngle = angle_mod(curAngle+angVel*dt);
-
-  // ROS_WARN("Robot pose: (%4.3f, %4.3f, %4.3f)", curLoc.x, curLoc.y, curAngle);
-
-  tLastCmd = GetTimeSec();
 }
 
 void CobotSim::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {

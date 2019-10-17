@@ -27,7 +27,6 @@
 #include "popt_pp.h"
 #include "cobot_sim.h"
 
-using namespace cobot_msgs;
 
 bool run = true;
 CobotSim *cobotSim;
@@ -48,7 +47,7 @@ void timerEvent( int sig ) {
 
 int main(int argc, char **argv) {
   ColourTerminal(TerminalUtils::TERMINAL_COL_WHITE,TerminalUtils::TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
-  printf("\nCoBot Simulator\n\n");
+  printf("\nF1/10 Simulator\n\n");
   ResetTerminal();
 
   // option table
@@ -69,7 +68,7 @@ int main(int argc, char **argv) {
   rotLimits.set(2.0,2.0,1.5);
   cobotSim->setLimits(transLimits, rotLimits);
 
-  ros::init(argc, argv, "Cobot_Simulator");
+  ros::init(argc, argv, "F1Tenth_Simulator");
   ros::NodeHandle n;
   cobotSim->init(n);
 
