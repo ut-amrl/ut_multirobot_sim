@@ -1,0 +1,3 @@
+[submodule "cobot_linux/submodules/config-reader"]
+	path = cobot_linux/submodules/config-reader
+	url = git@github.com:ut-amrl/config-reader.git
