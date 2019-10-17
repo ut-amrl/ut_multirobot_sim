@@ -9,9 +9,6 @@ MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/submodules/config-reader/include/config_reader")
-
 SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -g -rdynamic")
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Release")
@@ -29,9 +26,6 @@ ROSBUILD_INIT()
 SET(ROS_BUILD_STATIC_LIBS true)
 SET(ROS_BUILD_SHARED_LIBS false)
 
-INCLUDE(FindLuaJIT)
-FIND_PACKAGE(LuaJIT REQUIRED)
-
 MESSAGE(STATUS "ROS-Overrride Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
 MESSAGE(STATUS "Build-Specific Libraries: ${BUILD_SPECIFIC_LIBRARIES}")
@@ -46,8 +40,6 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/hardware)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/map)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/shared/math)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/shared/util)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config-reader/include)
-INCLUDE_DIRECTORIES(${LUAJIT_INCLUDE_DIR})
 
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src/cobot_sim)
 
@@ -56,7 +48,6 @@ SET(libs roslib roscpp popt glog
 
 SET(SHARED_SRCS
   src/shared/math/geometry.h
-  submodules/config-reader/include/config_reader/config_reader.h
   src/shared/util/helpers.cpp
   src/shared/util/proghelp.cc
   src/shared/util/terminal_utils.cpp
@@ -72,7 +63,7 @@ SET(MAP_SRCS
 #
 ADD_LIBRARY(shared_libraries SHARED ${SHARED_SRCS} ${HW_SRCS})
 ADD_DEPENDENCIES(shared_libraries rosbuild_precompile)
-TARGET_LINK_LIBRARIES(shared_libraries shared_libraries ${LUAJIT_LIBRARIES} ${libs})
+TARGET_LINK_LIBRARIES(shared_libraries shared_libraries ${libs})
 
 ADD_LIBRARY(map_libraries SHARED ${MAP_SRCS})
 ADD_DEPENDENCIES(map_libraries shared_libraries)
