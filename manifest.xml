@@ -5,7 +5,6 @@
   <review status="unreviewed" notes=""/>
   <url>https://github.com/ut-amrl/f1tenth_simulator</url>
   <depend package="roscpp"/>
-  <depend package="ackermann_msgs" />
   <depend package="std_msgs"/>
   <depend package="nav_msgs"/>
   <depend package="sensor_msgs"/>

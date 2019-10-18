@@ -22,9 +22,13 @@
 
 #include "cobot_sim.h"
 #include <math.h>
+#include "config_reader/config_reader.h"
 
 using f1tenth_simulator::AckermanDriveMsgConstPtr;
 using f1tenth_simulator::AckermanDriveMsg;
+
+CONFIG_FLOAT(axis_length, "axisLength");
+config_reader::ConfigReader reader({"config/f1_config.lua"});
 
 const double CobotSim::baseRadius = 0.18;
 const double CobotSim::robotHeight = 0.36;
@@ -33,7 +37,6 @@ const float CobotSim::startY = 1.0;
 const float CobotSim::startAngle = 0.0;
 const float CobotSim::DT = 0.05;
 const float CobotSim::kMinR = 0.1;
-const double axis_length = 1.0;
 
 CobotSim::CobotSim() {
   w0.heading(RAD(45.0));
