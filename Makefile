@@ -13,7 +13,7 @@ all: build build/CMakeLists.txt.copy
 clean:
 	rm -rf bin lib msg_gen src/f1tenth_simulator
 
-build/CMakeLists.txt.copy: CMakeLists.txt Makefile
+build/CMakeLists.txt.copy: build CMakeLists.txt Makefile
 	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) ..
 	cp CMakeLists.txt build/CMakeLists.txt.copy
 
