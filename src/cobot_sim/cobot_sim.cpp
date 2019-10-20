@@ -73,24 +73,30 @@ void CobotSim::init(ros::NodeHandle& n) {
   initCobotSimVizMarkers();
   loadAtlas();
 
-  // ROS_INFO("Init Robot Pose: (%4.3f, %4.3f, %4.3f)", curLoc.x, curLoc.y, curAngle);
-
-  driveSubscriber = n.subscribe("/Cobot/Ackerman", 1, &CobotSim::AckermanDriveCallback, this);
-  initSubscriber = n.subscribe("/initialpose",
-                               1,
-                               &CobotSim::InitalLocationCallback,
-                               this);
+  driveSubscriber = n.subscribe(
+      "/ackerman_drive", 1, &CobotSim::AckermanDriveCallback, this);
+  initSubscriber = n.subscribe(
+      "/initialpose", 1, &CobotSim::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
-  laserPublisher = n.advertise<sensor_msgs::LaserScan>("/Cobot/Laser", 1);
-  mapLinesPublisher = n.advertise<visualization_msgs::Marker>("/visualization_marker", 6);
-  posMarkerPublisher = n.advertise<visualization_msgs::Marker>("/visualization_marker", 6);
-  dirMarkerPublisher = n.advertise<visualization_msgs::Marker>("/visualization_marker", 6);
+  laserPublisher = n.advertise<sensor_msgs::LaserScan>("/laser", 1);
+  mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
+      "/simulator_visualization", 6);
+  posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
+      "/simulator_visualization", 6);
+  dirMarkerPublisher = n.advertise<visualization_msgs::Marker>(
+      "/simulator_visualization", 6);
   br = new tf::TransformBroadcaster();
 }
 
 void CobotSim::InitalLocationCallback(
     const PoseWithCovarianceStamped& msg) {
-  printf("Initializing location to %.2f,%.2f, %.1f\u00b0\n", 0, 0, 0);
+  curLoc.set(msg.pose.pose.position.x, msg.pose.pose.position.y);
+  curAngle = 2.0 *
+      atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
+  printf("Set robot pose: %.2f,%.2f, %.1f\u00b0\n",
+         curLoc.x,
+         curLoc.y,
+         DEG(curAngle));
 }
 
 
