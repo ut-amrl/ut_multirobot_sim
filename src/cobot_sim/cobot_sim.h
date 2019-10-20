@@ -35,6 +35,7 @@
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include <tf/transform_broadcaster.h>
 
 #ifndef COBOT_SIM_H
@@ -47,18 +48,18 @@ class AccelLimits{
     double max_accel;  // acceleration limit from 0 to max_vel
     double max_deccel; // acceleration limit from max_vel to 0
     double max_vel;    // maximum velocity along dimension
-    
+
   public:
     void set(double a,double d,double v)
     {max_accel=a; max_deccel=d; max_vel=v;}
-    
+
     // return new limits with all parameters scaled by <f>
     AccelLimits operator*(double f) const
     {AccelLimits r; r.set(max_accel*f,max_deccel*f,max_vel*f); return(r);}
-    
+
     // scale all parameters by <f> in-place
     AccelLimits &operator*=(double f);
-    
+
     // set limits to <al> with all parameters scaled by <f>
     AccelLimits &set(const AccelLimits &al,double f);
 };
@@ -70,6 +71,7 @@ class CobotSim{
   AccelLimits transLimits, rotLimits;
 
   ros::Subscriber driveSubscriber;
+  ros::Subscriber initSubscriber;
 
   ros::Publisher odometryTwistPublisher;
   ros::Publisher laserPublisher;
@@ -112,6 +114,8 @@ private:
   void initVizMarker(visualization_msgs::Marker& vizMarker, string ns, int id, string type, geometry_msgs::PoseStamped p, geometry_msgs::Point32 scale, double duration, vector<float> color);
   void initCobotSimVizMarkers();
   void loadAtlas();
+  void InitalLocationCallback(
+      const geometry_msgs::PoseWithCovarianceStamped& msg);
   void AckermanDriveCallback(
       const f1tenth_simulator::AckermanDriveMsgConstPtr& msg);
   void publishOdometry();

@@ -24,8 +24,11 @@
 #include <math.h>
 #include "config_reader/config_reader.h"
 
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
+
 using f1tenth_simulator::AckermanDriveMsgConstPtr;
 using f1tenth_simulator::AckermanDriveMsg;
+using geometry_msgs::PoseWithCovarianceStamped;
 
 CONFIG_FLOAT(axis_length, "axisLength");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
@@ -73,6 +76,10 @@ void CobotSim::init(ros::NodeHandle& n) {
   // ROS_INFO("Init Robot Pose: (%4.3f, %4.3f, %4.3f)", curLoc.x, curLoc.y, curAngle);
 
   driveSubscriber = n.subscribe("/Cobot/Ackerman", 1, &CobotSim::AckermanDriveCallback, this);
+  initSubscriber = n.subscribe("/initialpose",
+                               1,
+                               &CobotSim::InitalLocationCallback,
+                               this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
   laserPublisher = n.advertise<sensor_msgs::LaserScan>("/Cobot/Laser", 1);
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>("/visualization_marker", 6);
@@ -80,6 +87,12 @@ void CobotSim::init(ros::NodeHandle& n) {
   dirMarkerPublisher = n.advertise<visualization_msgs::Marker>("/visualization_marker", 6);
   br = new tf::TransformBroadcaster();
 }
+
+void CobotSim::InitalLocationCallback(
+    const PoseWithCovarianceStamped& msg) {
+  printf("Initializing location to %.2f,%.2f, %.1f\u00b0\n", 0, 0, 0);
+}
+
 
 /**
  * Helper method that initializes visualization_msgs::Marker parameters
