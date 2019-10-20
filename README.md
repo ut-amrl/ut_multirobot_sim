@@ -2,38 +2,38 @@
 
 ## Dependencies
 
-1. glog
-1. popt
+1. [glog](https://github.com/google/glog)
+1. [popt](https://directory.fsf.org/wiki/Popt)
 
 You can install all the dependencies on *buntu using:
 ```
 sudo apt install libgoogle-glog-dev libpopt-dev
 ```
 
-Add the project directory to `ROS_PACKAGE_PATH`:
-```
-export ROS_PACKAGE_PATH=MYDIRECTORY:$ROS_PACKAGE_PATH
-```
-(Replace `MYDIRECTORY` with the actual directory)
-You can also add this to your `~/.bashrc` file so that you don't have to do 
-this every time you open a new terminal.
-
 
 ## Build
 
-
-Build the program
-
-`make`
+1. Add the project directory to `ROS_PACKAGE_PATH`:
+    ```
+    export ROS_PACKAGE_PATH=MYDIRECTORY:$ROS_PACKAGE_PATH
+    ```
+    (Replace `MYDIRECTORY` with the actual directory)
+    You can also add this to your `~/.bashrc` file so that you don't have to do 
+    this every time you open a new terminal.
+1. Build the program:
+    ```
+    make
+    ```
+1. Do **not** run `cmake`, `catkin_make`, `rosbuild` or any other such alternate commands that the internet may suggest.
 
 
 ## Run
 
-Run
+Run `./bin/cobot_simulator`
 
-`./bin/cobot_simulator`
+The simulator laser scans to the `/laser` topic, odometry messages to `/odom`, and visualization messages to `/simulator_visualization`. It listens to motion commands on `/ackerman_drive`, and location initialization messages on `/initialpose`.
 
-Publishes a laser scan message, odometry message, and visualization message
-Markers and listens to a drive message.
+## Visualization
 
-Uses the first map in the file maps/atlas.txt.
+Run `rosrun rviz rviz -d visualization.rviz`
+
