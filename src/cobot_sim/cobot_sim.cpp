@@ -30,16 +30,21 @@ using f1tenth_simulator::AckermanDriveMsgConstPtr;
 using f1tenth_simulator::AckermanDriveMsg;
 using geometry_msgs::PoseWithCovarianceStamped;
 
-CONFIG_FLOAT(axis_length, "axisLength");
+CONFIG_STRING(cMapName, "map_name");
+CONFIG_FLOAT(cAxisLength, "axis_length");
+CONFIG_FLOAT(cStartX, "start_x");
+CONFIG_FLOAT(cStartY, "start_y");
+CONFIG_FLOAT(cStartAngle, "start_angle");
+CONFIG_FLOAT(cDT, "delta_t");
+CONFIG_FLOAT(cMinTurnR, "min_turn_radius");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
 
-const double CobotSim::baseRadius = 0.18;
 const double CobotSim::robotHeight = 0.36;
-const float CobotSim::startX = -7.5;
-const float CobotSim::startY = 1.0;
-const float CobotSim::startAngle = 0.0;
-const float CobotSim::DT = 0.05;
-const float CobotSim::kMinR = 0.1;
+// // const float CobotSim::startX = -7.5;
+// // const float CobotSim::startY = 1.0;
+// const float CobotSim::startAngle = 0.0;
+// const float CobotSim::DT = 0.05;
+// const float CobotSim::kMinR = 0.1;
 
 CobotSim::CobotSim() {
   w0.heading(RAD(45.0));
@@ -67,8 +72,8 @@ void CobotSim::init(ros::NodeHandle& n) {
   odometryTwistMsg.header.frame_id = "odom";
   odometryTwistMsg.child_frame_id = "base_footprint";
 
-  curLoc.set(CobotSim::startX, CobotSim::startY);
-  curAngle = CobotSim::startAngle;
+  curLoc.set(cStartX, cStartY);
+  curAngle = cStartAngle;
 
   initCobotSimVizMarkers();
   loadAtlas();
@@ -88,8 +93,7 @@ void CobotSim::init(ros::NodeHandle& n) {
   br = new tf::TransformBroadcaster();
 }
 
-void CobotSim::InitalLocationCallback(
-    const PoseWithCovarianceStamped& msg) {
+void CobotSim::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
   curLoc.set(msg.pose.pose.position.x, msg.pose.pose.position.y);
   curAngle = 2.0 *
       atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
@@ -180,16 +184,16 @@ void CobotSim::initCobotSimVizMarkers() {
   initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0, color);
 
   p.pose.position.z = CobotSim::robotHeight / 2.0;
-  scale.x = axis_length;
-  scale.y = axis_length / 2;
+  scale.x = cAxisLength;
+  scale.y = cAxisLength / 2;
   scale.z = CobotSim::robotHeight;
   color[1] = 0.0;
   color[2] = 0.0;
   color[3] = 1.0;
   initVizMarker(robotPosMarker, "robot_position", 1, "cube", p, scale, 0.0, color);
 
-  scale.x = axis_length + 0.4;
-  scale.y = axis_length / 10;
+  scale.x = cAxisLength + 0.4;
+  scale.y = cAxisLength / 10;
   scale.z = 0.1;
   color[0] = 0.0;
   color[1] = 1.0;
@@ -200,30 +204,8 @@ void CobotSim::initCobotSimVizMarkers() {
 }
 
 void CobotSim::loadAtlas() {
-  static const bool debug = false;
-  string atlas_path = "./maps/atlas.txt";
-
-  FILE* fid = fopen(atlas_path.c_str(),"r");
-  if(fid==NULL) {
-    TerminalWarning("Unable to load Atlas!");
-    exit(1);
-    return;
-  }
-  char mapName[4096];
-  int mapNum;
-  if(debug) printf("Loading Atlas...\n");
-  maps.clear();
-  while(fscanf(fid,"%d %s\n",&mapNum,mapName)==2) {
-    if(debug) printf("Loading map %s\n",mapName);
-    maps.push_back(VectorMap(mapName,"./maps",false));
-  }
-  curMapIdx = -1;
-  if(maps.size()>0) {
-    curMapIdx = 0;
-    currentMap = &maps[curMapIdx];
-  }
-
-  vector<line2f> map_segments = currentMap->Lines();
+  VectorMap currentMap = VectorMap(cMapName, "./maps", false);
+  vector<line2f> map_segments = currentMap.Lines();
   for (size_t i = 0; i < map_segments.size(); i++) {
     // The line list needs two points for each line
     geometry_msgs::Point p0, p1;
@@ -248,11 +230,16 @@ void CobotSim::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {
   }
   const double desired_speed = min(static_cast<double>(msg->v),
                                    transLimits.max_vel);
-  const double desired_radius = msg->R;
+
+  const double inverse_min_radius = 1.0 / cMinTurnR;
+  double desired_radius = 0;
+  if (static_cast<double>(msg->R) > 0) {
+    desired_radius = min(static_cast<double>(msg->R), inverse_min_radius);
+  }
 
   double dv_max = 0.0;
   if (desired_speed > vel) {
-    dv_max = DT * transLimits.max_accel;
+    dv_max = cDT * transLimits.max_accel;
   }
 
   double dv = desired_speed - vel;
@@ -261,20 +248,14 @@ void CobotSim::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {
   }
   vel = vel + dv;
 
-  const double steering_angle = atan(desired_radius * axis_length);
-  const double v_theta = (tan(steering_angle)/axis_length) * vel;
+  const double steering_angle = atan(desired_radius * cAxisLength);
+  const double v_theta = (tan(steering_angle)/cAxisLength) * vel;
   const double v_x = cos(curAngle) * vel;
   const double v_y = sin(curAngle) * vel;
-  std::cout << steering_angle << std::endl;
-  std::cout << v_theta << std::endl;
-  std::cout << v_x << std::endl;
-  std::cout << v_y << std::endl;
 
-  std::cout << endl;
-
-  curLoc.x += v_x * DT;
-  curLoc.y += v_y * DT;
-  curAngle = angle_mod(curAngle + v_theta * DT);
+  curLoc.x += v_x * cDT;
+  curLoc.y += v_y * cDT;
+  curAngle = angle_mod(curAngle + v_theta * cDT);
 
   tLastCmd = GetTimeSec();
 }
@@ -306,8 +287,8 @@ void CobotSim::publishOdometry() {
 
   odometryTwistPublisher.publish(odometryTwistMsg);
 
-  robotPosMarker.pose.position.x = curLoc.x + (cos(curAngle)*0.5*axis_length);
-  robotPosMarker.pose.position.y = curLoc.y + (sin(curAngle)*0.5*axis_length);
+  robotPosMarker.pose.position.x = curLoc.x + (cos(curAngle)*0.5*cAxisLength);
+  robotPosMarker.pose.position.y = curLoc.y + (sin(curAngle)*0.5*cAxisLength);
   robotPosMarker.pose.position.z = CobotSim::robotHeight / 2.0;
   robotPosMarker.pose.orientation.w = 1.0;
   robotPosMarker.pose.orientation.x = robotQ.x();
@@ -326,17 +307,14 @@ void CobotSim::publishOdometry() {
 }
 
 void CobotSim::publishLaser() {
-  if(curMapIdx<0 || curMapIdx>=int(maps.size())) {
-    TerminalWarning("Unknown map, unable to generate laser scan!");
-    curMapIdx = -1;
-    return;
-  }
+  VectorMap currentMap = VectorMap(cMapName, "./maps", false);
 
   scanDataMsg.header.stamp = ros::Time::now();
   vector2f laserLoc(0.145,0.0);
   // ROS_INFO("curLoc: (%4.3f, %4.3f)", curLoc.x, curLoc.y);
   laserLoc = curLoc + laserLoc.rotate(curAngle);
-  vector<float> ranges = maps[curMapIdx].getRayCast(laserLoc,curAngle,RAD(360.0)/1024.0,769,0.02,4.0);
+  vector<float> ranges =
+      currentMap.getRayCast(laserLoc,curAngle,RAD(360.0)/1024.0,769,0.02,4.0);
   scanDataMsg.ranges.resize(ranges.size());
   for(int i=0; i<int(ranges.size()); i++) {
     scanDataMsg.ranges[i] = ranges[i];
