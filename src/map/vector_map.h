@@ -24,11 +24,11 @@
 #include <algorithm>
 #include <string>
 
-#include "geometry.h"
-#include "line.h"
-#include "triangle.h"
-#include "terminal_utils.h"
-#include "timer.h"
+#include "shared/math/geometry.h"
+#include "shared/math/line.h"
+#include "shared/math/triangle.h"
+#include "shared/util/terminal_utils.h"
+#include "shared/util/timer.h"
 #include <eigen3/Eigen/Eigen>
 
 #ifndef VECTOR_MAP_H

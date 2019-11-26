@@ -13,7 +13,7 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
- * \file    cobot_sim_main.cpp
+ * \file    simulator_main.cpp
  * \brief   A simple Simulator for cobot
  * \author  Joydeep Biswas, (C) 2010
  */
@@ -22,10 +22,10 @@
 #include <iostream>
 #include <stdio.h>
 #include <ros/ros.h>
-#include "proghelp.h"
-#include "timer.h"
-#include "popt_pp.h"
-#include "cobot_sim.h"
+#include "shared/util/proghelp.h"
+#include "shared/util/timer.h"
+#include "shared/util/popt_pp.h"
+#include "simulator.h"
 
 
 bool run = true;

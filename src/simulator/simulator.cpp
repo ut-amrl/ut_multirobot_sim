@@ -13,14 +13,14 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-\file    cobot_sim.h
-\brief   C++ Implementation: CobotSim
+\file    simulator.h
+\brief   C++ Implementation: Simulator
 \author  Joydeep Biswas, (C) 2011
 */
 //========================================================================
 
 
-#include "cobot_sim.h"
+#include "simulator.h"
 #include <math.h>
 #include "config_reader/config_reader.h"
 

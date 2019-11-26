@@ -30,25 +30,15 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/submodules")
 
-INCLUDE(FindLuaJIT)
-FIND_PACKAGE(LuaJIT REQUIRED)
-
 INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/map)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/shared/math)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/shared/util)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader/include)
-INCLUDE_DIRECTORIES(${LUAJIT_INCLUDE_DIR})
-
 
 ROSBUILD_GENMSG()
 
-ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/src/cobot_sim)
-
 SET(libs roslib roscpp popt glog
-    ${BUILD_SPECIFIC_LIBRARIES} rosbag X11)
+    ${BUILD_SPECIFIC_LIBRARIES} rosbag X11 lua5.1)
 
 SET(SHARED_SRCS
   src/shared/math/geometry.h
@@ -67,8 +57,29 @@ SET(MAP_SRCS
 #
 ADD_LIBRARY(shared_libraries SHARED ${SHARED_SRCS} ${HW_SRCS})
 ADD_DEPENDENCIES(shared_libraries rosbuild_precompile)
-TARGET_LINK_LIBRARIES(shared_libraries shared_libraries ${LUAJIT_LIBRARIES} ${libs})
+TARGET_LINK_LIBRARIES(shared_libraries shared_libraries ${libs})
 
 ADD_LIBRARY(map_libraries SHARED ${MAP_SRCS})
 ADD_DEPENDENCIES(map_libraries shared_libraries)
 TARGET_LINK_LIBRARIES(map_libraries shared_libraries ${libs})
+
+
+ROSBUILD_ADD_BOOST_DIRECTORIES()
+
+SET(target simulator)
+ROSBUILD_ADD_EXECUTABLE(${target}
+  src/simulator/simulator_main.cpp
+  src/simulator/simulator.cpp
+)
+ADD_DEPENDENCIES(${target}
+  shared_libraries
+  map_libraries
+  rosbuild_precompile
+)
+TARGET_LINK_LIBRARIES(${target}
+  shared_libraries
+  map_libraries
+  ${libs}
+)
+ROSBUILD_LINK_BOOST(${target} system)
+

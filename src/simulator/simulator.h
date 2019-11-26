@@ -13,8 +13,8 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-\file    cobot_sim.h
-\brief   C++ Interface: CobotSim
+\file    simulator.h
+\brief   C++ Interface: Simulator
 \author  Joydeep Biswas, (C) 2011
 */
 //========================================================================
@@ -22,10 +22,10 @@
 #include <iostream>
 #include <stdio.h>
 #include <vector>
-#include "proghelp.h"
-#include "timer.h"
-#include "geometry.h"
-#include "vector_map.h"
+#include "shared/util/proghelp.h"
+#include "shared/util/timer.h"
+#include "shared/math/geometry.h"
+#include "map/vector_map.h"
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <tf/transform_datatypes.h>
