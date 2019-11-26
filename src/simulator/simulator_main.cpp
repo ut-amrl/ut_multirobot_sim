@@ -14,7 +14,7 @@
 //========================================================================
 /*!
  * \file    simulator_main.cpp
- * \brief   A simple Simulator for cobot
+ * \brief   A simple simulator.
  * \author  Joydeep Biswas, (C) 2010
  */
 //========================================================================
@@ -29,7 +29,7 @@
 
 
 bool run = true;
-CobotSim *cobotSim;
+Simulator simulator_;
 
 void timerEvent( int sig ) {
   const bool debugTimer = false;
@@ -38,7 +38,7 @@ void timerEvent( int sig ) {
     printf( "dT = %f\n", GetTimeSec()-tLast );
     tLast = GetTimeSec();
   }
-  cobotSim->run();
+  simulator_.run();
 
   if( !run ) {
     CancelTimerInterrupts();
@@ -46,7 +46,9 @@ void timerEvent( int sig ) {
 }
 
 int main(int argc, char **argv) {
-  ColourTerminal(TerminalUtils::TERMINAL_COL_WHITE,TerminalUtils::TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
+
+ColourTerminal(TerminalUtils::TERMINAL_COL_WHITE,TerminalUtils::
+TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
   printf("\nF1/10 Simulator\n\n");
   ResetTerminal();
 
@@ -60,17 +62,15 @@ int main(int argc, char **argv) {
   int c;
   while((c = popt.getNextOpt()) >= 0) { }
 
-  cobotSim = new CobotSim();
-
   InitHandleStop(&run);
   AccelLimits transLimits, rotLimits;
   transLimits.set(0.5,0.5,0.5);
   rotLimits.set(2.0,2.0,1.5);
-  cobotSim->setLimits(transLimits, rotLimits);
+  simulator_.setLimits(transLimits, rotLimits);
 
   ros::init(argc, argv, "F1Tenth_Simulator");
   ros::NodeHandle n;
-  cobotSim->init(n);
+  simulator_.init(n);
 
   //Interrupt frequency of 20 Hz
   if(!SetTimerInterrupt(50000, &timerEvent)) {
@@ -86,7 +86,6 @@ int main(int argc, char **argv) {
 
   printf("closing.\n");
   CancelTimerInterrupts();
-  delete cobotSim;
 
   return(0);
 }

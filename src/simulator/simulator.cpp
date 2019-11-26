@@ -39,14 +39,14 @@ CONFIG_FLOAT(cDT, "delta_t");
 CONFIG_FLOAT(cMinTurnR, "min_turn_radius");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
 
-const double CobotSim::robotHeight = 0.36;
-// // const float CobotSim::startX = -7.5;
-// // const float CobotSim::startY = 1.0;
-// const float CobotSim::startAngle = 0.0;
-// const float CobotSim::DT = 0.05;
-// const float CobotSim::kMinR = 0.1;
+const double Simulator::robotHeight = 0.36;
+// // const float Simulator::startX = -7.5;
+// // const float Simulator::startY = 1.0;
+// const float Simulator::startAngle = 0.0;
+// const float Simulator::DT = 0.05;
+// const float Simulator::kMinR = 0.1;
 
-CobotSim::CobotSim() {
+Simulator::Simulator() {
   w0.heading(RAD(45.0));
   w1.heading(RAD(135.0));
   w2.heading(RAD(-135.0));
@@ -54,9 +54,9 @@ CobotSim::CobotSim() {
   tLastCmd = GetTimeSec();
 }
 
-CobotSim::~CobotSim() { }
+Simulator::~Simulator() { }
 
-void CobotSim::init(ros::NodeHandle& n) {
+void Simulator::init(ros::NodeHandle& n) {
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = "base_laser";
   scanDataMsg.angle_min = RAD(-135.0);
@@ -75,13 +75,13 @@ void CobotSim::init(ros::NodeHandle& n) {
   curLoc.set(cStartX, cStartY);
   curAngle = cStartAngle;
 
-  initCobotSimVizMarkers();
+  initSimulatorVizMarkers();
   loadAtlas();
 
   driveSubscriber = n.subscribe(
-      "/ackerman_drive", 1, &CobotSim::AckermanDriveCallback, this);
+      "/ackerman_drive", 1, &Simulator::AckermanDriveCallback, this);
   initSubscriber = n.subscribe(
-      "/initialpose", 1, &CobotSim::InitalLocationCallback, this);
+      "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
   laserPublisher = n.advertise<sensor_msgs::LaserScan>("/laser", 1);
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
@@ -93,7 +93,7 @@ void CobotSim::init(ros::NodeHandle& n) {
   br = new tf::TransformBroadcaster();
 }
 
-void CobotSim::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
   curLoc.set(msg.pose.pose.position.x, msg.pose.pose.position.y);
   curAngle = 2.0 *
       atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
@@ -121,7 +121,7 @@ void CobotSim::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
  * @param color       vector of 4 float values representing color of marker;
  *                    0: red, 1: green, 2: blue, 3: alpha
  */
-void CobotSim::initVizMarker(visualization_msgs::Marker& vizMarker, string ns,
+void Simulator::initVizMarker(visualization_msgs::Marker& vizMarker, string ns,
     int id, string type, geometry_msgs::PoseStamped p,
     geometry_msgs::Point32 scale, double duration, vector<float> color) {
 
@@ -165,7 +165,7 @@ void CobotSim::initVizMarker(visualization_msgs::Marker& vizMarker, string ns,
   vizMarker.action = visualization_msgs::Marker::ADD;
 }
 
-void CobotSim::initCobotSimVizMarkers() {
+void Simulator::initSimulatorVizMarkers() {
   geometry_msgs::PoseStamped p;
   geometry_msgs::Point32 scale;
   vector<float> color;
@@ -181,16 +181,18 @@ void CobotSim::initCobotSimVizMarkers() {
   color[1] = 0.0;
   color[2] = 1.0;
   color[3] = 1.0;
-  initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0, color);
+  initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
+color);
 
-  p.pose.position.z = CobotSim::robotHeight / 2.0;
+  p.pose.position.z = Simulator::robotHeight / 2.0;
   scale.x = cAxisLength;
   scale.y = cAxisLength / 2;
-  scale.z = CobotSim::robotHeight;
+  scale.z = Simulator::robotHeight;
   color[1] = 0.0;
   color[2] = 0.0;
   color[3] = 1.0;
-  initVizMarker(robotPosMarker, "robot_position", 1, "cube", p, scale, 0.0, color);
+  initVizMarker(robotPosMarker, "robot_position", 1, "cube", p, scale, 0.0,
+color);
 
   scale.x = cAxisLength + 0.4;
   scale.y = cAxisLength / 10;
@@ -199,11 +201,12 @@ void CobotSim::initCobotSimVizMarkers() {
   color[1] = 1.0;
   color[2] = 0.0;
   color[3] = 1.0;
-  initVizMarker(robotDirMarker, "robot_direction", 2, "arrow", p, scale, 0.0, color);
+  initVizMarker(robotDirMarker, "robot_direction", 2, "arrow", p, scale, 0.0,
+color);
 
 }
 
-void CobotSim::loadAtlas() {
+void Simulator::loadAtlas() {
   VectorMap currentMap = VectorMap(cMapName, "./maps", false);
   vector<line2f> map_segments = currentMap.Lines();
   for (size_t i = 0; i < map_segments.size(); i++) {
@@ -223,7 +226,7 @@ void CobotSim::loadAtlas() {
   }
 }
 
-void CobotSim::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {
+void Simulator::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {
  if (!isfinite(msg->v) || !isfinite(msg->R)) {
     printf("Ignoring non-finite drive values: %f %f\n", msg->v, msg->R);
     return;
@@ -260,7 +263,7 @@ void CobotSim::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {
   tLastCmd = GetTimeSec();
 }
 
-void CobotSim::publishOdometry() {
+void Simulator::publishOdometry() {
   static const double kMaxCommandAge = 0.5;
 
   if (GetTimeSec() > tLastCmd + kMaxCommandAge) {
@@ -289,7 +292,7 @@ void CobotSim::publishOdometry() {
 
   robotPosMarker.pose.position.x = curLoc.x + (cos(curAngle)*0.5*cAxisLength);
   robotPosMarker.pose.position.y = curLoc.y + (sin(curAngle)*0.5*cAxisLength);
-  robotPosMarker.pose.position.z = CobotSim::robotHeight / 2.0;
+  robotPosMarker.pose.position.z = Simulator::robotHeight / 2.0;
   robotPosMarker.pose.orientation.w = 1.0;
   robotPosMarker.pose.orientation.x = robotQ.x();
   robotPosMarker.pose.orientation.y = robotQ.y();
@@ -298,7 +301,7 @@ void CobotSim::publishOdometry() {
 
   robotDirMarker.pose.position.x = curLoc.x;
   robotDirMarker.pose.position.y = curLoc.y;
-  robotDirMarker.pose.position.z = CobotSim::robotHeight;
+  robotDirMarker.pose.position.z = Simulator::robotHeight;
   robotDirMarker.pose.orientation.x = robotQ.x();
   robotDirMarker.pose.orientation.y = robotQ.y();
   robotDirMarker.pose.orientation.z = robotQ.z();
@@ -306,7 +309,7 @@ void CobotSim::publishOdometry() {
 
 }
 
-void CobotSim::publishLaser() {
+void Simulator::publishLaser() {
   VectorMap currentMap = VectorMap(cMapName, "./maps", false);
 
   scanDataMsg.header.stamp = ros::Time::now();
@@ -325,35 +328,39 @@ void CobotSim::publishLaser() {
   laserPublisher.publish(scanDataMsg);
 }
 
-void CobotSim::publishTransform() {
+void Simulator::publishTransform() {
   tf::Transform transform;
   tf::Quaternion q;
 
   transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map", "/odom"));
+  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
+"/odom"));
 
   transform.setOrigin(tf::Vector3(curLoc.x,curLoc.y,0.0));
   q.setRPY(0.0,0.0,curAngle);
   transform.setRotation(q);
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom", "/base_footprint"));
+  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom",
+"/base_footprint"));
 
   transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/base_footprint", "/base_link"));
+  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+"/base_footprint", "/base_link"));
 
   transform.setOrigin(tf::Vector3(0.145,0.0, 0.23));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/base_link", "/base_laser"));
+  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+"/base_link", "/base_laser"));
 }
 
-void CobotSim::publishVisualizationMarkers() {
+void Simulator::publishVisualizationMarkers() {
   mapLinesPublisher.publish(lineListMarker);
   dirMarkerPublisher.publish(robotDirMarker);
   posMarkerPublisher.publish(robotPosMarker);
 }
 
-void CobotSim::run() {
+void Simulator::run() {
   //publish odometry and status
   publishOdometry();
   //publish laser rangefinder messages

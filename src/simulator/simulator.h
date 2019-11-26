@@ -38,8 +38,8 @@
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include <tf/transform_broadcaster.h>
 
-#ifndef COBOT_SIM_H
-#define COBOT_SIM_H
+#ifndef SIMULATOR_H
+#define SIMULATOR_H
 
 using namespace std;
 
@@ -64,7 +64,7 @@ class AccelLimits{
     AccelLimits &set(const AccelLimits &al,double f);
 };
 
-class CobotSim{
+class Simulator{
   vector2d loc;
   double vel;
   double angVel;
@@ -111,8 +111,10 @@ class CobotSim{
   static const float kMinR;
 
 private:
-  void initVizMarker(visualization_msgs::Marker& vizMarker, string ns, int id, string type, geometry_msgs::PoseStamped p, geometry_msgs::Point32 scale, double duration, vector<float> color);
-  void initCobotSimVizMarkers();
+  void initVizMarker(visualization_msgs::Marker& vizMarker, string ns, int id,
+string type, geometry_msgs::PoseStamped p, geometry_msgs::Point32 scale, double
+duration, vector<float> color);
+  void initSimulatorVizMarkers();
   void loadAtlas();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped& msg);
@@ -124,10 +126,11 @@ private:
   void publishTransform();
 
 public:
-  CobotSim();
-  ~CobotSim();
-  void setLimits(AccelLimits _transLimits, AccelLimits _rotLimits){transLimits = _transLimits; rotLimits = _rotLimits;}
+  Simulator();
+  ~Simulator();
+  void setLimits(AccelLimits _transLimits, AccelLimits _rotLimits){transLimits =
+_transLimits; rotLimits = _rotLimits;}
   void init(ros::NodeHandle &n);
   void run();
 };
-#endif //COBOT_SIM_H
+#endif //SIMULATOR_H
