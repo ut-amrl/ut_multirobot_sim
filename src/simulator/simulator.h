@@ -68,7 +68,6 @@ class Simulator{
   vector2d loc;
   double vel;
   double angVel;
-  AccelLimits transLimits, rotLimits;
 
   ros::Subscriber driveSubscriber;
   ros::Subscriber initSubscriber;
@@ -131,8 +130,6 @@ duration, vector<float> color);
 public:
   Simulator();
   ~Simulator();
-  void setLimits(AccelLimits _transLimits, AccelLimits _rotLimits){transLimits =
-_transLimits; rotLimits = _rotLimits;}
   void init(ros::NodeHandle &n);
   void run();
 };

@@ -6,7 +6,7 @@ start_angle = 0.0
 delta_t = 0.025
 kmin_r = 0.1
 min_turn_radius = 0.98
-max_vel = 1.2 
+max_speed = 1.2
 max_accel = 3.0
 
 

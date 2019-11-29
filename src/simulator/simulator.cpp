@@ -37,6 +37,8 @@ CONFIG_FLOAT(cStartY, "start_y");
 CONFIG_FLOAT(cStartAngle, "start_angle");
 CONFIG_FLOAT(cDT, "delta_t");
 CONFIG_FLOAT(cMinTurnR, "min_turn_radius");
+CONFIG_FLOAT(cMaxAccel, "max_accel");
+CONFIG_FLOAT(cMaxSpeed, "max_speed");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
 
 const double Simulator::robotHeight = 0.36;
@@ -344,7 +346,7 @@ void Simulator::update() {
   // Epsilon curvature corresponding to a very large radius of turning.
   static const float kEpsilonCurvature = 1.0 / 1E3;
   // Commanded speed bounded to motion limit.
-  const float desired_vel = AbsBound(last_cmd_.velocity, transLimits.max_vel);
+  const float desired_vel = AbsBound(last_cmd_.velocity, cMaxSpeed);
   // Maximum magnitude of curvature according to turning limits.
   const float max_curvature = 1.0 / cMinTurnR;
   // Commanded curvature bounded to turning limit.
@@ -352,7 +354,7 @@ void Simulator::update() {
   // Indicates if the command is for linear motion.
   const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
 
-  const float dv_max = cDT * transLimits.max_accel;
+  const float dv_max = cDT * cMaxAccel;
   const float bounded_dv = AbsBound(desired_vel - vel, dv_max);
   vel = vel + bounded_dv;
   const float dist = vel * cDT;

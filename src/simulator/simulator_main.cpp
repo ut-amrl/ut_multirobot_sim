@@ -63,11 +63,6 @@ TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
   while((c = popt.getNextOpt()) >= 0) { }
 
   InitHandleStop(&run);
-  AccelLimits transLimits, rotLimits;
-  transLimits.set(0.5,0.5,0.5);
-  rotLimits.set(2.0,2.0,1.5);
-  simulator_.setLimits(transLimits, rotLimits);
-
   ros::init(argc, argv, "F1Tenth_Simulator");
   ros::NodeHandle n;
   simulator_.init(n);
