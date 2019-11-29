@@ -22,3 +22,6 @@ build:
 
 cleanup_cache:
 	rm -rf build
+
+purge: clean cleanup_cache
+

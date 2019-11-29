@@ -72,8 +72,8 @@ TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
   ros::NodeHandle n;
   simulator_.init(n);
 
-  //Interrupt frequency of 20 Hz
-  if(!SetTimerInterrupt(50000, &timerEvent)) {
+  //Interrupt frequency of 40 Hz
+  if(!SetTimerInterrupt(25000, &timerEvent)) {
     TerminalWarning( "Unable to set timer interrupt\n" );
     return(1);
   }

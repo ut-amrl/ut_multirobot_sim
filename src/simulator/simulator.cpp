@@ -23,11 +23,11 @@
 #include "simulator.h"
 #include <math.h>
 #include "config_reader/config_reader.h"
-
+#include "f1tenth_simulator/AckermannDriveMsg.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 
-using f1tenth_simulator::AckermanDriveMsgConstPtr;
-using f1tenth_simulator::AckermanDriveMsg;
+using f1tenth_simulator::AckermannDriveMsgConstPtr;
+using f1tenth_simulator::AckermannDriveMsg;
 using geometry_msgs::PoseWithCovarianceStamped;
 
 CONFIG_STRING(cMapName, "map_name");
@@ -79,7 +79,7 @@ void Simulator::init(ros::NodeHandle& n) {
   loadAtlas();
 
   driveSubscriber = n.subscribe(
-      "/ackerman_drive", 1, &Simulator::AckermanDriveCallback, this);
+      "/ackermann_drive", 1, &Simulator::AckermannDriveCallback, this);
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
@@ -226,51 +226,7 @@ void Simulator::loadAtlas() {
   }
 }
 
-void Simulator::AckermanDriveCallback(const AckermanDriveMsgConstPtr& msg) {
- if (!isfinite(msg->v) || !isfinite(msg->R)) {
-    printf("Ignoring non-finite drive values: %f %f\n", msg->v, msg->R);
-    return;
-  }
-  const double desired_speed = min(static_cast<double>(msg->v),
-                                   transLimits.max_vel);
-
-  const double inverse_min_radius = 1.0 / cMinTurnR;
-  double desired_radius = 0;
-  if (static_cast<double>(msg->R) > 0) {
-    desired_radius = min(static_cast<double>(msg->R), inverse_min_radius);
-  }
-
-  double dv_max = 0.0;
-  if (desired_speed > vel) {
-    dv_max = cDT * transLimits.max_accel;
-  }
-
-  double dv = desired_speed - vel;
-  if(fabs(dv) > dv_max) {
-    dv = sign(dv) * dv_max;
-  }
-  vel = vel + dv;
-
-  const double steering_angle = atan(desired_radius * cAxisLength);
-  const double v_theta = (tan(steering_angle)/cAxisLength) * vel;
-  const double v_x = cos(curAngle) * vel;
-  const double v_y = sin(curAngle) * vel;
-
-  curLoc.x += v_x * cDT;
-  curLoc.y += v_y * cDT;
-  curAngle = angle_mod(curAngle + v_theta * cDT);
-
-  tLastCmd = GetTimeSec();
-}
-
 void Simulator::publishOdometry() {
-  static const double kMaxCommandAge = 0.5;
-
-  if (GetTimeSec() > tLastCmd + kMaxCommandAge) {
-    angVel = 0.0;
-    vel = 0.0;
-  }
-
   tf::Quaternion robotQ = tf::createQuaternionFromYaw(curAngle);
 
   odometryTwistMsg.header.stamp = ros::Time::now();
@@ -360,7 +316,67 @@ void Simulator::publishVisualizationMarkers() {
   posMarkerPublisher.publish(robotPosMarker);
 }
 
+float AbsBound(float x, float bound) {
+  if (x > 0.0 && x > bound) {
+    return bound;
+  } else if (x < 0.0 && x < -bound) {
+    return -bound;
+  }
+  return x;
+}
+
+void Simulator::AckermannDriveCallback(const AckermannDriveMsgConstPtr& msg) {
+ if (!isfinite(msg->velocity) || !isfinite(msg->curvature)) {
+    printf("Ignoring non-finite drive values: %f %f\n",
+           msg->velocity,
+           msg->curvature);
+    return;
+  }
+  last_cmd_ = *msg;
+  tLastCmd = GetTimeSec();
+}
+
+void Simulator::update() {
+  static const double kMaxCommandAge = 0.5;
+  if (GetTimeSec() > tLastCmd + kMaxCommandAge) {
+    last_cmd_.velocity = 0;
+  }
+  // Epsilon curvature corresponding to a very large radius of turning.
+  static const float kEpsilonCurvature = 1.0 / 1E3;
+  // Commanded speed bounded to motion limit.
+  const float desired_vel = AbsBound(last_cmd_.velocity, transLimits.max_vel);
+  // Maximum magnitude of curvature according to turning limits.
+  const float max_curvature = 1.0 / cMinTurnR;
+  // Commanded curvature bounded to turning limit.
+  const float desired_curvature = AbsBound(last_cmd_.curvature, max_curvature);
+  // Indicates if the command is for linear motion.
+  const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
+
+  const float dv_max = cDT * transLimits.max_accel;
+  const float bounded_dv = AbsBound(desired_vel - vel, dv_max);
+  vel = vel + bounded_dv;
+  const float dist = vel * cDT;
+
+  float dx = 0, dy = 0, dtheta = 0;
+  if (linear_motion) {
+    dx = dist;
+    dy = 0;
+    dtheta = 0;
+  } else {
+    const float r = 1.0 / desired_curvature;
+    dtheta = dist * desired_curvature;
+    dx = r * sin(dtheta);
+    dy = r * (1.0 - cos(dtheta));
+  }
+
+  curLoc.x += dx * cos(curAngle) - dy * sin(curAngle);
+  curLoc.y += dx * sin(curAngle) + dy * cos(curAngle);
+  curAngle = angle_mod(curAngle + dtheta);
+}
+
 void Simulator::run() {
+  // Simulate time-step.
+  update();
   //publish odometry and status
   publishOdometry();
   //publish laser rangefinder messages

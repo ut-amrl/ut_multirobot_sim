@@ -31,7 +31,10 @@ sudo apt install libgoogle-glog-dev libpopt-dev
 
 Run `./bin/simulator`
 
-The simulator laser scans to the `/laser` topic, odometry messages to `/odom`, and visualization messages to `/simulator_visualization`. It listens to motion commands on `/ackerman_drive`, and location initialization messages on `/initialpose`.
+The simulator laser scans to the `/laser` topic, odometry messages to `/odom`,
+and visualization messages to `/simulator_visualization`. It listens to motion
+commands on `/ackermann_drive`, and location initialization messages on
+`/initialpose`.
 
 ## Visualize Simulation
 
