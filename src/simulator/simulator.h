@@ -76,15 +76,12 @@ class Simulator{
   ros::Publisher laserPublisher;
   ros::Publisher mapLinesPublisher;
   ros::Publisher posMarkerPublisher;
-  ros::Publisher dirMarkerPublisher;
   tf::TransformBroadcaster *br;
 
   // wheel orientations
   vector2d w0,w1,w2,w3;
   // Radius of base
   static const double baseRadius;
-  // "height" of robot
-  static const double robotHeight;
 
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
@@ -95,7 +92,6 @@ class Simulator{
 
   visualization_msgs::Marker lineListMarker;
   visualization_msgs::Marker robotPosMarker;
-  visualization_msgs::Marker robotDirMarker;
 
   static const float startX;
   static const float startY;
@@ -116,7 +112,7 @@ private:
 string type, geometry_msgs::PoseStamped p, geometry_msgs::Point32 scale, double
 duration, vector<float> color);
   void initSimulatorVizMarkers();
-  void loadAtlas();
+  void drawMap();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped& msg);
   void AckermannDriveCallback(

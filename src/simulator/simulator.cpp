@@ -31,7 +31,13 @@ using f1tenth_simulator::AckermannDriveMsg;
 using geometry_msgs::PoseWithCovarianceStamped;
 
 CONFIG_STRING(cMapName, "map_name");
-CONFIG_FLOAT(cAxisLength, "axis_length");
+CONFIG_FLOAT(cCarLength, "car_length");
+CONFIG_FLOAT(cCarWidth, "car_width");
+CONFIG_FLOAT(cCarHeight, "car_height");
+CONFIG_FLOAT(cRearAxleOffset, "rear_axle_offset");
+CONFIG_FLOAT(cLaserLocX, "laser_loc.x");
+CONFIG_FLOAT(cLaserLocY, "laser_loc.y");
+CONFIG_FLOAT(cLaserLocZ, "laser_loc.z");
 CONFIG_FLOAT(cStartX, "start_x");
 CONFIG_FLOAT(cStartY, "start_y");
 CONFIG_FLOAT(cStartAngle, "start_angle");
@@ -41,14 +47,7 @@ CONFIG_FLOAT(cMaxAccel, "max_accel");
 CONFIG_FLOAT(cMaxSpeed, "max_speed");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
 
-const double Simulator::robotHeight = 0.36;
-// // const float Simulator::startX = -7.5;
-// // const float Simulator::startY = 1.0;
-// const float Simulator::startAngle = 0.0;
-// const float Simulator::DT = 0.05;
-// const float Simulator::kMinR = 0.1;
-
-Simulator::Simulator() {
+Simulator::Simulator() : currentMap(nullptr) {
   w0.heading(RAD(45.0));
   w1.heading(RAD(135.0));
   w2.heading(RAD(-135.0));
@@ -78,19 +77,17 @@ void Simulator::init(ros::NodeHandle& n) {
   curAngle = cStartAngle;
 
   initSimulatorVizMarkers();
-  loadAtlas();
+  drawMap();
 
   driveSubscriber = n.subscribe(
       "/ackermann_drive", 1, &Simulator::AckermannDriveCallback, this);
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
-  laserPublisher = n.advertise<sensor_msgs::LaserScan>("/laser", 1);
+  laserPublisher = n.advertise<sensor_msgs::LaserScan>("/scan", 1);
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
-      "/simulator_visualization", 6);
-  dirMarkerPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
   br = new tf::TransformBroadcaster();
 }
@@ -186,41 +183,33 @@ void Simulator::initSimulatorVizMarkers() {
   initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
 color);
 
-  p.pose.position.z = Simulator::robotHeight / 2.0;
-  scale.x = cAxisLength;
-  scale.y = cAxisLength / 2;
-  scale.z = Simulator::robotHeight;
-  color[1] = 0.0;
-  color[2] = 0.0;
-  color[3] = 1.0;
+  p.pose.position.z = 0.5 * cCarHeight;
+  scale.x = cCarLength;
+  scale.y = cCarWidth;
+  scale.z = cCarHeight;
+  color[0] = 94.0 / 255.0;
+  color[1] = 156.0 / 255.0;
+  color[2] = 255.0 / 255.0;
+  color[3] = 0.8;
   initVizMarker(robotPosMarker, "robot_position", 1, "cube", p, scale, 0.0,
-color);
-
-  scale.x = cAxisLength + 0.4;
-  scale.y = cAxisLength / 10;
-  scale.z = 0.1;
-  color[0] = 0.0;
-  color[1] = 1.0;
-  color[2] = 0.0;
-  color[3] = 1.0;
-  initVizMarker(robotDirMarker, "robot_direction", 2, "arrow", p, scale, 0.0,
 color);
 
 }
 
-void Simulator::loadAtlas() {
-  VectorMap currentMap = VectorMap(cMapName, "./maps", false);
-  vector<line2f> map_segments = currentMap.Lines();
+void Simulator::drawMap() {
+  if (currentMap == nullptr) return;
+  const vector<line2f>& map_segments = currentMap->Lines();
+  lineListMarker.points.clear();
   for (size_t i = 0; i < map_segments.size(); i++) {
     // The line list needs two points for each line
     geometry_msgs::Point p0, p1;
 
-    p0.x = map_segments.at(i).P0().x;
-    p0.y = map_segments.at(i).P0().y;
+    p0.x = map_segments[i].P0().x;
+    p0.y = map_segments[i].P0().y;
     p0.z = 0.01;
 
-    p1.x = map_segments.at(i).P1().x;
-    p1.y = map_segments.at(i).P1().y;
+    p1.x = map_segments[i].P1().x;
+    p1.y = map_segments[i].P1().y;
     p1.z = 0.01;
 
     lineListMarker.points.push_back(p0);
@@ -248,34 +237,30 @@ void Simulator::publishOdometry() {
 
   odometryTwistPublisher.publish(odometryTwistMsg);
 
-  robotPosMarker.pose.position.x = curLoc.x + (cos(curAngle)*0.5*cAxisLength);
-  robotPosMarker.pose.position.y = curLoc.y + (sin(curAngle)*0.5*cAxisLength);
-  robotPosMarker.pose.position.z = Simulator::robotHeight / 2.0;
+  robotPosMarker.pose.position.x =
+      curLoc.x - cos(curAngle) * cRearAxleOffset;
+  robotPosMarker.pose.position.y =
+      curLoc.y - sin(curAngle) * cRearAxleOffset;
+  robotPosMarker.pose.position.z = 0.5 * cCarHeight;
   robotPosMarker.pose.orientation.w = 1.0;
   robotPosMarker.pose.orientation.x = robotQ.x();
   robotPosMarker.pose.orientation.y = robotQ.y();
   robotPosMarker.pose.orientation.z = robotQ.z();
   robotPosMarker.pose.orientation.w = robotQ.w();
-
-  robotDirMarker.pose.position.x = curLoc.x;
-  robotDirMarker.pose.position.y = curLoc.y;
-  robotDirMarker.pose.position.z = Simulator::robotHeight;
-  robotDirMarker.pose.orientation.x = robotQ.x();
-  robotDirMarker.pose.orientation.y = robotQ.y();
-  robotDirMarker.pose.orientation.z = robotQ.z();
-  robotDirMarker.pose.orientation.w = robotQ.w();
-
 }
 
 void Simulator::publishLaser() {
-  VectorMap currentMap = VectorMap(cMapName, "./maps", false);
-
+  if (currentMap == nullptr || currentMap->mapName.compare(cMapName) != 0) {
+    if (currentMap) delete currentMap;
+    currentMap = new VectorMap(cMapName, "./maps", false);
+    drawMap();
+  }
   scanDataMsg.header.stamp = ros::Time::now();
-  vector2f laserLoc(0.145,0.0);
+  vector2f laserLoc(cLaserLocX, cLaserLocY);
   // ROS_INFO("curLoc: (%4.3f, %4.3f)", curLoc.x, curLoc.y);
   laserLoc = curLoc + laserLoc.rotate(curAngle);
   vector<float> ranges =
-      currentMap.getRayCast(laserLoc,curAngle,RAD(360.0)/1024.0,769,0.02,4.0);
+      currentMap->getRayCast(laserLoc,curAngle,RAD(360.0)/1024.0,769,0.02,4.0);
   scanDataMsg.ranges.resize(ranges.size());
   for(int i=0; i<int(ranges.size()); i++) {
     scanDataMsg.ranges[i] = ranges[i];
@@ -306,7 +291,7 @@ void Simulator::publishTransform() {
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
 "/base_footprint", "/base_link"));
 
-  transform.setOrigin(tf::Vector3(0.145,0.0, 0.23));
+  transform.setOrigin(tf::Vector3(cLaserLocX, cLaserLocY, cLaserLocZ));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
 "/base_link", "/base_laser"));
@@ -314,7 +299,6 @@ void Simulator::publishTransform() {
 
 void Simulator::publishVisualizationMarkers() {
   mapLinesPublisher.publish(lineListMarker);
-  dirMarkerPublisher.publish(robotDirMarker);
   posMarkerPublisher.publish(robotPosMarker);
 }
 
