@@ -10,7 +10,7 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-map_name =  "CS403"
+map_name =  "GDC1"
 -- Simulator starting location.
 start_x = -7.5
 start_y = 1.0

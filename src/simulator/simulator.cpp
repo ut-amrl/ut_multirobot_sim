@@ -323,7 +323,7 @@ void Simulator::AckermannDriveCallback(const AckermannDriveMsgConstPtr& msg) {
 }
 
 void Simulator::update() {
-  static const double kMaxCommandAge = 0.5;
+  static const double kMaxCommandAge = 0.1;
   if (GetTimeSec() > tLastCmd + kMaxCommandAge) {
     last_cmd_.velocity = 0;
   }
