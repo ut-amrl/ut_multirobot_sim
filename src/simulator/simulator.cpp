@@ -23,11 +23,10 @@
 #include "simulator.h"
 #include <math.h>
 #include "config_reader/config_reader.h"
-#include "f1tenth_simulator/AckermannDriveMsg.h"
+#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 
-using f1tenth_simulator::AckermannDriveMsgConstPtr;
-using f1tenth_simulator::AckermannDriveMsg;
+using f1tenth_course::AckermannCurvatureDriveMsg;
 using geometry_msgs::PoseWithCovarianceStamped;
 
 CONFIG_STRING(cMapName, "map_name");
@@ -80,7 +79,10 @@ void Simulator::init(ros::NodeHandle& n) {
   drawMap();
 
   driveSubscriber = n.subscribe(
-      "/ackermann_drive", 1, &Simulator::AckermannDriveCallback, this);
+      "/ackermann_curvature_drive",
+      1,
+      &Simulator::DriveCallback,
+      this);
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
@@ -311,14 +313,14 @@ float AbsBound(float x, float bound) {
   return x;
 }
 
-void Simulator::AckermannDriveCallback(const AckermannDriveMsgConstPtr& msg) {
- if (!isfinite(msg->velocity) || !isfinite(msg->curvature)) {
+void Simulator::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
+ if (!isfinite(msg.velocity) || !isfinite(msg.curvature)) {
     printf("Ignoring non-finite drive values: %f %f\n",
-           msg->velocity,
-           msg->curvature);
+           msg.velocity,
+           msg.curvature);
     return;
   }
-  last_cmd_ = *msg;
+  last_cmd_ = msg;
   tLastCmd = GetTimeSec();
 }
 

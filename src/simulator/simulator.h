@@ -31,7 +31,7 @@
 #include <tf/transform_datatypes.h>
 #include <visualization_msgs/Marker.h>
 #include <nav_msgs/Odometry.h>
-#include "f1tenth_simulator/AckermannDriveMsg.h"
+#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/PoseStamped.h"
@@ -105,7 +105,7 @@ class Simulator{
   static const float DT;
   static const float kMinR;
 
-  f1tenth_simulator::AckermannDriveMsg last_cmd_;
+  f1tenth_course::AckermannCurvatureDriveMsg last_cmd_;
 
 private:
   void initVizMarker(visualization_msgs::Marker& vizMarker, string ns, int id,
@@ -115,8 +115,7 @@ duration, vector<float> color);
   void drawMap();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped& msg);
-  void AckermannDriveCallback(
-      const f1tenth_simulator::AckermannDriveMsgConstPtr& msg);
+  void DriveCallback(const f1tenth_course::AckermannCurvatureDriveMsg& msg);
   void publishOdometry();
   void publishLaser();
   void publishVisualizationMarkers();
