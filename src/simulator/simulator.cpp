@@ -52,6 +52,8 @@ Simulator::Simulator() : currentMap(nullptr) {
   w2.heading(RAD(-135.0));
   w3.heading(RAD(-45.0));
   tLastCmd = GetTimeSec();
+  truePoseMsg.header.seq = 0;
+  truePoseMsg.header.frame_id = "map";
 }
 
 Simulator::~Simulator() { }
@@ -91,6 +93,8 @@ void Simulator::init(ros::NodeHandle& n) {
       "/simulator_visualization", 6);
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
+  truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
+      "/simulator_true_pose", 1);
   br = new tf::TransformBroadcaster();
 }
 
@@ -360,6 +364,17 @@ void Simulator::update() {
   curLoc.x += dx * cos(curAngle) - dy * sin(curAngle);
   curLoc.y += dx * sin(curAngle) + dy * cos(curAngle);
   curAngle = angle_mod(curAngle + dtheta);
+
+  truePoseMsg.header.stamp = ros::Time::now();
+  truePoseMsg.pose.position.x = curLoc.x;
+  truePoseMsg.pose.position.y = curLoc.y;
+  truePoseMsg.pose.position.z = 0;
+  truePoseMsg.pose.orientation.w = cos(0.5 * curAngle);
+  truePoseMsg.pose.orientation.z = sin(0.5 * curAngle);
+  truePoseMsg.pose.orientation.x = 0;
+  truePoseMsg.pose.orientation.y = 0;
+  truePosePublisher.publish(truePoseMsg);
+
 }
 
 void Simulator::run() {

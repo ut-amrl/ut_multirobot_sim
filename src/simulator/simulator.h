@@ -76,6 +76,7 @@ class Simulator{
   ros::Publisher laserPublisher;
   ros::Publisher mapLinesPublisher;
   ros::Publisher posMarkerPublisher;
+  ros::Publisher truePosePublisher;
   tf::TransformBroadcaster *br;
 
   // wheel orientations
@@ -104,6 +105,7 @@ class Simulator{
 
   static const float DT;
   static const float kMinR;
+  geometry_msgs::PoseStamped truePoseMsg;
 
   f1tenth_course::AckermannCurvatureDriveMsg last_cmd_;
 
