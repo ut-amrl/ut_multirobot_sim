@@ -19,19 +19,21 @@
  */
 //========================================================================
 
-#include <iostream>
 #include <stdio.h>
-#include <ros/ros.h>
+
+#include <iostream>
+
+#include "gflags/gflags.h"
+#include "ros/ros.h"
+
 #include "shared/util/proghelp.h"
 #include "shared/util/timer.h"
-#include "shared/util/popt_pp.h"
 #include "simulator.h"
-
 
 bool run = true;
 Simulator simulator_;
 
-void timerEvent( int sig ) {
+void timerEvent(int sig) {
   const bool debugTimer = false;
   static double tLast = GetTimeSec();
   if(debugTimer) {
@@ -46,21 +48,8 @@ void timerEvent( int sig ) {
 }
 
 int main(int argc, char **argv) {
-
-ColourTerminal(TerminalUtils::TERMINAL_COL_WHITE,TerminalUtils::
-TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
+  google::ParseCommandLineFlags(&argc, &argv, false);
   printf("\nF1/10 Simulator\n\n");
-  ResetTerminal();
-
-  // option table
-  static struct poptOption options[] = {
-    POPT_AUTOHELP
-    { NULL, 0, 0, NULL, 0, NULL, NULL }
-  };
-  // parse options
-  POpt popt(NULL,argc,(const char**)argv,options,0);
-  int c;
-  while((c = popt.getNextOpt()) >= 0) { }
 
   InitHandleStop(&run);
   ros::init(argc, argv, "F1Tenth_Simulator");
@@ -69,7 +58,7 @@ TERMINAL_COL_BLACK,TerminalUtils::TERMINAL_ATTR_BRIGHT);
 
   //Interrupt frequency of 40 Hz
   if(!SetTimerInterrupt(25000, &timerEvent)) {
-    TerminalWarning( "Unable to set timer interrupt\n" );
+    printf("Unable to set timer interrupt\n");
     return(1);
   }
 
