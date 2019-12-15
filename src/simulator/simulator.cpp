@@ -19,15 +19,19 @@
 */
 //========================================================================
 
+#include <math.h>
+
+#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
+#include "geometry_msgs/Pose2D.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "gflags/gflags.h"
 
 #include "simulator.h"
-#include <math.h>
 #include "config_reader/config_reader.h"
-#include "f1tenth_simulator/AckermannDriveMsg.h"
-#include "geometry_msgs/PoseWithCovarianceStamped.h"
 
-using f1tenth_simulator::AckermannDriveMsgConstPtr;
-using f1tenth_simulator::AckermannDriveMsg;
+DEFINE_bool(localize, false, "Publish localization");
+
+using f1tenth_course::AckermannCurvatureDriveMsg;
 using geometry_msgs::PoseWithCovarianceStamped;
 
 CONFIG_STRING(cMapName, "map_name");
@@ -80,7 +84,10 @@ void Simulator::init(ros::NodeHandle& n) {
   drawMap();
 
   driveSubscriber = n.subscribe(
-      "/ackermann_drive", 1, &Simulator::AckermannDriveCallback, this);
+      "/ackermann_curvature_drive",
+      1,
+      &Simulator::DriveCallback,
+      this);
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
@@ -89,6 +96,8 @@ void Simulator::init(ros::NodeHandle& n) {
       "/simulator_visualization", 6);
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
+  localizationPublisher = n.advertise<geometry_msgs::Pose2D>(
+      "/localization", 1);
   br = new tf::TransformBroadcaster();
 }
 
@@ -311,14 +320,14 @@ float AbsBound(float x, float bound) {
   return x;
 }
 
-void Simulator::AckermannDriveCallback(const AckermannDriveMsgConstPtr& msg) {
- if (!isfinite(msg->velocity) || !isfinite(msg->curvature)) {
+void Simulator::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
+ if (!isfinite(msg.velocity) || !isfinite(msg.curvature)) {
     printf("Ignoring non-finite drive values: %f %f\n",
-           msg->velocity,
-           msg->curvature);
+           msg.velocity,
+           msg.curvature);
     return;
   }
-  last_cmd_ = *msg;
+  last_cmd_ = msg;
   tLastCmd = GetTimeSec();
 }
 
@@ -371,4 +380,12 @@ void Simulator::run() {
   publishVisualizationMarkers();
   //publish tf
   publishTransform();
+
+  if (FLAGS_localize) {
+    geometry_msgs::Pose2D localization_msg;
+    localization_msg.x = curLoc.x;
+    localization_msg.y = curLoc.y;
+    localization_msg.theta = curAngle;
+    localizationPublisher.publish(localization_msg);
+  }
 }

@@ -35,8 +35,6 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader/include)
 
-ROSBUILD_GENMSG()
-
 SET(libs roslib roscpp popt glog gflags
     ${BUILD_SPECIFIC_LIBRARIES} rosbag X11 lua5.1)
 
