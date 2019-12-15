@@ -185,9 +185,9 @@ void Simulator::initSimulatorVizMarkers() {
   scale.x = 0.1;
   scale.y = 0.0;
   scale.z = 0.0;
-  color[0] = 0.0;
-  color[1] = 0.0;
-  color[2] = 1.0;
+  color[0] = 66.0 / 255.0;
+  color[1] = 134.0 / 255.0;
+  color[2] = 244.0 / 255.0;
   color[3] = 1.0;
   initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
 color);
