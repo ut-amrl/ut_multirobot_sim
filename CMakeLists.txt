@@ -35,14 +35,14 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader/include)
 
-SET(libs roslib roscpp popt glog
+SET(libs roslib roscpp popt glog gflags
     ${BUILD_SPECIFIC_LIBRARIES} rosbag X11 lua5.1)
 
 SET(SHARED_SRCS
   src/shared/math/geometry.h
   src/shared/util/helpers.cpp
   src/shared/util/proghelp.cc
-  src/shared/util/terminal_utils.cpp
+  src/shared/util/terminal_colors.cc
   src/shared/util/watch_files.cpp
 )
 

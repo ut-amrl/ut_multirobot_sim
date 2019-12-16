@@ -91,9 +91,7 @@ bool VectorMap::loadMap(const string& name, bool usePreRender) {
   if (debug) printf("Loading vector map from %s\n",vectorFile);
   ScopedFile fid_vector(vectorFile,"r");
   if (fid_vector() == NULL) {
-    char buf[1024];
-    snprintf(buf, 1023, "Unable to load vector file %s!",vectorFile);
-    TerminalWarning(buf);
+    printf("Unable to load vector file %s!",vectorFile);
     return false;
   }
   float x1,y1,x2,y2;
@@ -127,9 +125,7 @@ bool VectorMap::loadMap(const string& name, bool usePreRender) {
   if (usePreRender) {
     ScopedFile fid_render(renderFile, "r");
     if (fid_render() == NULL) {
-      char buf[1024];
-      snprintf(buf, 1023, "Unable to load pre-render file %s!",renderFile);
-      TerminalWarning(buf);
+      printf("Unable to load pre-render file %s!",renderFile);
     } else {
       bool error = false;
       int x=0, y=0;
@@ -157,9 +153,7 @@ bool VectorMap::loadMap(const string& name, bool usePreRender) {
         if (x<0 || y<0 ||
             x > static_cast<int>(visListWidth) - 1 ||
             y > static_cast<int>(visListHeight) - 1) {
-          char msg[4096];
-          snprintf(msg, 4095, "Invalid loc (%d,%d) in pre-render file",x,y);
-          TerminalWarning(msg);
+          printf("Invalid loc (%d,%d) in pre-render file",x,y);
           error = true;
         }
         visibilityList[x][y].resize(size);
@@ -177,9 +171,7 @@ bool VectorMap::loadMap(const string& name, bool usePreRender) {
           cnt++;
       }
       if (error) {
-        char buf[1024];
-        snprintf(buf, 1023, "\nUnable to parse pre-render file %s",renderFile);
-        TerminalWarning(buf);
+        printf("\nUnable to parse pre-render file %s",renderFile);
         preRenderExists = false;
       } else {
         if (debug) printf("\nRead %d locations into visibility list\n",cnt);
@@ -262,7 +254,7 @@ vector<float> VectorMap::getRayCast(vector2f loc, float angle,
             }
           }
           if (curRay<0.0) {
-            TerminalWarning("Ray Cast Fail!");
+            printf("Ray Cast Fail!");
             printf("line: %.3f,%.3f : %.3f,%.3f loc:%.3f,"
                    "%.3f a:%.1f\u00b0 curRay:%f\n",
                    V2COMP(lines[lineIndex].P0()),
@@ -708,11 +700,8 @@ void VectorMap::sceneRender(
   }
 
   if (linesList.size()>=MaxLines) {
-    char buf[2048];
-    sprintf(buf,
-            "Runaway Analytic Scene Render at %.30f,%.30f, %.3f : %.3f\u00b0",
-            V2COMP(loc),DEG(a0),DEG(a1));
-    TerminalWarning(buf);
+    printf("Runaway Analytic Scene Render at %.30f,%.30f, %.3f : %.3f\u00b0",
+           V2COMP(loc),DEG(a0),DEG(a1));
   }
   for(i=0; i<scene.size(); i++) {
     if (scene[i].Length() > eps)

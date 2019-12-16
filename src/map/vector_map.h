@@ -27,7 +27,6 @@
 #include "shared/math/geometry.h"
 #include "shared/math/line.h"
 #include "shared/math/triangle.h"
-#include "shared/util/terminal_utils.h"
 #include "shared/util/timer.h"
 #include <eigen3/Eigen/Eigen>
 

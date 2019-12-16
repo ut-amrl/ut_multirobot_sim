@@ -77,6 +77,7 @@ class Simulator{
   ros::Publisher mapLinesPublisher;
   ros::Publisher posMarkerPublisher;
   ros::Publisher truePosePublisher;
+  ros::Publisher localizationPublisher;
   tf::TransformBroadcaster *br;
 
   // wheel orientations

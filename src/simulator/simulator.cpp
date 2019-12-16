@@ -19,12 +19,17 @@
 */
 //========================================================================
 
+#include <math.h>
+
+#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
+#include "geometry_msgs/Pose2D.h"
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include "gflags/gflags.h"
 
 #include "simulator.h"
-#include <math.h>
 #include "config_reader/config_reader.h"
-#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
-#include "geometry_msgs/PoseWithCovarianceStamped.h"
+
+DEFINE_bool(localize, false, "Publish localization");
 
 using f1tenth_course::AckermannCurvatureDriveMsg;
 using geometry_msgs::PoseWithCovarianceStamped;
@@ -95,6 +100,8 @@ void Simulator::init(ros::NodeHandle& n) {
       "/simulator_visualization", 6);
   truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
       "/simulator_true_pose", 1);
+  localizationPublisher = n.advertise<geometry_msgs::Pose2D>(
+      "/localization", 1);
   br = new tf::TransformBroadcaster();
 }
 
@@ -182,9 +189,9 @@ void Simulator::initSimulatorVizMarkers() {
   scale.x = 0.1;
   scale.y = 0.0;
   scale.z = 0.0;
-  color[0] = 0.0;
-  color[1] = 0.0;
-  color[2] = 1.0;
+  color[0] = 66.0 / 255.0;
+  color[1] = 134.0 / 255.0;
+  color[2] = 244.0 / 255.0;
   color[3] = 1.0;
   initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
 color);
@@ -388,4 +395,12 @@ void Simulator::run() {
   publishVisualizationMarkers();
   //publish tf
   publishTransform();
+
+  if (FLAGS_localize) {
+    geometry_msgs::Pose2D localization_msg;
+    localization_msg.x = curLoc.x;
+    localization_msg.y = curLoc.y;
+    localization_msg.theta = curAngle;
+    localizationPublisher.publish(localization_msg);
+  }
 }
