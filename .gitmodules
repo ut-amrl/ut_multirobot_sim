@@ -1,3 +1,6 @@
 [submodule "submodules/config_reader"]
 	path = submodules/config_reader
 	url = git@github.com:ut-amrl/config-reader.git
+[submodule "submodules/shared"]
+	path = submodules/shared
+	url = git@github.com:umass-amrl/amrl_shared_lib.git

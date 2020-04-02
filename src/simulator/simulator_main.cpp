@@ -26,50 +26,29 @@
 #include "gflags/gflags.h"
 #include "ros/ros.h"
 
-#include "shared/util/proghelp.h"
 #include "shared/util/timer.h"
 #include "simulator.h"
 
-bool run = true;
-Simulator simulator_;
-
-void timerEvent(int sig) {
-  const bool debugTimer = false;
-  static double tLast = GetTimeSec();
-  if(debugTimer) {
-    printf( "dT = %f\n", GetTimeSec()-tLast );
-    tLast = GetTimeSec();
-  }
-  simulator_.run();
-
-  if( !run ) {
-    CancelTimerInterrupts();
-  }
-}
 
 int main(int argc, char **argv) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   printf("\nF1/10 Simulator\n\n");
 
-  InitHandleStop(&run);
   ros::init(argc, argv, "F1Tenth_Simulator");
   ros::NodeHandle n;
-  simulator_.init(n);
 
-  //Interrupt frequency of 40 Hz
-  if(!SetTimerInterrupt(25000, &timerEvent)) {
-    printf("Unable to set timer interrupt\n");
-    return(1);
-  }
+  Simulator simulator;
+  simulator.init(n);
 
   // main loop
-  while(ros::ok() && run){
+  RateLoop rate(40.0);
+  while (ros::ok()){
     ros::spinOnce();
-    Sleep(0.05);
+    simulator.Run();
+    rate.Sleep();
   }
 
   printf("closing.\n");
-  CancelTimerInterrupts();
 
   return(0);
 }

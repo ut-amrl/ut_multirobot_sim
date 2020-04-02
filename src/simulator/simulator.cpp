@@ -20,19 +20,38 @@
 //========================================================================
 
 #include <math.h>
+#include <stdio.h>
 
-#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
+#include <random>
+
+#include "eigen3/Eigen/Dense"
+#include "eigen3/Eigen/Geometry"
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "gflags/gflags.h"
 
 #include "simulator.h"
 #include "config_reader/config_reader.h"
+#include "shared/math/geometry.h"
+#include "shared/math/line2d.h"
+#include "shared/math/math_util.h"
+#include "shared/ros/ros_helpers.h"
+#include "shared/util/timer.h"
+#include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
 
-using f1tenth_course::AckermannCurvatureDriveMsg;
+using Eigen::Rotation2Df;
+using Eigen::Vector2f;
+using f1tenth_simulator::AckermannCurvatureDriveMsg;
+using geometry::Heading;
+using geometry::line2f;
 using geometry_msgs::PoseWithCovarianceStamped;
+using math_util::AngleMod;
+using math_util::DegToRad;
+using math_util::RadToDeg;
+using std::atan2;
+using vector_map::VectorMap;
 
 CONFIG_STRING(cMapName, "map_name");
 CONFIG_FLOAT(cCarLength, "car_length");
@@ -49,14 +68,16 @@ CONFIG_FLOAT(cDT, "delta_t");
 CONFIG_FLOAT(cMinTurnR, "min_turn_radius");
 CONFIG_FLOAT(cMaxAccel, "max_accel");
 CONFIG_FLOAT(cMaxSpeed, "max_speed");
+CONFIG_FLOAT(cLaserStdDev, "laser_noise_stddev");
+CONFIG_FLOAT(cAngularErrorBias, "angular_error_bias");
+CONFIG_FLOAT(cAngularErrorRate, "angular_error_rate");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
 
-Simulator::Simulator() : currentMap(nullptr) {
-  w0.heading(RAD(45.0));
-  w1.heading(RAD(135.0));
-  w2.heading(RAD(-135.0));
-  w3.heading(RAD(-45.0));
-  tLastCmd = GetTimeSec();
+
+Simulator::Simulator() :
+    laser_noise_(0, 1),
+    angular_error_(0, 1) {
+  tLastCmd = GetMonotonicTime();
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
 }
@@ -66,11 +87,11 @@ Simulator::~Simulator() { }
 void Simulator::init(ros::NodeHandle& n) {
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = "base_laser";
-  scanDataMsg.angle_min = RAD(-135.0);
-  scanDataMsg.angle_max = RAD(135.0);
+  scanDataMsg.angle_min = DegToRad(-135.0);
+  scanDataMsg.angle_max = DegToRad(135.0);
   scanDataMsg.range_min = 0.02;
-  scanDataMsg.range_max = 4.0;
-  scanDataMsg.angle_increment = RAD(360.0)/1024.0;
+  scanDataMsg.range_max = 10.0;
+  scanDataMsg.angle_increment = DegToRad(0.25);
   scanDataMsg.intensities.clear();
   scanDataMsg.time_increment = 0.0;
   scanDataMsg.scan_time = 0.05;
@@ -79,7 +100,7 @@ void Simulator::init(ros::NodeHandle& n) {
   odometryTwistMsg.header.frame_id = "odom";
   odometryTwistMsg.child_frame_id = "base_footprint";
 
-  curLoc.set(cStartX, cStartY);
+  curLoc = Vector2f(cStartX, cStartY);
   curAngle = cStartAngle;
 
   initSimulatorVizMarkers();
@@ -106,13 +127,13 @@ void Simulator::init(ros::NodeHandle& n) {
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
-  curLoc.set(msg.pose.pose.position.x, msg.pose.pose.position.y);
+  curLoc = Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
   curAngle = 2.0 *
       atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
   printf("Set robot pose: %.2f,%.2f, %.1f\u00b0\n",
-         curLoc.x,
-         curLoc.y,
-         DEG(curAngle));
+         curLoc.x(),
+         curLoc.y(),
+         RadToDeg(curAngle));
 }
 
 
@@ -186,7 +207,7 @@ void Simulator::initSimulatorVizMarkers() {
   p.header.frame_id = "/map";
 
   p.pose.orientation.w = 1.0;
-  scale.x = 0.1;
+  scale.x = 0.02;
   scale.y = 0.0;
   scale.z = 0.0;
   color[0] = 66.0 / 255.0;
@@ -210,23 +231,9 @@ color);
 }
 
 void Simulator::drawMap() {
-  if (currentMap == nullptr) return;
-  const vector<line2f>& map_segments = currentMap->Lines();
-  lineListMarker.points.clear();
-  for (size_t i = 0; i < map_segments.size(); i++) {
-    // The line list needs two points for each line
-    geometry_msgs::Point p0, p1;
-
-    p0.x = map_segments[i].P0().x;
-    p0.y = map_segments[i].P0().y;
-    p0.z = 0.01;
-
-    p1.x = map_segments[i].P1().x;
-    p1.y = map_segments[i].P1().y;
-    p1.z = 0.01;
-
-    lineListMarker.points.push_back(p0);
-    lineListMarker.points.push_back(p1);
+  ros_helpers::ClearMarker(&lineListMarker);
+  for (const line2f& l : map_.lines) {
+    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &lineListMarker);
   }
 }
 
@@ -234,8 +241,8 @@ void Simulator::publishOdometry() {
   tf::Quaternion robotQ = tf::createQuaternionFromYaw(curAngle);
 
   odometryTwistMsg.header.stamp = ros::Time::now();
-  odometryTwistMsg.pose.pose.position.x = curLoc.x;
-  odometryTwistMsg.pose.pose.position.y = curLoc.y;
+  odometryTwistMsg.pose.pose.position.x = curLoc.x();
+  odometryTwistMsg.pose.pose.position.y = curLoc.y();
   odometryTwistMsg.pose.pose.position.z = 0.0;
   odometryTwistMsg.pose.pose.orientation.x = robotQ.x();
   odometryTwistMsg.pose.pose.orientation.y = robotQ.y();
@@ -244,16 +251,16 @@ void Simulator::publishOdometry() {
   odometryTwistMsg.twist.twist.angular.x = 0.0;
   odometryTwistMsg.twist.twist.angular.y = 0.0;
   odometryTwistMsg.twist.twist.angular.z = angVel;
-  odometryTwistMsg.twist.twist.linear.x = vel * cos(curAngle);
-  odometryTwistMsg.twist.twist.linear.y = vel * sin(curAngle);
+  odometryTwistMsg.twist.twist.linear.x = vel;
+  odometryTwistMsg.twist.twist.linear.y = 0;
   odometryTwistMsg.twist.twist.linear.z = 0.0;
 
   odometryTwistPublisher.publish(odometryTwistMsg);
 
   robotPosMarker.pose.position.x =
-      curLoc.x - cos(curAngle) * cRearAxleOffset;
+      curLoc.x() - cos(curAngle) * cRearAxleOffset;
   robotPosMarker.pose.position.y =
-      curLoc.y - sin(curAngle) * cRearAxleOffset;
+      curLoc.y() - sin(curAngle) * cRearAxleOffset;
   robotPosMarker.pose.position.z = 0.5 * cCarHeight;
   robotPosMarker.pose.orientation.w = 1.0;
   robotPosMarker.pose.orientation.x = robotQ.x();
@@ -263,23 +270,30 @@ void Simulator::publishOdometry() {
 }
 
 void Simulator::publishLaser() {
-  if (currentMap == nullptr || currentMap->mapName.compare(cMapName) != 0) {
-    if (currentMap) delete currentMap;
-    currentMap = new VectorMap(cMapName, "./maps", false);
+  if (map_.file_name != cMapName) {
+    map_.Load(cMapName);
     drawMap();
   }
   scanDataMsg.header.stamp = ros::Time::now();
-  vector2f laserLoc(cLaserLocX, cLaserLocY);
-  // ROS_INFO("curLoc: (%4.3f, %4.3f)", curLoc.x, curLoc.y);
-  laserLoc = curLoc + laserLoc.rotate(curAngle);
-  vector<float> ranges =
-      currentMap->getRayCast(laserLoc,curAngle,RAD(360.0)/1024.0,769,0.02,4.0);
-  scanDataMsg.ranges.resize(ranges.size());
-  for(int i=0; i<int(ranges.size()); i++) {
-    scanDataMsg.ranges[i] = ranges[i];
-    if(ranges[i]>3.5) {
-      scanDataMsg.ranges[i] = 0.0;
+  const Vector2f laserRobotLoc(cLaserLocX, cLaserLocY);
+  const Vector2f laserLoc = curLoc + Rotation2Df(curAngle) * laserRobotLoc;
+
+  const int num_rays = static_cast<int>(
+      1.0 + (scanDataMsg.angle_max - scanDataMsg.angle_min) /
+      scanDataMsg.angle_increment);
+  map_.GetPredictedScan(laserLoc,
+                        scanDataMsg.range_min,
+                        scanDataMsg.range_max,
+                        scanDataMsg.angle_min + curAngle,
+                        scanDataMsg.angle_max + curAngle,
+                        num_rays,
+                        &scanDataMsg.ranges);
+  for (float& r : scanDataMsg.ranges) {
+    if (r > scanDataMsg.range_max - 0.1) {
+      r = scanDataMsg.range_max;
+      continue;
     }
+    r = max<float>(0.0, r + cLaserStdDev * laser_noise_(rng_));
   }
   laserPublisher.publish(scanDataMsg);
 }
@@ -293,7 +307,7 @@ void Simulator::publishTransform() {
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
 "/odom"));
 
-  transform.setOrigin(tf::Vector3(curLoc.x,curLoc.y,0.0));
+  transform.setOrigin(tf::Vector3(curLoc.x(), curLoc.y(), 0.0));
   q.setRPY(0.0,0.0,curAngle);
   transform.setRotation(q);
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom",
@@ -332,12 +346,12 @@ void Simulator::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
     return;
   }
   last_cmd_ = msg;
-  tLastCmd = GetTimeSec();
+  tLastCmd = GetMonotonicTime();
 }
 
 void Simulator::update() {
   static const double kMaxCommandAge = 0.1;
-  if (GetTimeSec() > tLastCmd + kMaxCommandAge) {
+  if (GetMonotonicTime() > tLastCmd + kMaxCommandAge) {
     last_cmd_.velocity = 0;
   }
   // Epsilon curvature corresponding to a very large radius of turning.
@@ -360,21 +374,24 @@ void Simulator::update() {
   if (linear_motion) {
     dx = dist;
     dy = 0;
-    dtheta = 0;
+    dtheta = cDT * cAngularErrorBias;
   } else {
     const float r = 1.0 / desired_curvature;
-    dtheta = dist * desired_curvature;
+    dtheta = dist * desired_curvature +
+        angular_error_(rng_) * cDT * cAngularErrorBias +
+        angular_error_(rng_) * cAngularErrorRate * fabs(dist *
+            desired_curvature);
     dx = r * sin(dtheta);
     dy = r * (1.0 - cos(dtheta));
   }
 
-  curLoc.x += dx * cos(curAngle) - dy * sin(curAngle);
-  curLoc.y += dx * sin(curAngle) + dy * cos(curAngle);
-  curAngle = angle_mod(curAngle + dtheta);
+  curLoc.x() += dx * cos(curAngle) - dy * sin(curAngle);
+  curLoc.y() += dx * sin(curAngle) + dy * cos(curAngle);
+  curAngle = AngleMod(curAngle + dtheta);
 
   truePoseMsg.header.stamp = ros::Time::now();
-  truePoseMsg.pose.position.x = curLoc.x;
-  truePoseMsg.pose.position.y = curLoc.y;
+  truePoseMsg.pose.position.x = curLoc.x();
+  truePoseMsg.pose.position.y = curLoc.y();
   truePoseMsg.pose.position.z = 0;
   truePoseMsg.pose.orientation.w = cos(0.5 * curAngle);
   truePoseMsg.pose.orientation.z = sin(0.5 * curAngle);
@@ -384,7 +401,7 @@ void Simulator::update() {
 
 }
 
-void Simulator::run() {
+void Simulator::Run() {
   // Simulate time-step.
   update();
   //publish odometry and status
@@ -398,8 +415,8 @@ void Simulator::run() {
 
   if (FLAGS_localize) {
     geometry_msgs::Pose2D localization_msg;
-    localization_msg.x = curLoc.x;
-    localization_msg.y = curLoc.y;
+    localization_msg.x = curLoc.x();
+    localization_msg.y = curLoc.y();
     localization_msg.theta = curAngle;
     localizationPublisher.publish(localization_msg);
   }

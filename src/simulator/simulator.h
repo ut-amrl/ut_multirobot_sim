@@ -21,22 +21,26 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <random>
 #include <vector>
-#include "shared/util/proghelp.h"
-#include "shared/util/timer.h"
-#include "shared/math/geometry.h"
-#include "map/vector_map.h"
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <tf/transform_datatypes.h>
-#include <visualization_msgs/Marker.h>
-#include <nav_msgs/Odometry.h>
-#include "f1tenth_course/AckermannCurvatureDriveMsg.h"
-#include "sensor_msgs/LaserScan.h"
+
+#include "eigen3/Eigen/Dense"
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
-#include <tf/transform_broadcaster.h>
+#include "nav_msgs/Odometry.h"
+#include "ros/ros.h"
+#include "ros/package.h"
+#include "sensor_msgs/LaserScan.h"
+#include "tf/transform_broadcaster.h"
+#include "tf/transform_datatypes.h"
+#include "visualization_msgs/Marker.h"
+
+#include "f1tenth_simulator/AckermannCurvatureDriveMsg.h"
+
+#include "shared/util/timer.h"
+#include "shared/math/geometry.h"
+#include "simulator/vector_map.h"
 
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
@@ -65,7 +69,7 @@ class AccelLimits{
 };
 
 class Simulator{
-  vector2d loc;
+  Eigen::Vector2f loc;
   double vel;
   double angVel;
 
@@ -80,24 +84,18 @@ class Simulator{
   ros::Publisher localizationPublisher;
   tf::TransformBroadcaster *br;
 
-  // wheel orientations
-  vector2d w0,w1,w2,w3;
-  // Radius of base
-  static const double baseRadius;
 
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
 
-  VectorMap* currentMap;
-  vector<VectorMap> maps;
-  int curMapIdx;
+  vector_map::VectorMap map_;
 
   visualization_msgs::Marker lineListMarker;
   visualization_msgs::Marker robotPosMarker;
 
   static const float startX;
   static const float startY;
-  vector2f curLoc;
+  Eigen::Vector2f curLoc;
 
   static const float startAngle;
   float curAngle;
@@ -108,17 +106,26 @@ class Simulator{
   static const float kMinR;
   geometry_msgs::PoseStamped truePoseMsg;
 
-  f1tenth_course::AckermannCurvatureDriveMsg last_cmd_;
+  f1tenth_simulator::AckermannCurvatureDriveMsg last_cmd_;
+
+  std::default_random_engine rng_;
+  std::normal_distribution<float> laser_noise_;
+  std::normal_distribution<float> angular_error_;
 
 private:
-  void initVizMarker(visualization_msgs::Marker& vizMarker, string ns, int id,
-string type, geometry_msgs::PoseStamped p, geometry_msgs::Point32 scale, double
-duration, vector<float> color);
+  void initVizMarker(visualization_msgs::Marker& vizMarker,
+                     string ns,
+                     int id,
+                     string type,
+                     geometry_msgs::PoseStamped p,
+                     geometry_msgs::Point32 scale,
+                     double duration,
+                     std::vector<float> color);
   void initSimulatorVizMarkers();
   void drawMap();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped& msg);
-  void DriveCallback(const f1tenth_course::AckermannCurvatureDriveMsg& msg);
+  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg& msg);
   void publishOdometry();
   void publishLaser();
   void publishVisualizationMarkers();
@@ -129,6 +136,6 @@ public:
   Simulator();
   ~Simulator();
   void init(ros::NodeHandle &n);
-  void run();
+  void Run();
 };
 #endif //SIMULATOR_H

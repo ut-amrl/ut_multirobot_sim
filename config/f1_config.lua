@@ -10,10 +10,10 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-map_name =  "GDC1"
+map_name =  "maps/GDC1.txt"
 -- Simulator starting location.
-start_x = 35.7
-start_y = 71.0
+start_x = -21
+start_y = 8.6
 start_angle = 0.0
 
 -- Time-step for simulation.
@@ -33,4 +33,9 @@ min_turn_radius = 0.98
 max_speed = 1.2
 max_accel = 3.0
 
+-- Laser noise simulation.
+laser_noise_stddev = 0.01
 
+-- Turning error simulation.
+angular_error_bias = DegToRad(0);
+angular_error_rate = 0.1;
