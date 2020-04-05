@@ -23,25 +23,58 @@
 #include "shape_template.h"
 
 ShapeTemplate::ShapeTemplate(){
-  pose_ = Eigen::Vector3f(0., 0., 0.);
+  
 }
 
 ShapeTemplate::~ShapeTemplate(){
   
 }
 
-void ShapeTemplate::step(double dt){
+double ShapeTemplate::wrapAngle(double angle){
+  angle = fmod(angle + M_PI, 2 * M_PI);
+  if (angle < 0){
+    angle += 2 * M_PI;
+   }
+   angle -= M_PI;
+  return angle;
+}
 
+void ShapeTemplate::step(double dt){
+  pose_[2] += 0.1 * dt;
+  pose_[0] += 0.3 * dt;
+  pose_[2] = this->wrapAngle(pose_[2]);
+	std::cout << "Angle: " << pose_[2] << std::endl;
+  // update the shape based on the new pose
+  this->transform();
 }
 
 void ShapeTemplate::transform(){
+  Eigen::Rotation2Df R(pose_[2]);
+  Eigen::Vector2f T(pose_[0], pose_[1]);
 
+  std::cout << "pose: " << pose_ << std::endl;
+  std::cout << "Translation: " << T << std::endl;
+  
+  for (size_t i=0; i < template_lines_.size(); i++){
+    pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+    pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+  }
+}
+
+void ShapeTemplate::setGroundTruthPose(Eigen::Vector3f pose){
+  pose_ = pose;
+  // update the shape according to the new pose
+  this->transform();
 }
 
 Eigen::Vector3f ShapeTemplate::getGroundTruthPose(){
   return pose_;
 }
 
-std::vector<geometry::line2f> ShapeTemplate::getGroundTruthTemplate(){
+std::vector<geometry::line2f> ShapeTemplate::getTemplateLines(){
   return template_lines_;
+}
+
+std::vector<geometry::line2f> ShapeTemplate::getGroundTruthLines(){
+  return pose_lines_;
 }

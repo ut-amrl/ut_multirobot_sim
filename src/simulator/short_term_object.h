@@ -21,7 +21,6 @@
 //========================================================================
 
 #include "shape_template.h"
-#include "config_reader/config_reader.h"
 #include <string>
 #ifndef SHORT_TERM_OBJECT_H
 #define SHORT_TERM_OBJECT_H
@@ -34,8 +33,6 @@ public:
   // Intialize a default object reading from a file
   ShortTermObject(std::string config_file);
   ~ShortTermObject();
-
-  
 };
 
 

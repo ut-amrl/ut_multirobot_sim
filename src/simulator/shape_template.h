@@ -24,26 +24,32 @@
 #include <vector>
 #include "eigen3/Eigen/Dense"
 #include "math/line2d.h"
-
+#include <cmath>
 #ifndef SHAPE_TEMPLATE_H
 #define SHAPE_TEMPLATE_H
 
 class ShapeTemplate{
-private:
+protected:
     Eigen::Vector3f pose_; // (x, y, theta)
-    std::vector<geometry::line2f> template_lines_;
-
+    std::vector<geometry::line2f> template_lines_; // template lines always assuming at pose (0., 0., 0.)
+    std::vector<geometry::line2f> pose_lines_; // actual line position given current pose pose_
 public:
     ShapeTemplate();
     ~ShapeTemplate();
+    // wrap angle
+    double wrapAngle(double angle);
     // simulate a step for the object
     virtual void step(double dt);
     // transform the template to be placed at (x,y) with pose theta
-    void transform();
+    virtual void transform();
+    // set current ground truth pose
+    virtual void setGroundTruthPose(Eigen::Vector3f pose);
     // get current ground truth pose of the obstacle
     virtual Eigen::Vector3f getGroundTruthPose();
     // get current ground truth shape (lines)
-    virtual std::vector<geometry::line2f> getGroundTruthTemplate();
+    virtual std::vector<geometry::line2f> getGroundTruthLines();
+    // get template shape
+    virtual std::vector<geometry::line2f> getTemplateLines();
     
 };
 

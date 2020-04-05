@@ -24,6 +24,7 @@
 
 #include "eigen3/Eigen/Dense"
 #include "math/line2d.h"
+#include "shape_template.h"
 
 #ifndef VECTOR_MAP_H
 #define VECTOR_MAP_H
@@ -75,6 +76,9 @@ struct VectorMap {
 
   bool Intersects(const Eigen::Vector2f& v0, const Eigen::Vector2f& v1) const ;
   std::vector<geometry::line2f> lines;
+
+  // for all kinds of obstacles
+  std::vector<geometry::line2f> object_lines;
   std::string file_name;
 };
 

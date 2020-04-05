@@ -50,7 +50,9 @@ ROSBUILD_ADD_EXECUTABLE(${target}
   src/simulator/simulator_main.cpp
   src/simulator/simulator.cpp
   src/simulator/vector_map.cpp
-)
+  src/simulator/shape_template.cpp
+  src/simulator/short_term_object.cpp
+  )
 TARGET_LINK_LIBRARIES(${target}
   ${libs}
 )
