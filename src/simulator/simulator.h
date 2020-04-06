@@ -44,6 +44,7 @@
 
 #include "shape_template.h"
 #include "short_term_object.h"
+#include "human_object.h"
 
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
@@ -139,6 +140,7 @@ private:
   void publishVisualizationMarkers();
   void publishTransform();
   void update();
+  void loadObject();
 
 public:
   Simulator();

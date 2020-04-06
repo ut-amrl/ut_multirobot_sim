@@ -127,9 +127,20 @@ void Simulator::init(ros::NodeHandle& n) {
       "/localization", 1);
   br = new tf::TransformBroadcaster();
 
+  this->loadObject();
+}
+
+void Simulator::loadObject(){
   ShortTermObject* shortTermObject = new ShortTermObject;
   objects.push_back(shortTermObject);
-  objects[0]->setGroundTruthPose(Eigen::Vector3f(-18., 8.6, 0.0));
+  objects[0]->setGroundTruthPose(Eigen::Vector3f(-15., 8.6, 0.));
+
+  HumanObject* humanObject = new HumanObject;
+  objects.push_back(humanObject);
+  objects[1]->setGroundTruthPose(Eigen::Vector3f(-19., 8.6, 0.0));
+  dynamic_cast<HumanObject*>(objects[1])->setGoalPose(Eigen::Vector3f(-15., 8.4, 0.0));
+  dynamic_cast<HumanObject*>(objects[1])->setSpeed(0.5, 0.1);
+  // config_reader::ConfigReader reader({"config/objects.lua"});
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
@@ -238,9 +249,9 @@ color);
   scale.x = 0.02;
   scale.y = 0.0;
   scale.z = 0.0;
-  color[0] = 66.0 / 255.0;
-  color[1] = 66.0 / 255.0;
-  color[2] = 0.0 / 255.0;
+  color[0] = 244.0 / 255.0;
+  color[1] = 0.0 / 255.0;
+  color[2] = 156.0 / 255.0;
   color[3] = 1.0;
   initVizMarker(objectLinesMarker, "object_lines", 0, "linelist", p, scale, 0.0, color);
 }

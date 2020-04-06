@@ -31,6 +31,7 @@
 class ShapeTemplate{
 protected:
     Eigen::Vector3f pose_; // (x, y, theta)
+    Eigen::Vector3f vel_; // (vx, vy, vtheta)
     std::vector<geometry::line2f> template_lines_; // template lines always assuming at pose (0., 0., 0.)
     std::vector<geometry::line2f> pose_lines_; // actual line position given current pose pose_
 public:
@@ -44,6 +45,8 @@ public:
     virtual void transform();
     // set current ground truth pose
     virtual void setGroundTruthPose(Eigen::Vector3f pose);
+    // set current ground truth vel
+    virtual void setGroundTruthVel(Eigen::Vector3f vel);
     // get current ground truth pose of the obstacle
     virtual Eigen::Vector3f getGroundTruthPose();
     // get current ground truth shape (lines)
