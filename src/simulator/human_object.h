@@ -13,8 +13,8 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-  \file    simulator.h
-  \brief   C++ Interface: Simulator
+  \file    human_object.h
+  \brief   C++ Interface: Human Object
   \author  Yifeng Zhu, (C) 2020
   \email   yifeng.zhu@utexas.edu
 */
@@ -34,6 +34,7 @@ class HumanObject: public ShapeTemplate{
   
 protected:
   Eigen::Vector3f start_pose_;
+  // TODO: Change to a sequence of intermediate goals
   Eigen::Vector3f goal_pose_;
   double max_speed_;
   double avg_speed_;
@@ -41,6 +42,12 @@ protected:
   double avg_omega_;
   bool mode_;
   bool present_;
+
+  // (future) predefined trajectory if needed
+  // bool use_predefined_traj=false;
+  // double predefined_traj_freq;
+  // std::vector<Eigen::Vector3f> predefined_traj;
+  
 public:
   // Initialize a default object, probably a simple cylinder?
   HumanObject();

@@ -13,8 +13,8 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-  \file    simulator.h
-  \brief   C++ Interface: Simulator
+  \file    shape_template.h
+  \brief   C++ Interface: Abstract class for objects
   \author  Yifeng Zhu, (C) 2020
   \email   yifeng.zhu@utexas.edu
 */
