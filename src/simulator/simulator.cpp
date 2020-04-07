@@ -131,9 +131,8 @@ void Simulator::init(ros::NodeHandle& n) {
 }
 
 void Simulator::loadObject(){
-  ShortTermObject* shortTermObject = new ShortTermObject;
+  ShortTermObject* shortTermObject = new ShortTermObject("short_term_config.lua");
   objects.push_back(shortTermObject);
-  objects[0]->setGroundTruthPose(Eigen::Vector3f(-15., 8.6, 0.));
 
   HumanObject* humanObject = new HumanObject;
   objects.push_back(humanObject);

@@ -22,11 +22,15 @@
 
 #include "shape_template.h"
 #include <string>
+#include "stdlib.h"
+#include "time.h"
+
 #ifndef SHORT_TERM_OBJECT_H
 #define SHORT_TERM_OBJECT_H
 
 class ShortTermObject: public ShapeTemplate{
-
+protected:
+  std::vector<Eigen::Vector3f> potential_initial_locs;
 public:
   // Initialize a default object, probably a simple cylinder?
   ShortTermObject();

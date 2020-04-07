@@ -48,8 +48,7 @@ HumanObject::HumanObject(){
 }
 
 HumanObject::HumanObject(std::string config_file){
-  // TODO: Load the shape from a config file
-
+  // TODO: Load the shape, start point, goal point and walking mode from a config file
   this->initialize();
 }
 
