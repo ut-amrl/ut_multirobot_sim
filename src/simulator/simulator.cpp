@@ -120,7 +120,7 @@ void Simulator::init(ros::NodeHandle& n) {
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
   objectLinesPublisher = n.advertise<visualization_msgs::Marker>(
-								 "/simulator_visualization", 6);
+      "/simulator_visualization", 6);
   truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
       "/simulator_true_pose", 1);
   localizationPublisher = n.advertise<geometry_msgs::Pose2D>(
@@ -130,14 +130,14 @@ void Simulator::init(ros::NodeHandle& n) {
   this->loadObject();
 }
 
-void Simulator::loadObject(){
+void Simulator::loadObject() {
   ShortTermObject* shortTermObject = new ShortTermObject("short_term_config.lua");
   objects.push_back(shortTermObject);
 
   HumanObject* humanObject = new HumanObject;
   objects.push_back(humanObject);
-  objects[1]->setGroundTruthPose(Eigen::Vector3f(-19., 8.6, 0.0));
-  dynamic_cast<HumanObject*>(objects[1])->setGoalPose(Eigen::Vector3f(-15., 8.4, 0.0));
+  objects[1]->setGroundTruthPose(pose_2d::Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
+  dynamic_cast<HumanObject*>(objects[1])->setGoalPose(pose_2d::Pose2Df(0., Eigen::Vector2f(-10., 8.4)));
   dynamic_cast<HumanObject*>(objects[1])->setSpeed(0.5, 0.1);
   // config_reader::ConfigReader reader({"config/objects.lua"});
 }
@@ -435,8 +435,8 @@ void Simulator::update() {
 
   map_.object_lines.clear();
   for (size_t i=0; i < objects.size(); i++){
-    objects[i]->step(0.05);
-    auto pose_lines = objects[i]->getGroundTruthLines();
+    objects[i]->step(cDT);
+    auto pose_lines = objects[i]->getLines();
     for (line2f line: pose_lines){
       map_.object_lines.push_back(line);
     }

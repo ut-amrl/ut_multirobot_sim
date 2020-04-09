@@ -13,71 +13,53 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-  \file    shape_template.cpp
+  \file    entity_base.cpp
   \brief   C++ Interface: Abstract class for objects
   \author  Yifeng Zhu, (C) 2020
   \email   yifeng.zhu@utexas.edu
 */
 //========================================================================
 
-#include "shape_template.h"
+#include "simulator/entity_base.h"
 
-ShapeTemplate::ShapeTemplate(){
-  
+EntityBase::EntityBase() {
 }
 
-ShapeTemplate::~ShapeTemplate(){
-  
+EntityBase::~EntityBase() {
 }
 
-double ShapeTemplate::wrapAngle(double angle){
-  angle = fmod(angle + M_PI, 2 * M_PI);
-  if (angle < 0){
-    angle += 2 * M_PI;
-   }
-   angle -= M_PI;
-  return angle;
-}
-
-void ShapeTemplate::step(double dt){
+void EntityBase::step(const double& dt) {
   // pose_[2] += 0.1 * dt;
   // pose_[0] += 0.03 * dt;
-  // pose_[2] = this->wrapAngle(pose_[2]);
 
   // update the shape based on the new pose
   this->transform();
 }
 
-void ShapeTemplate::transform(){
-  pose_[2] = this->wrapAngle(pose_[2]);
-  Eigen::Rotation2Df R(pose_[2]);
-  Eigen::Vector2f T(pose_[0], pose_[1]);
+void EntityBase::transform() {
+  Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+  Eigen::Vector2f T = pose_.translation;
 
-  for (size_t i=0; i < template_lines_.size(); i++){
+  for (size_t i=0; i < template_lines_.size(); i++) {
     pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
     pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
   }
 }
 
-void ShapeTemplate::setGroundTruthPose(Eigen::Vector3f pose){
+void EntityBase::setGroundTruthPose(const pose_2d::Pose2Df& pose) {
   pose_ = pose;
   // update the shape according to the new pose
   this->transform();
 }
 
-void ShapeTemplate::setGroundTruthVel(Eigen::Vector3f vel){
-  vel_ = vel;
-  // update the shape according to the new vel
-}
-
-Eigen::Vector3f ShapeTemplate::getGroundTruthPose(){
+pose_2d::Pose2Df EntityBase::getGroundTruthPose() {
   return pose_;
 }
 
-std::vector<geometry::line2f> ShapeTemplate::getTemplateLines(){
+std::vector<geometry::line2f> EntityBase::getTemplateLines() {
   return template_lines_;
 }
 
-std::vector<geometry::line2f> ShapeTemplate::getGroundTruthLines(){
+std::vector<geometry::line2f> EntityBase::getLines() {
   return pose_lines_;
 }

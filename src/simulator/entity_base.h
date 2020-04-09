@@ -1,6 +1,6 @@
 //========================================================================
-//  This software is free: you can redistribute it and/or modify
-//  it under the terms of the GNU Lesser General Public License Version 3,
+//      This software is free: you can redistribute it and/or modif    y
+//  it under the terms of the GNU Lesser General Public License Vers    ion 3,
 //  as published by the Free Software Foundation.
 //
 //  This software is distributed in the hope that it will be useful,
@@ -13,7 +13,7 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-  \file    shape_template.h
+  \file    entity_base.h
   \brief   C++ Interface: Abstract class for objects
   \author  Yifeng Zhu, (C) 2020
   \email   yifeng.zhu@utexas.edu
@@ -22,38 +22,36 @@
 
 #include <iostream>
 #include <vector>
-#include "eigen3/Eigen/Dense"
-#include "math/line2d.h"
 #include <cmath>
-#ifndef SHAPE_TEMPLATE_H
-#define SHAPE_TEMPLATE_H
+#include "eigen3/Eigen/Dense"
+#include "shared/math/line2d.h"
+#include "shared/math/poses_2d.h"
+#ifndef SRC_SIMULATOR_ENTITY_BASE_H_
+#define SRC_SIMULATOR_ENTITY_BASE_H_
 
-class ShapeTemplate{
-protected:
-    Eigen::Vector3f pose_; // (x, y, theta)
-    Eigen::Vector3f vel_; // (vx, vy, vtheta)
-    std::vector<geometry::line2f> template_lines_; // template lines always assuming at pose (0., 0., 0.)
-    std::vector<geometry::line2f> pose_lines_; // actual line position given current pose pose_
-public:
-    ShapeTemplate();
-    ~ShapeTemplate();
-    // wrap angle
-    double wrapAngle(double angle);
+class EntityBase{
+ protected:
+    pose_2d::Pose2Df pose_;
+    Eigen::Vector3f vel_;  // (vx, vy, vtheta)
+    // template lines always assuming at pose (0., 0., 0.)
+    std::vector<geometry::line2f> template_lines_;
+    // actual line position given current pose pose_
+    std::vector<geometry::line2f> pose_lines_;
+ public:
+    EntityBase();
+    ~EntityBase();
     // simulate a step for the object
-    virtual void step(double dt);
-    // transform the template to be placed at (x,y) with pose theta
+    virtual void step(const double& dt);
+    // transform lines from template lines based on pose_
     virtual void transform();
     // set current ground truth pose
-    virtual void setGroundTruthPose(Eigen::Vector3f pose);
-    // set current ground truth vel
-    virtual void setGroundTruthVel(Eigen::Vector3f vel);
+    virtual void setGroundTruthPose(const pose_2d::Pose2Df& pose);
     // get current ground truth pose of the obstacle
-    virtual Eigen::Vector3f getGroundTruthPose();
-    // get current ground truth shape (lines)
-    virtual std::vector<geometry::line2f> getGroundTruthLines();
+    virtual pose_2d::Pose2Df getGroundTruthPose();
+    // get current shape (lines) based on the pose
+    virtual std::vector<geometry::line2f> getLines();
     // get template shape
     virtual std::vector<geometry::line2f> getTemplateLines();
-    
 };
 
-#endif // SHAPE_TEMPLATE_H
+#endif  // SRC_SIMULATOR_ENTITY_BASE_H_

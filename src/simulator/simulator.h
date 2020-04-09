@@ -42,7 +42,7 @@
 #include "shared/math/geometry.h"
 #include "simulator/vector_map.h"
 
-#include "shape_template.h"
+#include "entity_base.h"
 #include "short_term_object.h"
 #include "human_object.h"
 
@@ -77,7 +77,7 @@ class Simulator{
   double vel;
   double angVel;
 
-  std::vector<ShapeTemplate*> objects;
+  std::vector<EntityBase*> objects;
 
   ros::Subscriber driveSubscriber;
   ros::Subscriber initSubscriber;

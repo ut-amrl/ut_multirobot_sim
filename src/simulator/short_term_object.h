@@ -20,24 +20,25 @@
 */
 //========================================================================
 
-#include "shape_template.h"
 #include <string>
+#include <vector>
 #include "stdlib.h"
 #include "time.h"
+#include "simulator/entity_base.h"
 
-#ifndef SHORT_TERM_OBJECT_H
-#define SHORT_TERM_OBJECT_H
+#ifndef SRC_SIMULATOR_SHORT_TERM_OBJECT_H_
+#define SRC_SIMULATOR_SHORT_TERM_OBJECT_H_
 
-class ShortTermObject: public ShapeTemplate{
-protected:
-  std::vector<Eigen::Vector3f> potential_initial_locs;
-public:
+class ShortTermObject: public EntityBase{
+ protected:
+  std::vector<pose_2d::Pose2Df> potential_initial_locs;
+ public:
   // Initialize a default object, probably a simple cylinder?
   ShortTermObject();
   // Intialize a default object reading from a file
-  ShortTermObject(std::string config_file);
+  explicit ShortTermObject(const std::string& config_file);
   ~ShortTermObject();
 };
 
 
-#endif // SHORT_TERM_OBJECT_H
+#endif  // SRC_SIMULATOR_SHORT_TERM_OBJECT_H_
