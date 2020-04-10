@@ -50,6 +50,7 @@
 #define SIMULATOR_H
 
 using namespace std;
+using pose_2d::Pose2Df;
 
 class AccelLimits{
   public:

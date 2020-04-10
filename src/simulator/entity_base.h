@@ -29,9 +29,11 @@
 #ifndef SRC_SIMULATOR_ENTITY_BASE_H_
 #define SRC_SIMULATOR_ENTITY_BASE_H_
 
+using pose_2d::Pose2Df;
+
 class EntityBase{
  protected:
-    pose_2d::Pose2Df pose_;
+    Pose2Df pose_;
     Eigen::Vector3f vel_;  // (vx, vy, vtheta)
     // template lines always assuming at pose (0., 0., 0.)
     std::vector<geometry::line2f> template_lines_;
@@ -41,17 +43,17 @@ class EntityBase{
     EntityBase();
     ~EntityBase();
     // simulate a step for the object
-    virtual void step(const double& dt);
+    virtual void Step(const double& dt);
     // transform lines from template lines based on pose_
-    virtual void transform();
+    virtual void Transform();
     // set current ground truth pose
-    virtual void setGroundTruthPose(const pose_2d::Pose2Df& pose);
+    virtual void SetGroundTruthPose(const Pose2Df& pose);
     // get current ground truth pose of the obstacle
-    virtual pose_2d::Pose2Df getGroundTruthPose();
+    virtual Pose2Df GetGroundTruthPose();
     // get current shape (lines) based on the pose
-    virtual std::vector<geometry::line2f> getLines();
+    virtual std::vector<geometry::line2f> GetLines();
     // get template shape
-    virtual std::vector<geometry::line2f> getTemplateLines();
+    virtual std::vector<geometry::line2f> GetTemplateLines();
 };
 
 #endif  // SRC_SIMULATOR_ENTITY_BASE_H_

@@ -24,16 +24,16 @@
 
 HumanObject::HumanObject() {
   // angle, (x, y)
-  pose_ = pose_2d::Pose2Df(0., Eigen::Vector2f(0., 0.));
+  pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
   // just a cylinder for now
-  float r = 0.3;
-  int num_segments = 20;
+  const float r = 0.3;
+  const int num_segments = 20;
 
-  float angle_increment = 2 * M_PI / num_segments;
+  const float angle_increment = 2 * M_PI / num_segments;
 
   Eigen::Vector2f v0(r, 0.);
   Eigen::Vector2f v1;
-  float eps = 0.001;
+  const float eps = 0.001;
   for (int i = 1; i < num_segments; i++) {
     v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
 
@@ -44,19 +44,19 @@ HumanObject::HumanObject() {
   }
   template_lines_.push_back(geometry::line2f(v1, Eigen::Vector2f(r, 0.0)));
   pose_lines_ = template_lines_;
-  this->initialize();
+  this->Initialize();
 }
 
 HumanObject::HumanObject(const std::string& config_file) {
   // TODO(yifeng): Load the shape, start point, goal point and walking mode from a config file
-  this->initialize();
+  this->Initialize();
 }
 
 
 HumanObject::~HumanObject() {
 }
 
-void HumanObject::initialize() {
+void HumanObject::Initialize() {
   start_pose_ = pose_;
   mode_ = HumanMode::Singleshot;
   max_speed_ = 1.5;
@@ -64,28 +64,28 @@ void HumanObject::initialize() {
   reach_goal_threashold_ = 0.3;
 }
 
-void HumanObject::setMode(const HumanMode& mode) {
+void HumanObject::SetMode(const HumanMode& mode) {
   mode_ = mode;
 }
 
-void HumanObject::setGoalPose(const pose_2d::Pose2Df& goal_pose) {
+void HumanObject::SetGoalPose(const Pose2Df& goal_pose) {
   goal_pose_ = goal_pose;
 }
 
-void HumanObject::setGroundTruthPose(pose_2d::Pose2Df pose) {
+void HumanObject::SetGroundTruthPose(Pose2Df pose) {
   pose_ = pose;
   // update the shape according to the new pose
-  this->initialize();
-  this->transform();
+  this->Initialize();
+  this->Transform();
 }
 
 
-void HumanObject::setGroundTruthVel(Eigen::Vector3f vel) {
+void HumanObject::SetGroundTruthVel(Eigen::Vector3f vel) {
   vel_ = vel;
   // update the shape according to the new vel
 }
 
-void HumanObject::step(const double& dt) {
+void HumanObject::Step(const double& dt) {
   // very simple dynamic update
   vel_.head<2>() = (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
   // TODO(yifeng): Add gaussian noise to the velocity
@@ -98,33 +98,33 @@ void HumanObject::step(const double& dt) {
 
   pose_.Set(pose_.angle + vel_(2) * dt, pose_.translation + vel_.head<2>() * dt);
 
-  this->transform();
-  this->checkReachGoal();
+  this->Transform();
+  this->CheckReachGoal();
 }
 
-void HumanObject::setSpeed(const double& max_speed, const double& avg_speed, const double& max_omega, const double& avg_omega) {
+void HumanObject::SetSpeed(const double& max_speed, const double& avg_speed, const double& max_omega, const double& avg_omega) {
   max_speed_ = max_speed;
   avg_speed_ = avg_speed;
   max_omega_ = max_omega;
   avg_omega_ = avg_omega;
 }
 
-double HumanObject::getMaxSpeed() {
+double HumanObject::GetMaxSpeed() {
   return max_speed_;
 }
 
-double HumanObject::getAvgSpeed() {
+double HumanObject::GetAvgSpeed() {
   return avg_speed_;
 }
 
-bool HumanObject::checkReachGoal() {
+bool HumanObject::CheckReachGoal() {
   if ((pose_.translation - goal_pose_.translation).norm() < this->reach_goal_threashold_) {
     // reached goal
     if (mode_ == HumanMode::Singleshot) {
       vel_.setZero();
       return true;
     } else if (mode_ == HumanMode::Repeat) {
-      pose_2d::Pose2Df temp = goal_pose_;
+      Pose2Df temp = goal_pose_;
       goal_pose_ = start_pose_;
       start_pose_ = temp;
     }

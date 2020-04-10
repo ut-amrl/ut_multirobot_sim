@@ -28,15 +28,15 @@ EntityBase::EntityBase() {
 EntityBase::~EntityBase() {
 }
 
-void EntityBase::step(const double& dt) {
+void EntityBase::Step(const double& dt) {
   // pose_[2] += 0.1 * dt;
   // pose_[0] += 0.03 * dt;
 
   // update the shape based on the new pose
-  this->transform();
+  this->Transform();
 }
 
-void EntityBase::transform() {
+void EntityBase::Transform() {
   Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
   Eigen::Vector2f T = pose_.translation;
 
@@ -46,20 +46,20 @@ void EntityBase::transform() {
   }
 }
 
-void EntityBase::setGroundTruthPose(const pose_2d::Pose2Df& pose) {
+void EntityBase::SetGroundTruthPose(const Pose2Df& pose) {
   pose_ = pose;
   // update the shape according to the new pose
-  this->transform();
+  this->Transform();
 }
 
-pose_2d::Pose2Df EntityBase::getGroundTruthPose() {
+Pose2Df EntityBase::GetGroundTruthPose() {
   return pose_;
 }
 
-std::vector<geometry::line2f> EntityBase::getTemplateLines() {
+std::vector<geometry::line2f> EntityBase::GetTemplateLines() {
   return template_lines_;
 }
 
-std::vector<geometry::line2f> EntityBase::getLines() {
+std::vector<geometry::line2f> EntityBase::GetLines() {
   return pose_lines_;
 }

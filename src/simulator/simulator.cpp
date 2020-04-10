@@ -130,15 +130,16 @@ void Simulator::init(ros::NodeHandle& n) {
   this->loadObject();
 }
 
+// TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
   ShortTermObject* shortTermObject = new ShortTermObject("short_term_config.lua");
   objects.push_back(shortTermObject);
 
   HumanObject* humanObject = new HumanObject;
   objects.push_back(humanObject);
-  objects[1]->setGroundTruthPose(pose_2d::Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
-  dynamic_cast<HumanObject*>(objects[1])->setGoalPose(pose_2d::Pose2Df(0., Eigen::Vector2f(-10., 8.4)));
-  dynamic_cast<HumanObject*>(objects[1])->setSpeed(0.5, 0.1);
+  objects[1]->SetGroundTruthPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
+  dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0., Eigen::Vector2f(-10., 8.4)));
+  dynamic_cast<HumanObject*>(objects[1])->SetSpeed(0.5, 0.1);
   // config_reader::ConfigReader reader({"config/objects.lua"});
 }
 
@@ -435,8 +436,8 @@ void Simulator::update() {
 
   map_.object_lines.clear();
   for (size_t i=0; i < objects.size(); i++){
-    objects[i]->step(cDT);
-    auto pose_lines = objects[i]->getLines();
+    objects[i]->Step(cDT);
+    auto pose_lines = objects[i]->GetLines();
     for (line2f line: pose_lines){
       map_.object_lines.push_back(line);
     }

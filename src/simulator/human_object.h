@@ -25,6 +25,8 @@
 #ifndef SRC_SIMULATOR_HUMAN_OBJECT_H_
 #define SRC_SIMULATOR_HUMAN_OBJECT_H_
 
+using pose_2d::Pose2Df;
+
 enum HumanMode{
      Singleshot,
      Repeat
@@ -32,9 +34,9 @@ enum HumanMode{
 
 class HumanObject: public EntityBase{
  protected:
-  pose_2d::Pose2Df start_pose_;
+  Pose2Df start_pose_;
   // TODO(yifeng): Change to a sequence of intermediate goals
-  pose_2d::Pose2Df goal_pose_;
+  Pose2Df goal_pose_;
   double max_speed_;
   double avg_speed_;
   double max_omega_;
@@ -53,20 +55,20 @@ class HumanObject: public EntityBase{
   ~HumanObject();
 
   // set start pose
-  void initialize();
-  void setGoalPose(const pose_2d::Pose2Df& goal_pose);
+  void Initialize();
+  void SetGoalPose(const Pose2Df& goal_pose);
   // define step function for human object
-  void step(const double& dt);
+  void Step(const double& dt);
 
   // check if human reaches the current goal
-  bool checkReachGoal();
+  bool CheckReachGoal();
   // set the maximum speed for human
-  void setSpeed(const double& max_speed, const double& avg_speed, const double& max_omega = 0.4, const double& avg_omega = 0.2);
-  void setGroundTruthPose(pose_2d::Pose2Df pose);
-  void setGroundTruthVel(Eigen::Vector3f vel);
-  void setMode(const HumanMode& mode);
-  double getMaxSpeed();
-  double getAvgSpeed();
+  void SetSpeed(const double& max_speed, const double& avg_speed, const double& max_omega = 0.4, const double& avg_omega = 0.2);
+  void SetGroundTruthPose(Pose2Df pose);
+  void SetGroundTruthVel(Eigen::Vector3f vel);
+  void SetMode(const HumanMode& mode);
+  double GetMaxSpeed();
+  double GetAvgSpeed();
 };
 
 
