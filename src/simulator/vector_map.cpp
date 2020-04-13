@@ -204,6 +204,14 @@ void VectorMap::GetSceneLines(const Vector2f& loc,
     if (l.p0.y() > y_max && l.p1.y() > y_max) continue;
     lines_list->push_back(l);
   }
+  // Add object lines
+  for (const line2f& l : object_lines){
+    if (l.p0.x() < x_min && l.p1.x() < x_min) continue;
+    if (l.p0.y() < y_min && l.p1.y() < y_min) continue;
+    if (l.p0.x() > x_max && l.p1.x() > x_max) continue;
+    if (l.p0.y() > y_max && l.p1.y() > y_max) continue;
+    lines_list->push_back(l);
+  }
 }
 
 void VectorMap::SceneRender(const Vector2f& loc,

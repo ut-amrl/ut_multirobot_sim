@@ -119,11 +119,28 @@ void Simulator::init(ros::NodeHandle& n) {
       "/simulator_visualization", 6);
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
+  objectLinesPublisher = n.advertise<visualization_msgs::Marker>(
+      "/simulator_visualization", 6);
   truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
       "/simulator_true_pose", 1);
   localizationPublisher = n.advertise<geometry_msgs::Pose2D>(
       "/localization", 1);
   br = new tf::TransformBroadcaster();
+
+  this->loadObject();
+}
+
+// TODO(yifeng): Change this into a general way
+void Simulator::loadObject() {
+  ShortTermObject* shortTermObject = new ShortTermObject("short_term_config.lua");
+  objects.push_back(shortTermObject);
+
+  HumanObject* humanObject = new HumanObject;
+  objects.push_back(humanObject);
+  objects[1]->SetPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
+  dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0., Eigen::Vector2f(-10., 8.4)));
+  dynamic_cast<HumanObject*>(objects[1])->SetSpeed(0.5, 0.1);
+  // config_reader::ConfigReader reader({"config/objects.lua"});
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
@@ -228,12 +245,29 @@ color);
   initVizMarker(robotPosMarker, "robot_position", 1, "cube", p, scale, 0.0,
 color);
 
+  p.pose.orientation.w = 1.0;
+  scale.x = 0.02;
+  scale.y = 0.0;
+  scale.z = 0.0;
+  color[0] = 244.0 / 255.0;
+  color[1] = 0.0 / 255.0;
+  color[2] = 156.0 / 255.0;
+  color[3] = 1.0;
+  initVizMarker(objectLinesMarker, "object_lines", 0, "linelist", p, scale, 0.0, color);
 }
 
 void Simulator::drawMap() {
   ros_helpers::ClearMarker(&lineListMarker);
   for (const line2f& l : map_.lines) {
     ros_helpers::DrawEigen2DLine(l.p0, l.p1, &lineListMarker);
+  }
+}
+
+void Simulator::drawObjects() {
+  // draw objects
+  ros_helpers::ClearMarker(&objectLinesMarker);
+  for (const line2f& l : map_.object_lines) {
+    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &objectLinesMarker);
   }
 }
 
@@ -327,6 +361,7 @@ void Simulator::publishTransform() {
 void Simulator::publishVisualizationMarkers() {
   mapLinesPublisher.publish(lineListMarker);
   posMarkerPublisher.publish(robotPosMarker);
+  objectLinesPublisher.publish(objectLinesMarker);
 }
 
 float AbsBound(float x, float bound) {
@@ -399,6 +434,15 @@ void Simulator::update() {
   truePoseMsg.pose.orientation.y = 0;
   truePosePublisher.publish(truePoseMsg);
 
+  map_.object_lines.clear();
+  for (size_t i=0; i < objects.size(); i++){
+    objects[i]->Step(cDT);
+    auto pose_lines = objects[i]->GetLines();
+    for (line2f line: pose_lines){
+      map_.object_lines.push_back(line);
+    }
+  }
+  this->drawObjects();
 }
 
 void Simulator::Run() {

@@ -42,10 +42,15 @@
 #include "shared/math/geometry.h"
 #include "simulator/vector_map.h"
 
+#include "entity_base.h"
+#include "short_term_object.h"
+#include "human_object.h"
+
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
 using namespace std;
+using pose_2d::Pose2Df;
 
 class AccelLimits{
   public:
@@ -73,6 +78,8 @@ class Simulator{
   double vel;
   double angVel;
 
+  std::vector<EntityBase*> objects;
+
   ros::Subscriber driveSubscriber;
   ros::Subscriber initSubscriber;
 
@@ -80,6 +87,7 @@ class Simulator{
   ros::Publisher laserPublisher;
   ros::Publisher mapLinesPublisher;
   ros::Publisher posMarkerPublisher;
+  ros::Publisher objectLinesPublisher;
   ros::Publisher truePosePublisher;
   ros::Publisher localizationPublisher;
   tf::TransformBroadcaster *br;
@@ -92,7 +100,8 @@ class Simulator{
 
   visualization_msgs::Marker lineListMarker;
   visualization_msgs::Marker robotPosMarker;
-
+  visualization_msgs::Marker objectLinesMarker;
+  
   static const float startX;
   static const float startY;
   Eigen::Vector2f curLoc;
@@ -123,6 +132,7 @@ private:
                      std::vector<float> color);
   void initSimulatorVizMarkers();
   void drawMap();
+  void drawObjects();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped& msg);
   void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg& msg);
@@ -131,6 +141,7 @@ private:
   void publishVisualizationMarkers();
   void publishTransform();
   void update();
+  void loadObject();
 
 public:
   Simulator();
