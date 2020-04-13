@@ -35,6 +35,9 @@ enum HumanMode{
 class HumanObject: public EntityBase{
  protected:
   Pose2Df start_pose_;
+  // (vx, vy, vtheta)  
+  Eigen::Vector2f trans_vel_;
+  double rot_vel_;
   // TODO(yifeng): Change to a sequence of intermediate goals
   Pose2Df goal_pose_;
   double max_speed_;
@@ -59,13 +62,15 @@ class HumanObject: public EntityBase{
   void SetGoalPose(const Pose2Df& goal_pose);
   // define step function for human object
   void Step(const double& dt);
+  // transform lines from template lines based on pose_
+  void Transform();
 
   // check if human reaches the current goal
   bool CheckReachGoal();
   // set the maximum speed for human
   void SetSpeed(const double& max_speed, const double& avg_speed, const double& max_omega = 0.4, const double& avg_omega = 0.2);
-  void SetGroundTruthPose(Pose2Df pose);
-  void SetGroundTruthVel(Eigen::Vector3f vel);
+  void SetPose(const Pose2Df& pose);
+  void SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel);
   void SetMode(const HumanMode& mode);
   double GetMaxSpeed();
   double GetAvgSpeed();

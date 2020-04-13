@@ -72,31 +72,40 @@ void HumanObject::SetGoalPose(const Pose2Df& goal_pose) {
   goal_pose_ = goal_pose;
 }
 
-void HumanObject::SetGroundTruthPose(Pose2Df pose) {
+void HumanObject::SetPose(const Pose2Df& pose) {
   pose_ = pose;
   // update the shape according to the new pose
   this->Initialize();
   this->Transform();
 }
 
+void HumanObject::Transform() {
+  Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+  Eigen::Vector2f T = pose_.translation;
 
-void HumanObject::SetGroundTruthVel(Eigen::Vector3f vel) {
-  vel_ = vel;
-  // update the shape according to the new vel
+  for (size_t i=0; i < template_lines_.size(); i++) {
+    pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+    pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+  }
+}
+
+
+void HumanObject::SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel) {
+  trans_vel_ = trans_vel;
+  rot_vel_ = rot_vel;
 }
 
 void HumanObject::Step(const double& dt) {
   // very simple dynamic update
-  vel_.head<2>() = (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
+  trans_vel_ = (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
   // TODO(yifeng): Add gaussian noise to the velocity
 
   // clip velocity if it is larger than max speed
-  if (vel_.head<2>().norm() > max_speed_) {
-    vel_.head<2>() = vel_.head<2>().normalized() * max_speed_;
+  if (trans_vel_.norm() > max_speed_) {
+    trans_vel_ = trans_vel_.normalized() * max_speed_;
   }
-  vel_(2) = 0.1;
 
-  pose_.Set(pose_.angle + vel_(2) * dt, pose_.translation + vel_.head<2>() * dt);
+  pose_.Set(pose_.angle + rot_vel_ * dt, pose_.translation + trans_vel_ * dt);
 
   this->Transform();
   this->CheckReachGoal();
@@ -121,7 +130,8 @@ bool HumanObject::CheckReachGoal() {
   if ((pose_.translation - goal_pose_.translation).norm() < this->reach_goal_threashold_) {
     // reached goal
     if (mode_ == HumanMode::Singleshot) {
-      vel_.setZero();
+      trans_vel_.setZero();
+      rot_vel_ = 0.;
       return true;
     } else if (mode_ == HumanMode::Repeat) {
       Pose2Df temp = goal_pose_;

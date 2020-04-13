@@ -33,7 +33,6 @@ ShortTermObject::ShortTermObject() {
   template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
   template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
   template_lines_.push_back(geometry::line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
-
   pose_lines_ = template_lines_;
 }
 
@@ -58,7 +57,13 @@ ShortTermObject::ShortTermObject(const std::string& config_file) {
   template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
   template_lines_.push_back(geometry::line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
 
-  pose_lines_ = template_lines_;
+  Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+  Eigen::Vector2f T = pose_.translation;
+  pose_lines_.resize(template_lines_.size());
+  for (size_t i=0; i < template_lines_.size(); i++) {
+    pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+    pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+  }  
 }
 
 

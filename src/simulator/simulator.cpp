@@ -137,7 +137,7 @@ void Simulator::loadObject() {
 
   HumanObject* humanObject = new HumanObject;
   objects.push_back(humanObject);
-  objects[1]->SetGroundTruthPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
+  objects[1]->SetPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
   dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0., Eigen::Vector2f(-10., 8.4)));
   dynamic_cast<HumanObject*>(objects[1])->SetSpeed(0.5, 0.1);
   // config_reader::ConfigReader reader({"config/objects.lua"});

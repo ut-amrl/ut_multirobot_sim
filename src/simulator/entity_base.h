@@ -34,7 +34,6 @@ using pose_2d::Pose2Df;
 class EntityBase{
  protected:
     Pose2Df pose_;
-    Eigen::Vector3f vel_;  // (vx, vy, vtheta)
     // template lines always assuming at pose (0., 0., 0.)
     std::vector<geometry::line2f> template_lines_;
     // actual line position given current pose pose_
@@ -44,12 +43,10 @@ class EntityBase{
     ~EntityBase();
     // simulate a step for the object
     virtual void Step(const double& dt);
-    // transform lines from template lines based on pose_
-    virtual void Transform();
-    // set current ground truth pose
-    virtual void SetGroundTruthPose(const Pose2Df& pose);
-    // get current ground truth pose of the obstacle
-    virtual Pose2Df GetGroundTruthPose();
+    // set current pose
+    virtual void SetPose(const Pose2Df& pose);
+    // get current  pose of the obstacle
+    virtual Pose2Df GetPose();
     // get current shape (lines) based on the pose
     virtual std::vector<geometry::line2f> GetLines();
     // get template shape
