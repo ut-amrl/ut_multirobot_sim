@@ -13,33 +13,27 @@
 //  If not, see <http://www.gnu.org/licenses/>.
 //========================================================================
 /*!
-  \file    entity_base.cpp
-  \brief   C++ Interface: Abstract class for objects
-  \author  Yifeng Zhu, (C) 2020
-  \email   yifeng.zhu@utexas.edu
+  \file    robot_model.cpp
+  \brief   C++ Interface: Abstract class for robot models
+  \author  Jarrett Holtz, (C) 2020
+  \email   jaholtz@cs.utexas.edu
 */
 //========================================================================
 
-#include "simulator/entity_base.h"
+#include "simulator/robot_model.h"
 
-EntityBase::EntityBase() {
+namespace robot_model {
+
+RobotModel::RobotModel() :
+    EntityBase(),
+    vel_(0,{0,0}) {}
+
+void RobotModel::SetVel(const pose_2d::Pose2Df& vel) {
+ vel_ = vel;
 }
 
-void EntityBase::Step(const double& dt) {
+Pose2Df RobotModel::GetVel() {
+  return vel_;
 }
 
-void EntityBase::SetPose(const Pose2Df& pose) {
-  pose_ = pose;
-}
-
-Pose2Df EntityBase::GetPose() {
-  return pose_;
-}
-
-std::vector<geometry::line2f> EntityBase::GetTemplateLines() {
-  return template_lines_;
-}
-
-std::vector<geometry::line2f> EntityBase::GetLines() {
-  return pose_lines_;
 }

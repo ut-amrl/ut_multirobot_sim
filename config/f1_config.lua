@@ -39,3 +39,5 @@ laser_noise_stddev = 0.01
 -- Turning error simulation.
 angular_error_bias = DegToRad(0);
 angular_error_rate = 0.1;
+
+drive_callback_topic = "ackermann_curvature_drive"

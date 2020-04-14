@@ -20,8 +20,9 @@
 //========================================================================
 
 #include <iostream>
-#include <stdio.h>
+#include <memory>
 #include <random>
+#include <stdio.h>
 #include <vector>
 
 #include "eigen3/Eigen/Dense"
@@ -29,8 +30,8 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "nav_msgs/Odometry.h"
-#include "ros/ros.h"
 #include "ros/package.h"
+#include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "tf/transform_broadcaster.h"
 #include "tf/transform_datatypes.h"
@@ -38,13 +39,14 @@
 
 #include "f1tenth_simulator/AckermannCurvatureDriveMsg.h"
 
-#include "shared/util/timer.h"
 #include "shared/math/geometry.h"
+#include "shared/util/timer.h"
 #include "simulator/vector_map.h"
 
 #include "entity_base.h"
-#include "short_term_object.h"
 #include "human_object.h"
+#include "robot_model.h"
+#include "short_term_object.h"
 
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
@@ -52,35 +54,12 @@
 using namespace std;
 using pose_2d::Pose2Df;
 
-class AccelLimits{
-  public:
-    double max_accel;  // acceleration limit from 0 to max_vel
-    double max_deccel; // acceleration limit from max_vel to 0
-    double max_vel;    // maximum velocity along dimension
+class Simulator {
+  Pose2Df vel_;
+  Pose2Df cur_loc_;
 
-  public:
-    void set(double a,double d,double v)
-    {max_accel=a; max_deccel=d; max_vel=v;}
+  std::vector<EntityBase *> objects;
 
-    // return new limits with all parameters scaled by <f>
-    AccelLimits operator*(double f) const
-    {AccelLimits r; r.set(max_accel*f,max_deccel*f,max_vel*f); return(r);}
-
-    // scale all parameters by <f> in-place
-    AccelLimits &operator*=(double f);
-
-    // set limits to <al> with all parameters scaled by <f>
-    AccelLimits &set(const AccelLimits &al,double f);
-};
-
-class Simulator{
-  Eigen::Vector2f loc;
-  double vel;
-  double angVel;
-
-  std::vector<EntityBase*> objects;
-
-  ros::Subscriber driveSubscriber;
   ros::Subscriber initSubscriber;
 
   ros::Publisher odometryTwistPublisher;
@@ -92,7 +71,6 @@ class Simulator{
   ros::Publisher localizationPublisher;
   tf::TransformBroadcaster *br;
 
-
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
 
@@ -101,41 +79,26 @@ class Simulator{
   visualization_msgs::Marker lineListMarker;
   visualization_msgs::Marker robotPosMarker;
   visualization_msgs::Marker objectLinesMarker;
-  
-  static const float startX;
-  static const float startY;
-  Eigen::Vector2f curLoc;
-
-  static const float startAngle;
-  float curAngle;
-
-  double tLastCmd;
 
   static const float DT;
-  static const float kMinR;
   geometry_msgs::PoseStamped truePoseMsg;
-
-  f1tenth_simulator::AckermannCurvatureDriveMsg last_cmd_;
 
   std::default_random_engine rng_;
   std::normal_distribution<float> laser_noise_;
-  std::normal_distribution<float> angular_error_;
+
+  std::unique_ptr<robot_model::RobotModel> motion_model_;
 
 private:
-  void initVizMarker(visualization_msgs::Marker& vizMarker,
-                     string ns,
-                     int id,
-                     string type,
-                     geometry_msgs::PoseStamped p,
-                     geometry_msgs::Point32 scale,
-                     double duration,
+  void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
+                     string type, geometry_msgs::PoseStamped p,
+                     geometry_msgs::Point32 scale, double duration,
                      std::vector<float> color);
   void initSimulatorVizMarkers();
   void drawMap();
   void drawObjects();
-  void InitalLocationCallback(
-      const geometry_msgs::PoseWithCovarianceStamped& msg);
-  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg& msg);
+  void
+  InitalLocationCallback(const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg &msg);
   void publishOdometry();
   void publishLaser();
   void publishVisualizationMarkers();
@@ -149,4 +112,4 @@ public:
   void init(ros::NodeHandle &n);
   void Run();
 };
-#endif //SIMULATOR_H
+#endif // SIMULATOR_H
