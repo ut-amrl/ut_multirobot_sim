@@ -19,10 +19,10 @@
 */
 //========================================================================
 
+#include <stdio.h>
 #include <iostream>
 #include <memory>
 #include <random>
-#include <stdio.h>
 #include <vector>
 
 #include "eigen3/Eigen/Dense"
@@ -54,6 +54,8 @@
 using namespace std;
 using pose_2d::Pose2Df;
 
+enum RobotType { F1TEN, COBOT };
+
 class Simulator {
   Pose2Df vel_;
   Pose2Df cur_loc_;
@@ -64,6 +66,7 @@ class Simulator {
 
   ros::Publisher odometryTwistPublisher;
   ros::Publisher laserPublisher;
+  ros::Publisher viz_laser_publisher_;
   ros::Publisher mapLinesPublisher;
   ros::Publisher posMarkerPublisher;
   ros::Publisher objectLinesPublisher;
@@ -87,8 +90,9 @@ class Simulator {
   std::normal_distribution<float> laser_noise_;
 
   std::unique_ptr<robot_model::RobotModel> motion_model_;
+  RobotType robot_type_;
 
-private:
+ private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
                      string type, geometry_msgs::PoseStamped p,
                      geometry_msgs::Point32 scale, double duration,
@@ -96,8 +100,8 @@ private:
   void initSimulatorVizMarkers();
   void drawMap();
   void drawObjects();
-  void
-  InitalLocationCallback(const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallback(
+      const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg &msg);
   void publishOdometry();
   void publishLaser();
@@ -106,10 +110,10 @@ private:
   void update();
   void loadObject();
 
-public:
+ public:
   Simulator();
   ~Simulator();
   void init(ros::NodeHandle &n);
   void Run();
 };
-#endif // SIMULATOR_H
+#endif  // SIMULATOR_H

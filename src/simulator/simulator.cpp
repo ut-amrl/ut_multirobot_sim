@@ -33,6 +33,7 @@
 
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
+#include "simulator/cobot_model.h"
 #include "config_reader/config_reader.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
@@ -45,40 +46,49 @@ DEFINE_bool(localize, false, "Publish localization");
 
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
-using f1tenth_simulator::AckermannCurvatureDriveMsg;
 using geometry::Heading;
 using geometry::line2f;
 using geometry_msgs::PoseWithCovarianceStamped;
 using math_util::AngleMod;
 using math_util::DegToRad;
 using math_util::RadToDeg;
-using robot_model::AckermannModel;
+using ackermann::AckermannModel;
+using cobot::CobotModel;
 using std::atan2;
 using vector_map::VectorMap;
 
-CONFIG_STRING(cMapName, "map_name");
+CONFIG_STRING(map_name, "map_name");
 // Used for visualizations
-CONFIG_FLOAT(cCarLength, "car_length");
-CONFIG_FLOAT(cCarWidth, "car_width");
-CONFIG_FLOAT(cCarHeight, "car_height");
-CONFIG_FLOAT(cRearAxleOffset, "rear_axle_offset");
+CONFIG_FLOAT(car_length, "car_length");
+CONFIG_FLOAT(car_width, "car_width");
+CONFIG_FLOAT(car_height, "car_height");
+CONFIG_FLOAT(rear_axle_offset, "rear_axle_offset");
 // Used for transforms
-CONFIG_FLOAT(cLaserLocX, "laser_loc.x");
-CONFIG_FLOAT(cLaserLocY, "laser_loc.y");
-CONFIG_FLOAT(cLaserLocZ, "laser_loc.z");
+CONFIG_FLOAT(laser_x, "laser_loc.x");
+CONFIG_FLOAT(laser_y, "laser_loc.y");
+CONFIG_FLOAT(laser_z, "laser_loc.z");
 // Initial location
-CONFIG_FLOAT(cStartX, "start_x");
-CONFIG_FLOAT(cStartY, "start_y");
-CONFIG_FLOAT(cStartAngle, "start_angle");
+CONFIG_FLOAT(start_x, "start_x");
+CONFIG_FLOAT(start_y, "start_y");
+CONFIG_FLOAT(start_angle, "start_angle");
 // Timestep size
-CONFIG_FLOAT(cDT, "delta_t");
-CONFIG_FLOAT(cLaserStdDev, "laser_noise_stddev");
-config_reader::ConfigReader reader({"config/f1_config.lua"});
+CONFIG_FLOAT(DT, "delta_t");
+CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
+
+// Used for topic names and robot specs
+CONFIG_INT(robot_type, "robot_type");
+CONFIG_STRING(laser_topic, "laser_topic");
+const vector<string> config_list = {"config/sim_config.lua",
+                                    "config/ackermann_config.lua",
+                                    "config/cobot_config.lua"};
+config_reader::ConfigReader reader(config_list);
+
 
 Simulator::Simulator() :
     vel_(0, {0,0}),
     cur_loc_(0, {0,0}),
-    laser_noise_(0, 1) {
+    laser_noise_(0, 1),
+    robot_type_(static_cast<RobotType>(CONFIG_robot_type)) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
 }
@@ -102,11 +112,20 @@ void Simulator::init(ros::NodeHandle& n) {
   odometryTwistMsg.header.frame_id = "odom";
   odometryTwistMsg.child_frame_id = "base_footprint";
 
-  cur_loc_ = Pose2Df(cStartAngle, {cStartX, cStartY});
+  cur_loc_ = Pose2Df(CONFIG_start_angle, {CONFIG_start_x, CONFIG_start_y});
 
-  // TODO(jaholtz): Determine what motion model to use based on config file
-  motion_model_ =
-      unique_ptr<AckermannModel>(new AckermannModel("config/f1_config.lua", &n));
+  // Create motion model based on robot type
+  // TODO extend to handle the multi-robot case
+  switch(robot_type_) {
+    case F1TEN:
+      motion_model_ =
+          unique_ptr<AckermannModel>(new AckermannModel(config_list, &n));
+      break;
+    case COBOT:
+      motion_model_ =
+          unique_ptr<CobotModel>(new CobotModel(config_list, &n));
+      break;
+  }
   motion_model_->SetPose(cur_loc_);
   initSimulatorVizMarkers();
   drawMap();
@@ -114,7 +133,8 @@ void Simulator::init(ros::NodeHandle& n) {
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
-  laserPublisher = n.advertise<sensor_msgs::LaserScan>("/scan", 1);
+  laserPublisher = n.advertise<sensor_msgs::LaserScan>(CONFIG_laser_topic, 1);
+  viz_laser_publisher_ = n.advertise<sensor_msgs::LaserScan>("/scan", 1);
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
@@ -132,7 +152,8 @@ void Simulator::init(ros::NodeHandle& n) {
 
 // TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
-  ShortTermObject* shortTermObject = new ShortTermObject("short_term_config.lua");
+  ShortTermObject* shortTermObject =
+      new ShortTermObject("short_term_config.lua");
   objects.push_back(shortTermObject);
 
   HumanObject* humanObject = new HumanObject;
@@ -235,10 +256,10 @@ void Simulator::initSimulatorVizMarkers() {
   initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
       color);
 
-  p.pose.position.z = 0.5 * cCarHeight;
-  scale.x = cCarLength;
-  scale.y = cCarWidth;
-  scale.z = cCarHeight;
+  p.pose.position.z = 0.5 * CONFIG_car_height;
+  scale.x = CONFIG_car_length;
+  scale.y = CONFIG_car_width;
+  scale.z = CONFIG_car_height;
   color[0] = 94.0 / 255.0;
   color[1] = 156.0 / 255.0;
   color[2] = 255.0 / 255.0;
@@ -296,10 +317,10 @@ void Simulator::publishOdometry() {
   // TODO(jaholtz) visualization should not always be based on car
   // parameters
   robotPosMarker.pose.position.x =
-      cur_loc_.translation.x() - cos(cur_loc_.angle) * cRearAxleOffset;
+      cur_loc_.translation.x() - cos(cur_loc_.angle) * CONFIG_rear_axle_offset;
   robotPosMarker.pose.position.y =
-      cur_loc_.translation.y() - sin(cur_loc_.angle) * cRearAxleOffset;
-  robotPosMarker.pose.position.z = 0.5 * cCarHeight;
+      cur_loc_.translation.y() - sin(cur_loc_.angle) * CONFIG_rear_axle_offset;
+  robotPosMarker.pose.position.z = 0.5 * CONFIG_car_height;
   robotPosMarker.pose.orientation.w = 1.0;
   robotPosMarker.pose.orientation.x = robotQ.x();
   robotPosMarker.pose.orientation.y = robotQ.y();
@@ -308,12 +329,12 @@ void Simulator::publishOdometry() {
 }
 
 void Simulator::publishLaser() {
-  if (map_.file_name != cMapName) {
-    map_.Load(cMapName);
+  if (map_.file_name != CONFIG_map_name) {
+    map_.Load(CONFIG_map_name);
     drawMap();
   }
   scanDataMsg.header.stamp = ros::Time::now();
-  const Vector2f laserRobotLoc(cLaserLocX, cLaserLocY);
+  const Vector2f laserRobotLoc(CONFIG_laser_x, CONFIG_laser_y);
   const Vector2f laserLoc =
       cur_loc_.translation + Rotation2Df(cur_loc_.angle) * laserRobotLoc;
 
@@ -332,9 +353,14 @@ void Simulator::publishLaser() {
       r = scanDataMsg.range_max;
       continue;
     }
-    r = max<float>(0.0, r + cLaserStdDev * laser_noise_(rng_));
+    r = max<float>(0.0, r + CONFIG_laser_stdev * laser_noise_(rng_));
   }
+
+  // TODO Avoid publishing laser twice.
+  // Currently publishes once for the visualizer and once for robot
+  // requirements.
   laserPublisher.publish(scanDataMsg);
+  viz_laser_publisher_.publish(scanDataMsg);
 }
 
 void Simulator::publishTransform() {
@@ -358,7 +384,8 @@ void Simulator::publishTransform() {
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
       "/base_footprint", "/base_link"));
 
-  transform.setOrigin(tf::Vector3(cLaserLocX, cLaserLocY, cLaserLocZ));
+  transform.setOrigin(tf::Vector3(CONFIG_laser_x,
+        CONFIG_laser_y, CONFIG_laser_z));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
       "/base_link", "/base_laser"));
@@ -372,7 +399,7 @@ void Simulator::publishVisualizationMarkers() {
 
 void Simulator::update() {
   // Step the motion model forward one time step
-  motion_model_->Step(cDT);
+  motion_model_->Step(CONFIG_DT);
 
   // Update the simulator with the motion model result.
   cur_loc_ = motion_model_->GetPose();
@@ -392,7 +419,7 @@ void Simulator::update() {
   // Update all map objects and get their lines
   map_.object_lines.clear();
   for (size_t i=0; i < objects.size(); i++){
-    objects[i]->Step(cDT);
+    objects[i]->Step(CONFIG_DT);
     auto pose_lines = objects[i]->GetLines();
     for (line2f line: pose_lines){
       map_.object_lines.push_back(line);

@@ -1,0 +1,13 @@
+Header header
+
+float32 velocity_x
+float32 velocity_y
+float32 velocity_r
+
+float32 transMaxAcceleration
+float32 transMaxDeceleration
+float32 transMaxVelocity
+
+float32 rotMaxAcceleration
+float32 rotMaxDeceleration
+float32 rotMaxVelocity

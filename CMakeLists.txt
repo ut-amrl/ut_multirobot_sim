@@ -6,14 +6,18 @@ MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Qunused-arguments -Werror -Wall -g -rdynamic")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Werror -Wall -g")
+
+IF(${CXX} MATCHES "g++")
+  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -rdynamic")
+ENDIF()
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Release")
   MESSAGE(STATUS "Additional Flags for Release mode")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fopenmp -O3 -DNDEBUG")
 ELSEIF(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   MESSAGE(STATUS "Additional Flags for Debug mode")
-  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g -rdynamic")
+  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g")
   SET(BUILD_SPECIFIC_LIBRARIES "")
 ENDIF()
 
@@ -53,6 +57,7 @@ ROSBUILD_ADD_EXECUTABLE(${target}
   src/simulator/entity_base.cpp
   src/simulator/robot_model.cpp
   src/simulator/ackermann_model.cpp
+  src/simulator/cobot_model.cpp
   src/simulator/short_term_object.cpp
   src/simulator/human_object.cpp
   )
