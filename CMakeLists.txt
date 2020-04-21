@@ -6,7 +6,7 @@ MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Werror -Wall -g -rdynamic")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Qunused-arguments -Werror -Wall -g -rdynamic")
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Release")
   MESSAGE(STATUS "Additional Flags for Release mode")
@@ -51,6 +51,8 @@ ROSBUILD_ADD_EXECUTABLE(${target}
   src/simulator/simulator.cpp
   src/simulator/vector_map.cpp
   src/simulator/entity_base.cpp
+  src/simulator/robot_model.cpp
+  src/simulator/ackermann_model.cpp
   src/simulator/short_term_object.cpp
   src/simulator/human_object.cpp
   )

@@ -10,5 +10,4 @@
   <depend package="nav_msgs"/>
   <depend package="sensor_msgs"/>
   <depend package="tf"/>
-  <!-- <depend package="f1tenth_course"/> -->
 </package>

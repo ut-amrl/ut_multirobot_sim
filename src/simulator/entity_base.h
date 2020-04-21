@@ -40,7 +40,7 @@ class EntityBase{
     std::vector<geometry::line2f> pose_lines_;
  public:
     EntityBase();
-    ~EntityBase();
+    virtual ~EntityBase() = default;
     // simulate a step for the object
     virtual void Step(const double& dt);
     // set current pose

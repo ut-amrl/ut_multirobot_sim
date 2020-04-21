@@ -20,6 +20,7 @@
 //========================================================================
 
 #include <math.h>
+#include <memory>
 #include <stdio.h>
 
 #include <random>
@@ -31,6 +32,7 @@
 #include "gflags/gflags.h"
 
 #include "simulator.h"
+#include "simulator/ackermann_model.h"
 #include "config_reader/config_reader.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
@@ -50,34 +52,33 @@ using geometry_msgs::PoseWithCovarianceStamped;
 using math_util::AngleMod;
 using math_util::DegToRad;
 using math_util::RadToDeg;
+using robot_model::AckermannModel;
 using std::atan2;
 using vector_map::VectorMap;
 
 CONFIG_STRING(cMapName, "map_name");
+// Used for visualizations
 CONFIG_FLOAT(cCarLength, "car_length");
 CONFIG_FLOAT(cCarWidth, "car_width");
 CONFIG_FLOAT(cCarHeight, "car_height");
 CONFIG_FLOAT(cRearAxleOffset, "rear_axle_offset");
+// Used for transforms
 CONFIG_FLOAT(cLaserLocX, "laser_loc.x");
 CONFIG_FLOAT(cLaserLocY, "laser_loc.y");
 CONFIG_FLOAT(cLaserLocZ, "laser_loc.z");
+// Initial location
 CONFIG_FLOAT(cStartX, "start_x");
 CONFIG_FLOAT(cStartY, "start_y");
 CONFIG_FLOAT(cStartAngle, "start_angle");
+// Timestep size
 CONFIG_FLOAT(cDT, "delta_t");
-CONFIG_FLOAT(cMinTurnR, "min_turn_radius");
-CONFIG_FLOAT(cMaxAccel, "max_accel");
-CONFIG_FLOAT(cMaxSpeed, "max_speed");
 CONFIG_FLOAT(cLaserStdDev, "laser_noise_stddev");
-CONFIG_FLOAT(cAngularErrorBias, "angular_error_bias");
-CONFIG_FLOAT(cAngularErrorRate, "angular_error_rate");
 config_reader::ConfigReader reader({"config/f1_config.lua"});
 
-
 Simulator::Simulator() :
-    laser_noise_(0, 1),
-    angular_error_(0, 1) {
-  tLastCmd = GetMonotonicTime();
+    vel_(0, {0,0}),
+    cur_loc_(0, {0,0}),
+    laser_noise_(0, 1) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
 }
@@ -85,6 +86,7 @@ Simulator::Simulator() :
 Simulator::~Simulator() { }
 
 void Simulator::init(ros::NodeHandle& n) {
+  // TODO(jaholtz) Too much hard coding, move to config
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = "base_laser";
   scanDataMsg.angle_min = DegToRad(-135.0);
@@ -100,17 +102,15 @@ void Simulator::init(ros::NodeHandle& n) {
   odometryTwistMsg.header.frame_id = "odom";
   odometryTwistMsg.child_frame_id = "base_footprint";
 
-  curLoc = Vector2f(cStartX, cStartY);
-  curAngle = cStartAngle;
+  cur_loc_ = Pose2Df(cStartAngle, {cStartX, cStartY});
 
+  // TODO(jaholtz): Determine what motion model to use based on config file
+  motion_model_ =
+      unique_ptr<AckermannModel>(new AckermannModel("config/f1_config.lua", &n));
+  motion_model_->SetPose(cur_loc_);
   initSimulatorVizMarkers();
   drawMap();
 
-  driveSubscriber = n.subscribe(
-      "/ackermann_curvature_drive",
-      1,
-      &Simulator::DriveCallback,
-      this);
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
@@ -138,21 +138,22 @@ void Simulator::loadObject() {
   HumanObject* humanObject = new HumanObject;
   objects.push_back(humanObject);
   objects[1]->SetPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
-  dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0., Eigen::Vector2f(-10., 8.4)));
+  dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0.,
+        Eigen::Vector2f(-10., 8.4)));
   dynamic_cast<HumanObject*>(objects[1])->SetSpeed(0.5, 0.1);
-  // config_reader::ConfigReader reader({"config/objects.lua"});
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
-  curLoc = Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
-  curAngle = 2.0 *
+  const Vector2f loc =
+      Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
+  const float angle = 2.0 *
       atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
   printf("Set robot pose: %.2f,%.2f, %.1f\u00b0\n",
-         curLoc.x(),
-         curLoc.y(),
-         RadToDeg(curAngle));
+         cur_loc_.translation.x(),
+         cur_loc_.translation.y(),
+         RadToDeg(cur_loc_.angle));
+  motion_model_->SetPose({angle, loc});
 }
-
 
 /**
  * Helper method that initializes visualization_msgs::Marker parameters
@@ -232,7 +233,7 @@ void Simulator::initSimulatorVizMarkers() {
   color[2] = 244.0 / 255.0;
   color[3] = 1.0;
   initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
-color);
+      color);
 
   p.pose.position.z = 0.5 * cCarHeight;
   scale.x = cCarLength;
@@ -243,7 +244,7 @@ color);
   color[2] = 255.0 / 255.0;
   color[3] = 0.8;
   initVizMarker(robotPosMarker, "robot_position", 1, "cube", p, scale, 0.0,
-color);
+      color);
 
   p.pose.orientation.w = 1.0;
   scale.x = 0.02;
@@ -253,7 +254,8 @@ color);
   color[1] = 0.0 / 255.0;
   color[2] = 156.0 / 255.0;
   color[3] = 1.0;
-  initVizMarker(objectLinesMarker, "object_lines", 0, "linelist", p, scale, 0.0, color);
+  initVizMarker(objectLinesMarker, "object_lines", 0, "linelist", p, scale,
+      0.0, color);
 }
 
 void Simulator::drawMap() {
@@ -272,29 +274,31 @@ void Simulator::drawObjects() {
 }
 
 void Simulator::publishOdometry() {
-  tf::Quaternion robotQ = tf::createQuaternionFromYaw(curAngle);
+  tf::Quaternion robotQ = tf::createQuaternionFromYaw(cur_loc_.angle);
 
   odometryTwistMsg.header.stamp = ros::Time::now();
-  odometryTwistMsg.pose.pose.position.x = curLoc.x();
-  odometryTwistMsg.pose.pose.position.y = curLoc.y();
+  odometryTwistMsg.pose.pose.position.x = cur_loc_.translation.x();
+  odometryTwistMsg.pose.pose.position.y = cur_loc_.translation.y();
   odometryTwistMsg.pose.pose.position.z = 0.0;
   odometryTwistMsg.pose.pose.orientation.x = robotQ.x();
   odometryTwistMsg.pose.pose.orientation.y = robotQ.y();
-  odometryTwistMsg.pose.pose.orientation.z = robotQ.z();;
+  odometryTwistMsg.pose.pose.orientation.z = robotQ.z();
   odometryTwistMsg.pose.pose.orientation.w = robotQ.w();
   odometryTwistMsg.twist.twist.angular.x = 0.0;
   odometryTwistMsg.twist.twist.angular.y = 0.0;
-  odometryTwistMsg.twist.twist.angular.z = angVel;
-  odometryTwistMsg.twist.twist.linear.x = vel;
-  odometryTwistMsg.twist.twist.linear.y = 0;
+  odometryTwistMsg.twist.twist.angular.z = vel_.angle;
+  odometryTwistMsg.twist.twist.linear.x = vel_.translation.x();
+  odometryTwistMsg.twist.twist.linear.y = vel_.translation.y();
   odometryTwistMsg.twist.twist.linear.z = 0.0;
 
   odometryTwistPublisher.publish(odometryTwistMsg);
 
+  // TODO(jaholtz) visualization should not always be based on car
+  // parameters
   robotPosMarker.pose.position.x =
-      curLoc.x() - cos(curAngle) * cRearAxleOffset;
+      cur_loc_.translation.x() - cos(cur_loc_.angle) * cRearAxleOffset;
   robotPosMarker.pose.position.y =
-      curLoc.y() - sin(curAngle) * cRearAxleOffset;
+      cur_loc_.translation.y() - sin(cur_loc_.angle) * cRearAxleOffset;
   robotPosMarker.pose.position.z = 0.5 * cCarHeight;
   robotPosMarker.pose.orientation.w = 1.0;
   robotPosMarker.pose.orientation.x = robotQ.x();
@@ -310,7 +314,8 @@ void Simulator::publishLaser() {
   }
   scanDataMsg.header.stamp = ros::Time::now();
   const Vector2f laserRobotLoc(cLaserLocX, cLaserLocY);
-  const Vector2f laserLoc = curLoc + Rotation2Df(curAngle) * laserRobotLoc;
+  const Vector2f laserLoc =
+      cur_loc_.translation + Rotation2Df(cur_loc_.angle) * laserRobotLoc;
 
   const int num_rays = static_cast<int>(
       1.0 + (scanDataMsg.angle_max - scanDataMsg.angle_min) /
@@ -318,8 +323,8 @@ void Simulator::publishLaser() {
   map_.GetPredictedScan(laserLoc,
                         scanDataMsg.range_min,
                         scanDataMsg.range_max,
-                        scanDataMsg.angle_min + curAngle,
-                        scanDataMsg.angle_max + curAngle,
+                        scanDataMsg.angle_min + cur_loc_.angle,
+                        scanDataMsg.angle_max + cur_loc_.angle,
                         num_rays,
                         &scanDataMsg.ranges);
   for (float& r : scanDataMsg.ranges) {
@@ -339,23 +344,24 @@ void Simulator::publishTransform() {
   transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
-"/odom"));
+      "/odom"));
 
-  transform.setOrigin(tf::Vector3(curLoc.x(), curLoc.y(), 0.0));
-  q.setRPY(0.0,0.0,curAngle);
+  transform.setOrigin(tf::Vector3(cur_loc_.translation.x(),
+        cur_loc_.translation.y(), 0.0));
+  q.setRPY(0.0, 0.0, cur_loc_.angle);
   transform.setRotation(q);
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom",
-"/base_footprint"));
+      "/base_footprint"));
 
   transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-"/base_footprint", "/base_link"));
+      "/base_footprint", "/base_link"));
 
   transform.setOrigin(tf::Vector3(cLaserLocX, cLaserLocY, cLaserLocZ));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-"/base_link", "/base_laser"));
+      "/base_link", "/base_laser"));
 }
 
 void Simulator::publishVisualizationMarkers() {
@@ -364,76 +370,26 @@ void Simulator::publishVisualizationMarkers() {
   objectLinesPublisher.publish(objectLinesMarker);
 }
 
-float AbsBound(float x, float bound) {
-  if (x > 0.0 && x > bound) {
-    return bound;
-  } else if (x < 0.0 && x < -bound) {
-    return -bound;
-  }
-  return x;
-}
-
-void Simulator::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
- if (!isfinite(msg.velocity) || !isfinite(msg.curvature)) {
-    printf("Ignoring non-finite drive values: %f %f\n",
-           msg.velocity,
-           msg.curvature);
-    return;
-  }
-  last_cmd_ = msg;
-  tLastCmd = GetMonotonicTime();
-}
-
 void Simulator::update() {
-  static const double kMaxCommandAge = 0.1;
-  if (GetMonotonicTime() > tLastCmd + kMaxCommandAge) {
-    last_cmd_.velocity = 0;
-  }
-  // Epsilon curvature corresponding to a very large radius of turning.
-  static const float kEpsilonCurvature = 1.0 / 1E3;
-  // Commanded speed bounded to motion limit.
-  const float desired_vel = AbsBound(last_cmd_.velocity, cMaxSpeed);
-  // Maximum magnitude of curvature according to turning limits.
-  const float max_curvature = 1.0 / cMinTurnR;
-  // Commanded curvature bounded to turning limit.
-  const float desired_curvature = AbsBound(last_cmd_.curvature, max_curvature);
-  // Indicates if the command is for linear motion.
-  const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
+  // Step the motion model forward one time step
+  motion_model_->Step(cDT);
 
-  const float dv_max = cDT * cMaxAccel;
-  const float bounded_dv = AbsBound(desired_vel - vel, dv_max);
-  vel = vel + bounded_dv;
-  const float dist = vel * cDT;
+  // Update the simulator with the motion model result.
+  cur_loc_ = motion_model_->GetPose();
+  vel_ = motion_model_->GetVel();
 
-  float dx = 0, dy = 0, dtheta = 0;
-  if (linear_motion) {
-    dx = dist;
-    dy = 0;
-    dtheta = cDT * cAngularErrorBias;
-  } else {
-    const float r = 1.0 / desired_curvature;
-    dtheta = dist * desired_curvature +
-        angular_error_(rng_) * cDT * cAngularErrorBias +
-        angular_error_(rng_) * cAngularErrorRate * fabs(dist *
-            desired_curvature);
-    dx = r * sin(dtheta);
-    dy = r * (1.0 - cos(dtheta));
-  }
-
-  curLoc.x() += dx * cos(curAngle) - dy * sin(curAngle);
-  curLoc.y() += dx * sin(curAngle) + dy * cos(curAngle);
-  curAngle = AngleMod(curAngle + dtheta);
-
+  // Publishing the ground truth pose
   truePoseMsg.header.stamp = ros::Time::now();
-  truePoseMsg.pose.position.x = curLoc.x();
-  truePoseMsg.pose.position.y = curLoc.y();
+  truePoseMsg.pose.position.x = cur_loc_.translation.x();
+  truePoseMsg.pose.position.y = cur_loc_.translation.y();
   truePoseMsg.pose.position.z = 0;
-  truePoseMsg.pose.orientation.w = cos(0.5 * curAngle);
-  truePoseMsg.pose.orientation.z = sin(0.5 * curAngle);
+  truePoseMsg.pose.orientation.w = cos(0.5 * cur_loc_.angle);
+  truePoseMsg.pose.orientation.z = sin(0.5 * cur_loc_.angle);
   truePoseMsg.pose.orientation.x = 0;
   truePoseMsg.pose.orientation.y = 0;
   truePosePublisher.publish(truePoseMsg);
 
+  // Update all map objects and get their lines
   map_.object_lines.clear();
   for (size_t i=0; i < objects.size(); i++){
     objects[i]->Step(cDT);
@@ -459,9 +415,9 @@ void Simulator::Run() {
 
   if (FLAGS_localize) {
     geometry_msgs::Pose2D localization_msg;
-    localization_msg.x = curLoc.x();
-    localization_msg.y = curLoc.y();
-    localization_msg.theta = curAngle;
+    localization_msg.x = cur_loc_.translation.x();
+    localization_msg.y = cur_loc_.translation.y();
+    localization_msg.theta = cur_loc_.angle;
     localizationPublisher.publish(localization_msg);
   }
 }
