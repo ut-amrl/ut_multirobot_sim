@@ -1,0 +1,43 @@
+os: linux
+dist: bionic
+sudo: required
+language:
+  - cpp
+compiler:
+  - gcc
+  - clang
+cache:
+- apt
+git:
+  submodules: true
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc
+      - cmake
+      - clang
+env:
+  global:
+  - ROS_DISTRO=melodic
+  - ROS_CI_DESKTOP="`lsb_release -cs`"
+  - CI_SOURCE_PATH=$(pwd)
+  - ROS_PARALLEL_JOBS='-j8 -l6'
+  - PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages:/usr/local/lib/python2.7/dist-packages
+before_install:
+- sudo sh -c "echo \"deb http://packages.ros.org/ros/ubuntu $ROS_CI_DESKTOP main\"
+  > /etc/apt/sources.list.d/ros-latest.list"
+- sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+- sudo apt-get update -qq
+- sudo apt-get install dpkg
+- sudo apt-get install -y python-rosdep python-wstool ros-$ROS_DISTRO-desktop libpopt-dev libgoogle-glog-dev
+- "$CI_SOURCE_PATH/submodules/config_reader/InstallPackages"
+- sudo pip uninstall -y enum34
+- source /opt/ros/$ROS_DISTRO/setup.bash
+- sudo rosdep init
+- rosdep update
+script:
+- source /opt/ros/$ROS_DISTRO/setup.bash
+- export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:`pwd`
+- make
