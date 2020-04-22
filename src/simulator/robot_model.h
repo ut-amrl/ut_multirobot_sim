@@ -28,12 +28,13 @@
 namespace robot_model {
 class RobotModel : public EntityBase {
  protected:
-    Pose2Df vel_;
+  Pose2Df vel_;
+
  public:
-    RobotModel();
-    virtual ~RobotModel() = default;
-    virtual void SetVel(const pose_2d::Pose2Df& vel);
-    virtual pose_2d::Pose2Df GetVel();
+  RobotModel();
+  virtual ~RobotModel() = default;
+  virtual void SetVel(const pose_2d::Pose2Df& vel);
+  virtual pose_2d::Pose2Df GetVel();
 };
 }  // namespace robot_model
 

@@ -40,4 +40,12 @@ laser_noise_stddev = 0.01
 angular_error_bias = DegToRad(0);
 angular_error_rate = 0.1;
 
-drive_callback_topic = "ackermann_curvature_drive"
+-- Defining robot type enumerator
+local RobotType = {
+    F1TEN=0,
+    COBOT=1
+}
+
+-- robot_type = RobotType.F1TEN
+robot_type = RobotType.COBOT
+laser_topic = "/Cobot/Laser"

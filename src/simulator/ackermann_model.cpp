@@ -6,33 +6,33 @@
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
 using f1tenth_simulator::AckermannCurvatureDriveMsg;
-using math_util::AbsBound;
+using math_util::Bound;
 using math_util::AngleDiff;
 using math_util::AngleMod;
-using std::string;
 using std::isfinite;
+using std::string;
+using std::vector;
 
-namespace robot_model {
+namespace ackermann {
 
-CONFIG_FLOAT(cMinTurnR, "min_turn_radius");
-CONFIG_FLOAT(cMaxAccel, "max_accel");
-CONFIG_FLOAT(cMaxSpeed, "max_speed");
-CONFIG_FLOAT(cAngularErrorBias, "angular_error_bias");
-CONFIG_FLOAT(cAngularErrorRate, "angular_error_rate");
-CONFIG_STRING(cDriveTopic, "drive_callback_topic");
+CONFIG_FLOAT(min_turn_r, "ak_min_turn_radius");
+CONFIG_FLOAT(max_accel, "ak_max_accel");
+CONFIG_FLOAT(max_speed, "ak_max_speed");
+CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
+CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
+CONFIG_STRING(drive_topic, "ak_drive_callback_topic");
 
-
-AckermannModel::AckermannModel(const string& config_file, ros::NodeHandle* n) :
+AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) :
     RobotModel(),
     last_cmd_(),
     t_last_cmd_(0),
     angular_error_(0, 1),
-    config_reader_({config_file}){
+    config_reader_(config_file){
   // Use the config reader to initialize the subscriber
   last_cmd_.velocity = 0;
   last_cmd_.curvature = 0;
   drive_subscriber_ = n->subscribe(
-      cDriveTopic,
+      CONFIG_drive_topic,
       1,
       &AckermannModel::DriveCallback,
       this);
@@ -61,19 +61,18 @@ void AckermannModel::Step(const double &dt) {
   static const float kEpsilonCurvature = 1.0 / 1E3;
   // Commanded speed bounded to motion limit.
   float desired_vel = last_cmd_.velocity;
-  AbsBound(cMaxSpeed, &desired_vel);
+  Bound(-CONFIG_max_speed, CONFIG_max_speed, &desired_vel);
   // Maximum magnitude of curvature according to turning limits.
-  const float max_curvature = 1.0 / cMinTurnR;
+  const float max_curvature = 1.0 / CONFIG_min_turn_r;
   // Commanded curvature bounded to turning limit.
   float desired_curvature = last_cmd_.curvature;
-  AbsBound(max_curvature, &desired_curvature);
+  Bound(-max_curvature, max_curvature, &desired_curvature);
   // Indicates if the command is for linear motion.
   const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
 
-  const float dv_max = dt * cMaxAccel;
+  const float dv_max = dt * CONFIG_max_accel;
   float bounded_dv = desired_vel - vel;
-  AbsBound(dv_max, &bounded_dv);
-
+  Bound(-dv_max, dv_max, &bounded_dv);
   // Set velocity
   vel_.translation.x() = vel + bounded_dv;
   const float dist = vel_.translation.x() * dt;
@@ -82,12 +81,12 @@ void AckermannModel::Step(const double &dt) {
   float dtheta = 0;
   if (linear_motion) {
     d_vector.x() = dist;
-    dtheta = dt * cAngularErrorBias;
+    dtheta = dt * CONFIG_angular_bias;
   } else {
     const float r = 1.0 / desired_curvature;
     dtheta = dist * desired_curvature +
-        angular_error_(rng_) * dt * cAngularErrorBias +
-        angular_error_(rng_) * cAngularErrorRate * fabs(dist *
+        angular_error_(rng_) * dt * CONFIG_angular_bias +
+        angular_error_(rng_) * CONFIG_angular_error * fabs(dist *
             desired_curvature);
     d_vector = {r * sin(dtheta), r * (1.0 - cos(dtheta))};
   }
@@ -96,4 +95,4 @@ void AckermannModel::Step(const double &dt) {
   pose_.angle = AngleMod(pose_.angle + dtheta);
 }
 
-} // namespace robot_model
+} // namespace ackermann
