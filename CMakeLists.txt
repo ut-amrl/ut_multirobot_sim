@@ -6,6 +6,17 @@ MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 
+string(ASCII 27 ESCAPE)
+IF(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
+  MESSAGE(AUTHOR_WARNING
+    "${ESCAPE}[1;33m"
+    "vector_map.cpp contains a struct not using EIGEN_MAKE_ALIGNED_OPERATOR_NEW"
+    " this may cause issues on your architecture."
+    " See: https://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers"
+    ".html"
+    "${ESCAPE}[0m")
+ENDIF()
+
 SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Werror -Wall -g")
 
 IF(${CXX} MATCHES "g++")
