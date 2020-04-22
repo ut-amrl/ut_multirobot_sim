@@ -1,4 +1,4 @@
-# F1/10 Simulator
+# F1/10 Simulator [![Build Status](https://travis-ci.com/ut-amrl/f1tenth_simulator.svg?branch=master)](https://travis-ci.com/ut-amrl/f1tenth_simulator)
 
 ## Dependencies
 
