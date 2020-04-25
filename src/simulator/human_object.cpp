@@ -22,7 +22,27 @@
 
 #include "simulator/human_object.h"
 
-HumanObject::HumanObject() {
+using std::string;
+using std::vector;
+
+namespace human{
+
+CONFIG_FLOAT(radius, "hu_radius");
+CONFIG_FLOAT(num_segments, "hu_num_segments");
+CONFIG_FLOAT(start_x, "hu_start_x");
+CONFIG_FLOAT(start_y, "hu_start_y");
+CONFIG_FLOAT(start_theta, "hu_start_theta");
+CONFIG_FLOAT(goal_x, "hu_goal_x");
+CONFIG_FLOAT(goal_y, "hu_goal_y");
+CONFIG_FLOAT(goal_theta, "hu_goal_theta");
+CONFIG_FLOAT(max_speed, "hu_max_speed");
+CONFIG_FLOAT(avg_speed, "hu_avg_speed");
+CONFIG_FLOAT(max_omega, "hu_max_omega");
+CONFIG_FLOAT(avg_omega, "hu_avg_omega");
+CONFIG_FLOAT(reach_goal_threshold, "hu_reach_goal_threshold");
+CONFIG_INT(mode, "hu_mode");
+
+/* HumanObject::HumanObject() {
   // angle, (x, y)
   pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
   // just a cylinder for now
@@ -46,23 +66,52 @@ HumanObject::HumanObject() {
   pose_lines_ = template_lines_;
   this->Initialize();
 }
+ */
+HumanObject::HumanObject(const vector<string>& config_file) :
+    EntityBase(),
+    start_pose_(),
+    goal_pose_(),
+    trans_vel_(0., 0.),
+    rot_vel_(0.),
+    max_speed_(0.),
+    avg_speed_(0.),
+    max_omega_(0.),
+    avg_omega_(0.),
+    mode_(HumanMode::Repeat),
+    reach_goal_threshold_(0.3),
+    config_reader_(config_file){
+  
+  start_pose_ = Pose2Df(CONFIG_start_theta, {CONFIG_start_x, CONFIG_start_y});
+  pose_ = start_pose_;
+  goal_pose_ = Pose2Df(CONFIG_goal_theta, {CONFIG_goal_x, CONFIG_goal_y});
+  max_speed_ = CONFIG_max_speed;
+  avg_speed_ = CONFIG_avg_speed;
+  max_omega_ = CONFIG_max_omega;
+  avg_omega_ = CONFIG_avg_omega;
+  reach_goal_threshold_ = CONFIG_reach_goal_threshold;
+  mode_ = static_cast<HumanMode>(CONFIG_mode);
 
-HumanObject::HumanObject(const std::string& config_file) {
-  // TODO(yifeng): Load the shape, start point, goal point and walking mode from a config file
-  this->Initialize();
+  // just a cylinder for now
+  const float r = CONFIG_radius;
+  const int num_segments = CONFIG_num_segments;
+
+  const float angle_increment = 2 * M_PI / num_segments;
+
+  Eigen::Vector2f v0(r, 0.);
+  Eigen::Vector2f v1;
+  const float eps = 0.001;
+  for (int i = 1; i < num_segments; i++) {
+    v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
+
+    // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
+    Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
+    template_lines_.push_back(geometry::line2f(v0 + eps_vec, v1 - eps_vec));
+    v0 = v1;
+  }
+  template_lines_.push_back(geometry::line2f(v1, Eigen::Vector2f(r, 0.0)));
+  pose_lines_ = template_lines_;
 }
 
-
-HumanObject::~HumanObject() {
-}
-
-void HumanObject::Initialize() {
-  start_pose_ = pose_;
-  mode_ = HumanMode::Singleshot;
-  max_speed_ = 1.5;
-  avg_speed_ = 1.0;
-  reach_goal_threashold_ = 0.3;
-}
 
 void HumanObject::SetMode(const HumanMode& mode) {
   mode_ = mode;
@@ -75,7 +124,7 @@ void HumanObject::SetGoalPose(const Pose2Df& goal_pose) {
 void HumanObject::SetPose(const Pose2Df& pose) {
   pose_ = pose;
   // update the shape according to the new pose
-  this->Initialize();
+  // this->Initialize();
   this->Transform();
 }
 
@@ -127,7 +176,7 @@ double HumanObject::GetAvgSpeed() {
 }
 
 bool HumanObject::CheckReachGoal() {
-  if ((pose_.translation - goal_pose_.translation).norm() < this->reach_goal_threashold_) {
+  if ((pose_.translation - goal_pose_.translation).norm() < this->reach_goal_threshold_) {
     // reached goal
     if (mode_ == HumanMode::Singleshot) {
       trans_vel_.setZero();
@@ -140,4 +189,6 @@ bool HumanObject::CheckReachGoal() {
     }
   }
   return false;
+}
+
 }

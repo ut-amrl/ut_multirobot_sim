@@ -56,6 +56,7 @@ using ackermann::AckermannModel;
 using cobot::CobotModel;
 using std::atan2;
 using vector_map::VectorMap;
+using human::HumanObject;
 
 CONFIG_STRING(map_name, "map_name");
 // Used for visualizations
@@ -83,6 +84,8 @@ const vector<string> config_list = {"config/sim_config.lua",
                                     "config/cobot_config.lua"};
 config_reader::ConfigReader reader(config_list);
 
+/* const vector<string> object_config_list = {"config/human_config.lua"};
+config_reader::ConfigReader object_reader(object_config_list); */
 
 Simulator::Simulator() :
     vel_(0, {0,0}),
@@ -156,12 +159,13 @@ void Simulator::loadObject() {
       new ShortTermObject("short_term_config.lua");
   objects.push_back(shortTermObject);
 
-  HumanObject* humanObject = new HumanObject;
+  const vector<string> object_config_list = {"config/human_config.lua"};
+  HumanObject* humanObject = new HumanObject(object_config_list);
   objects.push_back(humanObject);
-  objects[1]->SetPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
-  dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0.,
-        Eigen::Vector2f(-10., 8.4)));
-  dynamic_cast<HumanObject*>(objects[1])->SetSpeed(0.5, 0.1);
+  // objects[1]->SetPose(Pose2Df(0., Eigen::Vector2f(-19., 8.6)));
+  // dynamic_cast<HumanObject*>(objects[1])->SetGoalPose(Pose2Df(0.,
+  //       Eigen::Vector2f(-10., 8.4)));
+  // dynamic_cast<HumanObject*>(objects[1])->SetSpeed(0.5, 0.1);
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
