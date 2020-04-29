@@ -45,12 +45,13 @@ CONFIG_FLOAT(angular_pos_accel_limit, "angular_pos_accel_limit");
 CONFIG_FLOAT(angular_neg_accel_limit, "angular_neg_accel_limit");
 CONFIG_FLOAT(max_angular_vel, "max_angular");
 CONFIG_FLOAT(max_linear_vel, "max_linear_vel");
-
-CONFIG_STRING(drive_topic, "drive_callback_topic");
-CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
 CONFIG_FLOAT(linear_odom_scale, "linear_odom_scale");
 CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
 
+CONFIG_STRING(drive_topic, "drive_callback_topic");
+CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
+CONFIG_STRING(odom_frame_id, "odom_frame_id");
+CONFIG_STRING(child_frame_id, "frame_id");
 
 DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHandle* n) :
 	RobotModel(),
@@ -70,6 +71,10 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
     odometry_w = 0.0;
     target_linear_vel = 0.0;
     target_angular_vel = 0.0;
+    odom_trans.header.frame_id = CONFIG_odom_frame_id;
+    odom_trans.child_frame_id = CONFIG_child_frame_id;
+    odom_msg.header.frame_id = CONFIG_odom_frame_id;
+    odom_msg.child_frame_id = CONFIG_child_frame_id;
 }
 
 void DiffDriveModel::Step(const double &dt) {
@@ -136,6 +141,7 @@ void DiffDriveModel::Step(const double &dt) {
         //send the transform
         odom_broadcaster.sendTransform(odom_trans);
     }
+    last_time = current_time;
  
     Eigen::Vector2f vec_linear_vel(vel_x, vel_y);
     vel_.translation = vec_linear_vel;
@@ -176,6 +182,7 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
 	if (CONFIG_invert_z) {
 		z *= -1;
 	}
+    // cut off velocities to their maximum
 	if (CONFIG_max_linear_vel != 0.0) {
 	  if (abs(x) > CONFIG_max_linear_vel) {
 		x = (x > 0) ? CONFIG_max_linear_vel : -CONFIG_max_linear_vel;

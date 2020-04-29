@@ -29,8 +29,6 @@ class DiffDriveModel : public robot_model::RobotModel {
     geometry_msgs::TransformStamped odom_trans;
     nav_msgs::Odometry odom_msg;
 
-    float last_forward_displacement;
-    float last_yaw_displacement;
     float yaw_rate;
     float odometry_x;
     float odometry_y;
@@ -39,8 +37,6 @@ class DiffDriveModel : public robot_model::RobotModel {
     float vel_y;
     float target_linear_vel;
     float target_angular_vel;
-    double last_linear_vel;
-    double last_angular_vel;
     double linear_vel;
     double angular_vel;
     tf::TransformBroadcaster odom_broadcaster;
