@@ -38,7 +38,6 @@ namespace diffdrive {
 
 CONFIG_BOOL(invert_x, "invert_linear_vel_cmds");
 CONFIG_BOOL(invert_z, "invert_angular_vel_cmds");
-CONFIG_BOOL(broadcast_tf, "broadcast_tf");
 CONFIG_FLOAT(linear_pos_accel_limit, "linear_pos_accel_limit");
 CONFIG_FLOAT(linear_neg_accel_limit, "linear_neg_accel_limit");
 CONFIG_FLOAT(angular_pos_accel_limit, "angular_pos_accel_limit");
@@ -50,8 +49,6 @@ CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
 
 CONFIG_STRING(drive_topic, "drive_callback_topic");
 CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
-CONFIG_STRING(odom_frame_id, "odom_frame_id");
-CONFIG_STRING(child_frame_id, "frame_id");
 
 DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHandle* n) :
 	RobotModel(),
@@ -71,10 +68,8 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
     odometry_w = 0.0;
     target_linear_vel = 0.0;
     target_angular_vel = 0.0;
-    odom_trans.header.frame_id = CONFIG_odom_frame_id;
-    odom_trans.child_frame_id = CONFIG_child_frame_id;
-    odom_msg.header.frame_id = CONFIG_odom_frame_id;
-    odom_msg.child_frame_id = CONFIG_child_frame_id;
+    odom_msg.header.frame_id = "/odom";
+    odom_msg.child_frame_id = "/base_link";
 }
 
 void DiffDriveModel::Step(const double &dt) {
@@ -128,19 +123,6 @@ void DiffDriveModel::Step(const double &dt) {
 	
     // Create a Quaternion from the yaw displacement
     quat = tf::createQuaternionMsgFromYaw(yaw_displacement);
-    
-    // Publish the Transform odom->base_link
-    if (CONFIG_broadcast_tf) {
-        odom_trans.header.stamp = current_time;
-        
-        odom_trans.transform.translation.x = odometry_x;
-        odom_trans.transform.translation.y = odometry_y;
-        odom_trans.transform.translation.z = 0.0;
-        odom_trans.transform.rotation = quat;
-        
-        //send the transform
-        odom_broadcaster.sendTransform(odom_trans);
-    }
     last_time = current_time;
  
     Eigen::Vector2f vec_linear_vel(vel_x, vel_y);

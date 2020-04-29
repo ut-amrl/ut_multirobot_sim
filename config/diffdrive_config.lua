@@ -11,11 +11,6 @@ diff_drive_odom_topic = "/Bwibot/Odometry"
 linear_odom_scale = 1.0
 angular_odom_scale = 1.0
 
--- TF
-odom_frame_id = "/odom"
-frame_id = "/base_link"
-broadcast_tf = false
-
 -- Kinematic
 rear_axle_offset = 0.0
 min_turn_radius = 0.0
