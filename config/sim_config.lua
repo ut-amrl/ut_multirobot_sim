@@ -43,9 +43,11 @@ angular_error_rate = 0.1;
 -- Defining robot type enumerator
 local RobotType = {
     F1TEN=0,
-    COBOT=1
+    COBOT=1, 
+    BWIBOT=2
 }
 
 -- robot_type = RobotType.F1TEN
-robot_type = RobotType.COBOT
-laser_topic = "/Cobot/Laser"
+-- robot_type = RobotType.COBOT
+robot_type = RobotType.BWIBOT
+laser_topic = "/Bwibot/Laser"

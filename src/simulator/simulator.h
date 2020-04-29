@@ -54,7 +54,7 @@
 using namespace std;
 using pose_2d::Pose2Df;
 
-enum RobotType { F1TEN, COBOT };
+enum RobotType { F1TEN, COBOT, BWIBOT };
 
 class Simulator {
   Pose2Df vel_;
