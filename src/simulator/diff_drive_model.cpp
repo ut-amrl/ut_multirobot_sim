@@ -111,6 +111,8 @@ void DiffDriveModel::Step(const double &dt) {
 	
     yaw_rate = dt * angular_vel;
     
+    cout << angular_vel << endl;
+
     // Integrate the displacements over time
     // Update accumulated odometries and calculate the x and y components of velocity
     odometry_w = yaw_displacement;
@@ -130,10 +132,11 @@ void DiffDriveModel::Step(const double &dt) {
 	vel_.angle = yaw_rate;
 
     pose_.translation += Eigen::Rotation2Df(pose_.angle) * vel_.translation;
-    pose_.angle += yaw_displacement*dt; 
+    pose_.angle += yaw_displacement; 
 
 	PublishOdom(dt);
 }
+
 void DiffDriveModel::PublishOdom(const float dt) {
     odom_msg.header.stamp = last_time;
     odom_msg.pose.pose.position.x = odometry_x;
@@ -158,12 +161,15 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
 	last_cmd_ = msg;
 	t_last_cmd_ = GetMonotonicTime();
     double x = msg.linear.x, z = msg.angular.z;
-	if (CONFIG_invert_x) {
+
+	// invert motion, if needed
+    if (CONFIG_invert_x) {
 		x *= -1;
 	}
 	if (CONFIG_invert_z) {
 		z *= -1;
 	}
+
     // cut off velocities to their maximum
 	if (CONFIG_max_linear_vel != 0.0) {
 	  if (abs(x) > CONFIG_max_linear_vel) {
@@ -176,7 +182,7 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
 	  }
 	}
 	target_linear_vel = x;
-	target_angular_vel = z * radians_to_degrees;
+	target_angular_vel = z;
 
 }
 };
