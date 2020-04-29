@@ -84,7 +84,7 @@ CONFIG_STRING(laser_topic, "laser_topic");
 const vector<string> config_list = {"config/sim_config.lua",
                                     "config/ackermann_config.lua",
                                     "config/cobot_config.lua",
-                                    "config/diffdrive_config.lua"};
+                                    "config/bwibot_config.lua"};
 config_reader::ConfigReader reader(config_list);
 
 /* const vector<string> object_config_list = {"config/human_config.lua"};

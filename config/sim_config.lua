@@ -50,4 +50,4 @@ local RobotType = {
 -- robot_type = RobotType.F1TEN
 -- robot_type = RobotType.COBOT
 robot_type = RobotType.BWIBOT
-laser_topic = "/Bwibot/Laser"
+laser_topic = "/Cobot/Laser"

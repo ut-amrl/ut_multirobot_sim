@@ -111,8 +111,6 @@ void DiffDriveModel::Step(const double &dt) {
 	
     yaw_rate = dt * angular_vel;
     
-    cout << angular_vel << endl;
-
     // Integrate the displacements over time
     // Update accumulated odometries and calculate the x and y components of velocity
     odometry_w = yaw_displacement;
@@ -172,12 +170,12 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
 
     // cut off velocities to their maximum
 	if (CONFIG_max_linear_vel != 0.0) {
-	  if (abs(x) > CONFIG_max_linear_vel) {
+	  if (fabs(x) > CONFIG_max_linear_vel) {
 		x = (x > 0) ? CONFIG_max_linear_vel : -CONFIG_max_linear_vel;
 	  }
 	}
 	if (CONFIG_max_angular_vel != 0.0) {
-	  if (abs(z) > CONFIG_max_angular_vel) {
+	  if (fabs(z) > CONFIG_max_angular_vel) {
 		z = (z > 0) ? CONFIG_max_angular_vel : -CONFIG_max_angular_vel;
 	  }
 	}

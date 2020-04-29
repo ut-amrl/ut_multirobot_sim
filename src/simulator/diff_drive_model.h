@@ -17,8 +17,6 @@ namespace diffdrive {
 
 class DiffDriveModel : public robot_model::RobotModel {
  private:
-    const double radians_to_degrees = 180.0 / M_PI;
-    const double degrees_to_radians = M_PI / 180.0;
     geometry_msgs::Twist last_cmd_;
     double t_last_cmd_;
     std::default_random_engine rng_;
