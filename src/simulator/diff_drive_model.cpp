@@ -68,8 +68,10 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
     odometry_w = 0.0;
     target_linear_vel = 0.0;
     target_angular_vel = 0.0;
+    pose_.angle = 0;
     odom_msg.header.frame_id = "/odom";
     odom_msg.child_frame_id = "/base_link";
+
 }
 
 void DiffDriveModel::Step(const double &dt) {
