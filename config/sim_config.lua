@@ -19,6 +19,9 @@ start_angle = 0.0
 -- Time-step for simulation.
 delta_t = 0.025
 
+-- Simulator TF publications
+publish_map_to_odom = false
+
 -- Car dimensions.
 car_width = 0.281
 car_length = 0.535

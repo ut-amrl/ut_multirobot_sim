@@ -77,6 +77,9 @@ CONFIG_FLOAT(start_angle, "start_angle");
 // Timestep size
 CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
+// TF publications
+CONFIG_BOOL(publish_map2odom, "publish_map_to_odom");
+
 
 // Used for topic names and robot specs
 CONFIG_INT(robot_type, "robot_type");
@@ -376,9 +379,10 @@ void Simulator::publishTransform() {
 
   transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
+  if(CONFIG_publish_map2odom) {
+      br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
       "/odom"));
-
+  }
   transform.setOrigin(tf::Vector3(cur_loc_.translation.x(),
         cur_loc_.translation.y(), 0.0));
   q.setRPY(0.0, 0.0, cur_loc_.angle);
