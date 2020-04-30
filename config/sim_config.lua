@@ -20,7 +20,7 @@ start_angle = 0.0
 delta_t = 0.025
 
 -- Simulator TF publications
-publish_map_to_odom = false
+publish_map_to_odom = true
 
 -- Car dimensions.
 car_width = 0.281
@@ -51,6 +51,6 @@ local RobotType = {
 }
 
 -- robot_type = RobotType.F1TEN
--- robot_type = RobotType.COBOT
-robot_type = RobotType.BWIBOT
+robot_type = RobotType.COBOT
+--robot_type = RobotType.BWIBOT
 laser_topic = "/Cobot/Laser"
