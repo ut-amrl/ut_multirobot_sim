@@ -79,7 +79,7 @@ CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
 // TF publications
 CONFIG_BOOL(publish_map2odom, "publish_map_to_odom");
-
+CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
 CONFIG_INT(robot_type, "robot_type");
@@ -376,10 +376,10 @@ void Simulator::publishLaser() {
 void Simulator::publishTransform() {
   tf::Transform transform;
   tf::Quaternion q;
-
-  transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
-  transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+  
   if(CONFIG_publish_map2odom) {
+      transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
+      transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
       br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
       "/odom"));
   }
@@ -389,12 +389,14 @@ void Simulator::publishTransform() {
   transform.setRotation(q);
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom",
       "/base_footprint"));
-
-  transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
-  transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-      "/base_footprint", "/base_link"));
-
+  
+  if(CONFIG_publish_foot_to_base){
+      transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
+      transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+      br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+        "/base_footprint", "/base_link"));
+  }
+  
   transform.setOrigin(tf::Vector3(CONFIG_laser_x,
         CONFIG_laser_y, CONFIG_laser_z));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
