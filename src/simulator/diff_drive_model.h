@@ -24,8 +24,7 @@ class DiffDriveModel : public robot_model::RobotModel {
     ros::Subscriber drive_subscriber_;
     config_reader::ConfigReader config_reader_;
     ros::Publisher odom_publisher_;
-    geometry_msgs::TransformStamped odom_trans;
-    nav_msgs::Odometry odom_msg;
+    nav_msgs::Odometry odom_msg_;
 
     float yaw_rate;
     float odometry_x;
@@ -41,9 +40,8 @@ class DiffDriveModel : public robot_model::RobotModel {
     geometry_msgs::Quaternion quat;
     ros::Time last_time;
 
-
-  // Receives drive callback messages and stores them
-  void DriveCallback(const geometry_msgs::Twist& msg);
+    // Receives drive callback messages and stores them
+    void DriveCallback(const geometry_msgs::Twist& msg);
 
  public:
   DiffDriveModel() = delete;
@@ -55,6 +53,6 @@ class DiffDriveModel : public robot_model::RobotModel {
   void PublishOdom(const float dt);
 };
 
-}
+} // namespace diffdrive
 
 #endif  // SRC_SIMULATOR_DIFFDRIVE_MODEL_H_
