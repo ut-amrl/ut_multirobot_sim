@@ -78,7 +78,7 @@ CONFIG_FLOAT(start_angle, "start_angle");
 CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
 // TF publications
-CONFIG_BOOL(publish_map2odom, "publish_map_to_odom");
+CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
 CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
@@ -377,7 +377,7 @@ void Simulator::publishTransform() {
   tf::Transform transform;
   tf::Quaternion q;
   
-  if(CONFIG_publish_map2odom) {
+  if(CONFIG_publish_map_to_odom) {
       transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
       transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
       br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",

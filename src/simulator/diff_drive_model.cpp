@@ -32,6 +32,7 @@
 #include "shared/util/timer.h"
 
 using Eigen::Vector2f;
+using Eigen::Vector3f;
 using std::vector;
 using std::string;
 
@@ -64,11 +65,13 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
       &DiffDriveModel::DriveCallback,
       this);
     odom_publisher_ = n->advertise<nav_msgs::Odometry>(CONFIG_odom_topic, 1);
-    odometry_x = 0.0;
-    odometry_y = 0.0;
-    odometry_w = 0.0;
-    target_linear_vel = 0.0;
-    target_angular_vel = 0.0;
+    odometry_ = Vector3f(0,0,0);
+    odometry_w_ = 0.0;
+    linear_vel_ = 0.0;
+    angular_vel_ = 0.0;
+    target_linear_vel_ = 0.0;
+    target_angular_vel_ = 0.0;
+    pose_.translation = Vector2f(0,0);
     pose_.angle = 0;
     odom_msg_.header.frame_id = "/odom";
     odom_msg_.child_frame_id = "/base_link";
@@ -78,70 +81,66 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
 void DiffDriveModel::Step(const double &dt) {
     ros::Time current_time = ros::Time::now();
     // Update the linear velocity based on the linear acceleration limits
-    if (linear_vel < target_linear_vel) {
+    if (linear_vel_ < target_linear_vel_) {
         // Must increase linear speed
         if (CONFIG_linear_pos_accel_limit == 0.0 
-            || target_linear_vel - linear_vel < CONFIG_linear_pos_accel_limit) {
-            linear_vel = target_linear_vel;
+            || target_linear_vel_ - linear_vel_ < CONFIG_linear_pos_accel_limit) {
+            linear_vel_ = target_linear_vel_;
         }
         else {
-             linear_vel += CONFIG_linear_pos_accel_limit; 
+             linear_vel_ += CONFIG_linear_pos_accel_limit; 
         }
-    } else if (linear_vel > target_linear_vel) {
+    } else if (linear_vel_ > target_linear_vel_) {
         // Must decrease linear speed
         if (CONFIG_linear_neg_accel_limit == 0.0 
-            || linear_vel - target_linear_vel < CONFIG_linear_neg_accel_limit) {
-            linear_vel = target_linear_vel;
+            || linear_vel_ - target_linear_vel_ < CONFIG_linear_neg_accel_limit) {
+            linear_vel_ = target_linear_vel_;
         }
         else {
-             linear_vel -= CONFIG_linear_neg_accel_limit; 
+             linear_vel_ -= CONFIG_linear_neg_accel_limit; 
         }        
     }
 
     // Update the angular velocity based on the angular acceleration limits
-    if (angular_vel < target_angular_vel) {
+    if (angular_vel_ < target_angular_vel_) {
         // Must increase angular speed
         if (CONFIG_angular_pos_accel_limit == 0.0
-            || target_angular_vel - angular_vel < CONFIG_angular_pos_accel_limit) {
-            angular_vel = target_angular_vel;
+            || target_angular_vel_ - angular_vel_ < CONFIG_angular_pos_accel_limit) {
+            angular_vel_ = target_angular_vel_;
         }
         else {
-             angular_vel += CONFIG_angular_pos_accel_limit; 
+             angular_vel_ += CONFIG_angular_pos_accel_limit; 
         }
-    } else if (angular_vel > target_angular_vel) {
+    } else if (angular_vel_ > target_angular_vel_) {
         // Must decrease angular speed
         if (CONFIG_angular_neg_accel_limit == 0.0 
-            || angular_vel - target_angular_vel < CONFIG_angular_neg_accel_limit) {
-            angular_vel = target_angular_vel;
+            || angular_vel_ - target_angular_vel_ < CONFIG_angular_neg_accel_limit) {
+            angular_vel_ = target_angular_vel_;
         }
         else {
-             angular_vel -= CONFIG_angular_neg_accel_limit; 
+             angular_vel_ -= CONFIG_angular_neg_accel_limit; 
         }
     }
 
-    const float forward_displacement = dt * linear_vel * CONFIG_linear_odom_scale;
-    const float yaw_displacement = dt * angular_vel * CONFIG_angular_odom_scale;
+    const float forward_displacement = dt * linear_vel_ * CONFIG_linear_odom_scale;
+    const float yaw_displacement = dt * angular_vel_ * CONFIG_angular_odom_scale;
     
-    yaw_rate = dt * angular_vel;
+    yaw_rate = dt * angular_vel_;
     
     // Integrate the displacements over time
     // Update accumulated odometries and calculate the x and y components of velocity
-    odometry_w = yaw_displacement;
-    const float delta_odometry_x = forward_displacement * std::cos(odometry_w);
-    const float delta_odometry_y = forward_displacement * std::sin(odometry_w);
-    vel_x = delta_odometry_x;
-    vel_y = delta_odometry_y;
-    odometry_x += delta_odometry_x;
-    odometry_y += delta_odometry_y;
+    odometry_.w() = yaw_displacement;
+    vel_.translation.x() = forward_displacement * std::cos(odometry_.w());
+    vel_.translation.y() = forward_displacement * std::sin(odometry_.w());
+    vel_.angle = yaw_rate;
+    
+    odometry_.x() += vel_.translation.x();
+    odometry_.y() += vel_.translation.y();
     
     // Create a Quaternion from the yaw displacement
-    quat = tf::createQuaternionMsgFromYaw(yaw_displacement);
-    last_time = current_time;
+    quat_ = tf::createQuaternionMsgFromYaw(yaw_displacement);
+    last_time_ = current_time;
  
-    Vector2f vec_linear_vel(vel_x, vel_y);
-    vel_.translation = vec_linear_vel;
-    vel_.angle = yaw_rate;
-
     pose_.translation += Eigen::Rotation2Df(pose_.angle) * vel_.translation;
     pose_.angle += yaw_displacement; 
    
@@ -149,11 +148,11 @@ void DiffDriveModel::Step(const double &dt) {
 }
 
 void DiffDriveModel::PublishOdom(const float dt) {
-    odom_msg_.header.stamp = last_time;
-    odom_msg_.pose.pose.position.x = odometry_x;
-    odom_msg_.pose.pose.position.y = odometry_y;
+    odom_msg_.header.stamp = last_time_;
+    odom_msg_.pose.pose.position.x = odometry_.x();
+    odom_msg_.pose.pose.position.y = odometry_.y();
     odom_msg_.pose.pose.position.z = 0.0;
-    odom_msg_.pose.pose.orientation = quat;
+    odom_msg_.pose.pose.orientation = quat_;
     odom_msg_.pose.covariance[0] = 0.00001;
     odom_msg_.pose.covariance[7] = 0.00001;
     odom_msg_.pose.covariance[14] = 1000000000000.0;
@@ -161,8 +160,8 @@ void DiffDriveModel::PublishOdom(const float dt) {
     odom_msg_.pose.covariance[28] = 1000000000000.0;
     odom_msg_.pose.covariance[35] = 0.001;
     
-    odom_msg_.twist.twist.linear.x = vel_x;
-    odom_msg_.twist.twist.linear.y = vel_y;
+    odom_msg_.twist.twist.linear.x = vel_.translation.x();
+    odom_msg_.twist.twist.linear.y = vel_.translation.y();
     odom_msg_.twist.twist.angular.z = yaw_rate;
 
     odom_publisher_.publish(odom_msg_);
@@ -192,8 +191,8 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
         z = (z > 0) ? CONFIG_max_angular_vel : -CONFIG_max_angular_vel;
       }
     }
-    target_linear_vel = x;
-    target_angular_vel = z;
+    target_linear_vel_ = x;
+    target_angular_vel_ = z;
 
 }
 };

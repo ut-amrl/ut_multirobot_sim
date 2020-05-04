@@ -27,18 +27,14 @@ class DiffDriveModel : public robot_model::RobotModel {
     nav_msgs::Odometry odom_msg_;
 
     float yaw_rate;
-    float odometry_x;
-    float odometry_y;
-    float odometry_w;
-    float vel_x;
-    float vel_y;
-    float target_linear_vel;
-    float target_angular_vel;
-    double linear_vel;
-    double angular_vel;
-    tf::TransformBroadcaster odom_broadcaster;
-    geometry_msgs::Quaternion quat;
-    ros::Time last_time;
+    Eigen::Vector3f odometry_;
+    float odometry_w_;
+    float target_linear_vel_;
+    float target_angular_vel_;
+    double linear_vel_;
+    double angular_vel_;
+    geometry_msgs::Quaternion quat_;
+    ros::Time last_time_;
 
     // Receives drive callback messages and stores them
     void DriveCallback(const geometry_msgs::Twist& msg);
