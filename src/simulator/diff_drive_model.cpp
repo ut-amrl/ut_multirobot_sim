@@ -33,8 +33,10 @@
 
 using Eigen::Vector2f;
 using Eigen::Vector3f;
+using Eigen::Rotation2Df;
 using std::vector;
 using std::string;
+using math_util::AngleMod;
 
 namespace diffdrive {
 
@@ -65,16 +67,14 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
       &DiffDriveModel::DriveCallback,
       this);
     odom_publisher_ = n->advertise<nav_msgs::Odometry>(CONFIG_odom_topic, 1);
-    odometry_ = Vector3f(0,0,0);
-    odometry_w_ = 0.0;
     linear_vel_ = 0.0;
     angular_vel_ = 0.0;
     target_linear_vel_ = 0.0;
     target_angular_vel_ = 0.0;
     pose_.translation = Vector2f(0,0);
     pose_.angle = 0;
-    odom_msg_.header.frame_id = "/odom";
-    odom_msg_.child_frame_id = "/base_link";
+    odom_msg_.header.frame_id = "odom";
+    odom_msg_.child_frame_id = "base_footprint";
 
 }
 
@@ -121,36 +121,23 @@ void DiffDriveModel::Step(const double &dt) {
              angular_vel_ -= CONFIG_angular_neg_accel_limit; 
         }
     }
+    
+    vel_.translation.x() = linear_vel_;
+    vel_.angle = angular_vel_;
+    pose_.translation += Rotation2Df(pose_.angle) * vel_.translation * dt;
+    pose_.angle = AngleMod(pose_.angle + vel_.angle * dt);
 
-    const float forward_displacement = dt * linear_vel_ * CONFIG_linear_odom_scale;
-    const float yaw_displacement = dt * angular_vel_ * CONFIG_angular_odom_scale;
-    
-    yaw_rate = dt * angular_vel_;
-    
-    // Integrate the displacements over time
-    // Update accumulated odometries and calculate the x and y components of velocity
-    odometry_.w() = yaw_displacement;
-    vel_.translation.x() = forward_displacement * std::cos(odometry_.w());
-    vel_.translation.y() = forward_displacement * std::sin(odometry_.w());
-    vel_.angle = yaw_rate;
-    
-    odometry_.x() += vel_.translation.x();
-    odometry_.y() += vel_.translation.y();
-    
-    // Create a Quaternion from the yaw displacement
-    quat_ = tf::createQuaternionMsgFromYaw(yaw_displacement);
+    // Create a Quaternion from the angle
+    quat_ = tf::createQuaternionMsgFromYaw(pose_.angle);
     last_time_ = current_time;
- 
-    pose_.translation += Eigen::Rotation2Df(pose_.angle) * vel_.translation;
-    pose_.angle += yaw_displacement; 
    
     PublishOdom(dt);
 }
 
 void DiffDriveModel::PublishOdom(const float dt) {
     odom_msg_.header.stamp = last_time_;
-    odom_msg_.pose.pose.position.x = odometry_.x();
-    odom_msg_.pose.pose.position.y = odometry_.y();
+    odom_msg_.pose.pose.position.x = pose_.translation.x();
+    odom_msg_.pose.pose.position.y = pose_.translation.y();
     odom_msg_.pose.pose.position.z = 0.0;
     odom_msg_.pose.pose.orientation = quat_;
     odom_msg_.pose.covariance[0] = 0.00001;
@@ -162,7 +149,7 @@ void DiffDriveModel::PublishOdom(const float dt) {
     
     odom_msg_.twist.twist.linear.x = vel_.translation.x();
     odom_msg_.twist.twist.linear.y = vel_.translation.y();
-    odom_msg_.twist.twist.angular.z = yaw_rate;
+    odom_msg_.twist.twist.angular.z = vel_.angle;
 
     odom_publisher_.publish(odom_msg_);
 }

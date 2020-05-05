@@ -25,10 +25,6 @@ class DiffDriveModel : public robot_model::RobotModel {
     config_reader::ConfigReader config_reader_;
     ros::Publisher odom_publisher_;
     nav_msgs::Odometry odom_msg_;
-
-    float yaw_rate;
-    Eigen::Vector3f odometry_;
-    float odometry_w_;
     float target_linear_vel_;
     float target_angular_vel_;
     double linear_vel_;
