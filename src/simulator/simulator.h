@@ -99,13 +99,11 @@ class Simulator {
   int robot_number_;
   //std::vector<ros::Publisher> truePosePublishers;
   std::vector<visualization_msgs::Marker> robotPosMarkers;
-
   // topic prefixes
   std::vector<std::string> topic_prefixs_;
   std::vector<std::string> robot_types_;
 
   std::vector<Pose2Df> cur_locs_;
-
   // object lines associated with each vector
   std::vector<std::vector<geometry::Line2f>> motion_models_lines_;
  private:

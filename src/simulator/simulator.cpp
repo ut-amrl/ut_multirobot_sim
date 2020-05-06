@@ -101,7 +101,6 @@ CONFIG_DOUBLELIST(robot_start_angles, "angle_list");
 CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
 CONFIG_STRINGLIST(human_config_list, "human_config_list");
 
-
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
 
@@ -229,6 +228,7 @@ void Simulator::init(ros::NodeHandle& n) {
     localizationMsg.header.frame_id = "map";
     localizationMsg.header.seq = 0;
   }
+
 
   br = new tf::TransformBroadcaster();
 
@@ -508,6 +508,7 @@ void Simulator::publishTransform(int cur_car_number) {
   if (!CONFIG_publish_tfs) {
     return;
   }
+
   tf::Transform transform;
   tf::Quaternion q;
 
@@ -533,6 +534,7 @@ void Simulator::publishTransform(int cur_car_number) {
     br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
         topic_prefix + "/base_footprint", topic_prefix + "/base_link"));
   }
+
   transform.setOrigin(tf::Vector3(CONFIG_laser_x,
         CONFIG_laser_y, CONFIG_laser_z));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
@@ -614,12 +616,11 @@ string GetMapNameFromFilename(string path) {
   return file_name;
 }
 
-void Simulator::Run() {
 
+
+void Simulator::Run() {
   // update the position of the robots
   for(int i = 0; i < robot_number_; i++){
-    cur_loc_ = cur_locs_[i];
-    // Simulate time-step.
     updateLocation(i);
   }
   // update object lines associated with each robot
