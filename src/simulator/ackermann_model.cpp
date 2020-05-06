@@ -2,7 +2,7 @@
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
-
+#include <string>
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
 using ut_multirobot_sim::AckermannCurvatureDriveMsg;
@@ -22,6 +22,7 @@ CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
 CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
 CONFIG_STRING(drive_topic, "ak_drive_callback_topic");
 
+
 AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) :
     RobotModel(),
     last_cmd_(),
@@ -33,6 +34,22 @@ AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandl
   last_cmd_.curvature = 0;
   drive_subscriber_ = n->subscribe(
       CONFIG_drive_topic,
+      1,
+      &AckermannModel::DriveCallback,
+      this);
+}
+
+AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n, string topic_prefix) :
+    RobotModel(),
+    last_cmd_(),
+    t_last_cmd_(0),
+    angular_error_(0, 1),
+    config_reader_(config_file){
+  // Use the config reader to initialize the subscriber
+  last_cmd_.velocity = 0;
+  last_cmd_.curvature = 0;
+  drive_subscriber_ = n->subscribe(
+      topic_prefix + CONFIG_drive_topic,
       1,
       &AckermannModel::DriveCallback,
       this);

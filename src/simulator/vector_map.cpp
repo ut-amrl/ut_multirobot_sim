@@ -378,8 +378,10 @@ void VectorMap::Cleanup() {
     for (const Line2f l2 : new_lines) {
       if (l2.Intersection(l1, &p)) {
         const Vector2f shrink = kShrinkDistance * l1.Dir();
-        lines.push_back(Line2f(l1.p0, p - shrink));
-        lines.push_back(Line2f(p + shrink, l1.p1));
+        const line2f a = line2f(l1.p0, p - shrink);
+        const line2f b = line2f(p + shrink, l1.p1);
+        lines.push_back(a);
+        lines.push_back(b);
         intersection = true;
         break;
       }

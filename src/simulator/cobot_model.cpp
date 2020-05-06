@@ -4,6 +4,8 @@
 #include "shared/math/math_util.h"
 #include "ut_multirobot_sim/CobotOdometryMsg.h"
 
+#include <string>
+
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
 using ut_multirobot_sim::CobotDriveMsg;
@@ -43,6 +45,21 @@ CobotModel::CobotModel(const vector<string>& config_files, ros::NodeHandle* n) :
       &CobotModel::DriveCallback,
       this);
   odom_publisher_ = n->advertise<CobotOdometryMsg>(CONFIG_odom_topic, 1);
+}
+
+CobotModel::CobotModel(const vector<string>& config_files, ros::NodeHandle* n, string topic_prefix) :
+    RobotModel(),
+    last_cmd_(),
+    t_last_cmd_(0),
+    angular_error_(0, 1),
+    config_reader_(config_files){
+  // Use the config reader to initialize the subscriber
+  drive_subscriber_ = n->subscribe(
+      topic_prefix + CONFIG_drive_topic,
+      1,
+      &CobotModel::DriveCallback,
+      this);
+  odom_publisher_ = n->advertise<CobotOdometryMsg>(topic_prefix + CONFIG_odom_topic, 1);
 }
 
 void CobotModel::DriveCallback(const CobotDriveMsg& msg) {

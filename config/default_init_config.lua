@@ -1,6 +1,8 @@
 map_name =  "maps/GDC3/GDC3.txt"
--- Simulator starting location.
-start_x = 33.016267
-start_y = 21.534157
-start_angle = 0.0
+
+-- Simulator starting location. 
+-- (Tongrui: moved corresponding code to topic_config.lua)
+-- start_x = 33.016267
+-- start_y = 21.534157
+-- start_angle = 0.0
 
