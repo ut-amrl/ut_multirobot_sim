@@ -4,6 +4,8 @@
 #include "shared/math/math_util.h"
 #include "ut_multirobot_sim/CobotOdometryMsg.h"
 
+#include <string>
+
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
 using ut_multirobot_sim::CobotDriveMsg;
@@ -29,9 +31,12 @@ CONFIG_FLOAT(w3, "co_w3");
 CONFIG_FLOAT(base_r, "co_base_radius");
 CONFIG_STRING(drive_topic, "co_drive_callback_topic");
 CONFIG_STRING(odom_topic, "co_cobot_odom_topic");
+CONFIG_FLOAT(radius, "cobot_radius");
+CONFIG_FLOAT(num_segments, "cobot_num_segments");
+CONFIG_VECTOR2F(offset_vec, "cobot_offset");
 
-OmnidirectionalModel::OmnidirectionalModel(
-    const vector<string>& config_files, ros::NodeHandle* n) :
+
+OmnidirectionalModel::OmnidirectionalModel(const vector<string>& config_files, ros::NodeHandle* n, string topic_prefix = "") :
     RobotModel(),
     last_cmd_(),
     t_last_cmd_(0),
@@ -39,11 +44,13 @@ OmnidirectionalModel::OmnidirectionalModel(
     config_reader_(config_files){
   // Use the config reader to initialize the subscriber
   drive_subscriber_ = n->subscribe(
-      CONFIG_drive_topic,
+      topic_prefix + CONFIG_drive_topic,
       1,
       &OmnidirectionalModel::DriveCallback,
       this);
-  odom_publisher_ = n->advertise<CobotOdometryMsg>(CONFIG_odom_topic, 1);
+  odom_publisher_ = n->advertise<CobotOdometryMsg>(topic_prefix + CONFIG_odom_topic, 1);
+  this->SetTemplateLines(CONFIG_radius, CONFIG_num_segments);
+  this->Transform();
 }
 
 void OmnidirectionalModel::DriveCallback(const CobotDriveMsg& msg) {
@@ -120,6 +127,40 @@ void OmnidirectionalModel::Step(const double &dt) {
   pose_.translation += Rotation2Df(pose_.angle) * vel_.translation * dt;
   pose_.angle = AngleMod(pose_.angle + vel_.angle * dt);
   PublishOdom(dt);
+  this->Transform();
+}
+
+void OmnidirectionalModel::Transform() {
+  Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+  Eigen::Vector2f T = pose_.translation;
+
+  for (size_t i=0; i < template_lines_.size(); i++) {
+    pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+    pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+  }
+}
+
+void OmnidirectionalModel::SetTemplateLines(const float r, const int num_segments){
+  // copied directly from human model. In future refractor the code to 
+  // enable inherentance might be more optimal. For now there is an excessive
+  // amount of unwanted code in HumanModel, which disables inherenting directly.
+
+  const float angle_increment = 2 * M_PI / num_segments;
+
+  Eigen::Vector2f v0(r, 0.);
+  Eigen::Vector2f v1;
+  Eigen::Vector2f offset_vec = CONFIG_offset_vec;
+  const float eps = 0.0005; // lets see if this causes this issue.
+  for (int i = 1; i < num_segments; i++) {
+    v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
+
+    // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
+    Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
+    template_lines_.push_back(geometry::Line2f(v0 + eps_vec + offset_vec, v1 - eps_vec + offset_vec));
+    v0 = v1;
+  }
+  template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(r, 0.0)));
+  pose_lines_ = template_lines_;
 }
 
 } // namespace omnidrive

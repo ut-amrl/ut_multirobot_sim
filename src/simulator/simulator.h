@@ -60,21 +60,22 @@ class Simulator {
   config_reader::ConfigReader reader_;
   config_reader::ConfigReader init_config_reader_;
 
+  // tenporary variables
   Pose2Df vel_;
   Pose2Df cur_loc_;
 
   std::vector<std::unique_ptr<EntityBase>> objects;
 
-  ros::Subscriber initSubscriber;
+  std::vector<ros::Subscriber> initSubscribers;
 
-  ros::Publisher odometryTwistPublisher;
-  ros::Publisher laserPublisher;
-  ros::Publisher viz_laser_publisher_;
+  std::vector<ros::Publisher> odometryTwistPublishers;
+  std::vector<ros::Publisher> laserPublishers;
+  std::vector<ros::Publisher> viz_laser_publishers_;
   ros::Publisher mapLinesPublisher;
   ros::Publisher posMarkerPublisher;
   ros::Publisher objectLinesPublisher;
   ros::Publisher truePosePublisher;
-  ros::Publisher localizationPublisher;
+  std::vector<ros::Publisher> localizationPublishers;
   tf::TransformBroadcaster *br;
 
   sensor_msgs::LaserScan scanDataMsg;
@@ -93,9 +94,18 @@ class Simulator {
   std::default_random_engine rng_;
   std::normal_distribution<float> laser_noise_;
 
-  std::unique_ptr<robot_model::RobotModel> motion_model_;
-  std::string robot_type_;
+  // multi-robot variables
+  std::vector<std::unique_ptr<robot_model::RobotModel>> motion_models_;
+  int robot_number_;
+  //std::vector<ros::Publisher> truePosePublishers;
+  std::vector<visualization_msgs::Marker> robotPosMarkers;
+  // topic prefixes
+  std::vector<std::string> topic_prefixs_;
+  std::vector<std::string> robot_types_;
 
+  std::vector<Pose2Df> cur_locs_;
+  // object lines associated with each vector
+  std::vector<std::vector<geometry::Line2f>> motion_models_lines_;
  private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
                      string type, geometry_msgs::PoseStamped p,
@@ -107,12 +117,35 @@ class Simulator {
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
-  void publishOdometry();
-  void publishLaser();
-  void publishVisualizationMarkers();
-  void publishTransform();
-  void update();
+  void publishOdometry(int cur_car_number);
+  void publishLaser(int cur_car_number);
+  void publishVisualizationMarkers(int cur_car_number);
+  void publishTransform(int cur_car_number);
+  void update(int cur_car_number);
+  void updateLocation(int cur_car_number);
+  void updateSimulatorLines();
   void loadObject();
+
+
+  // TODO: figure out higher order function
+  void InitalLocationCallbackMulti(
+    const geometry_msgs::PoseWithCovarianceStamped &msg, int car_num);
+  void InitalLocationCallbackCar0(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar1(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar2(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar3(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar4(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar5(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar6(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
+  void InitalLocationCallbackCar7(
+    const geometry_msgs::PoseWithCovarianceStamped &msg);
 
  public:
   Simulator() = delete;

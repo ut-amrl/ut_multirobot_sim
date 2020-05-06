@@ -16,3 +16,8 @@ co_max_angle_accel = math.pi
 co_min_turn_radius = 0.98
 co_max_speed = 1.2
 co_max_accel = 3.0
+
+-- cobot configuration
+cobot_num_segments = 20
+cobot_radius = 0.5
+cobot_offset = {0, 0} -- position of lidar
