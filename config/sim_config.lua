@@ -19,6 +19,10 @@ start_angle = 0.0
 -- Time-step for simulation.
 delta_t = 0.025
 
+-- Simulator TF publications
+publish_foot_to_base = true;
+publish_map_to_odom = true;
+
 -- Car dimensions.
 car_width = 0.281
 car_length = 0.535
@@ -43,9 +47,11 @@ angular_error_rate = 0.1;
 -- Defining robot type enumerator
 local RobotType = {
     F1TEN=0,
-    COBOT=1
+    COBOT=1, 
+    BWIBOT=2
 }
 
 -- robot_type = RobotType.F1TEN
+-- robot_type = RobotType.BWIBOT
 robot_type = RobotType.COBOT
 laser_topic = "/Cobot/Laser"

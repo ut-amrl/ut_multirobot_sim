@@ -34,6 +34,7 @@
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
 #include "simulator/cobot_model.h"
+#include "simulator/diff_drive_model.h"
 #include "config_reader/config_reader.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
@@ -53,8 +54,9 @@ using math_util::AngleMod;
 using math_util::DegToRad;
 using math_util::RadToDeg;
 using ackermann::AckermannModel;
-using cobot::CobotModel;
 using std::atan2;
+using cobot::CobotModel;
+using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
 
@@ -75,13 +77,17 @@ CONFIG_FLOAT(start_angle, "start_angle");
 // Timestep size
 CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
+// TF publications
+CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
+CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
 CONFIG_INT(robot_type, "robot_type");
 CONFIG_STRING(laser_topic, "laser_topic");
 const vector<string> config_list = {"config/sim_config.lua",
                                     "config/ackermann_config.lua",
-                                    "config/cobot_config.lua"};
+                                    "config/cobot_config.lua",
+                                    "config/bwibot_config.lua"};
 config_reader::ConfigReader reader(config_list);
 
 /* const vector<string> object_config_list = {"config/human_config.lua"};
@@ -127,6 +133,10 @@ void Simulator::init(ros::NodeHandle& n) {
     case COBOT:
       motion_model_ =
           unique_ptr<CobotModel>(new CobotModel(config_list, &n));
+      break;
+    case BWIBOT:
+      motion_model_ =
+          unique_ptr<DiffDriveModel>(new DiffDriveModel(config_list, &n));
       break;
   }
   motion_model_->SetPose(cur_loc_);
@@ -366,24 +376,27 @@ void Simulator::publishLaser() {
 void Simulator::publishTransform() {
   tf::Transform transform;
   tf::Quaternion q;
-
-  transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
-  transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
+  
+  if(CONFIG_publish_map_to_odom) {
+      transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
+      transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+      br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
       "/odom"));
-
+  }
   transform.setOrigin(tf::Vector3(cur_loc_.translation.x(),
         cur_loc_.translation.y(), 0.0));
   q.setRPY(0.0, 0.0, cur_loc_.angle);
   transform.setRotation(q);
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom",
       "/base_footprint"));
-
-  transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
-  transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-      "/base_footprint", "/base_link"));
-
+  
+  if(CONFIG_publish_foot_to_base){
+      transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
+      transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+      br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+        "/base_footprint", "/base_link"));
+  }
+  
   transform.setOrigin(tf::Vector3(CONFIG_laser_x,
         CONFIG_laser_y, CONFIG_laser_z));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
