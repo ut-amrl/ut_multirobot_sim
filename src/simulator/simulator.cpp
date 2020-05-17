@@ -48,7 +48,7 @@ DEFINE_bool(localize, false, "Publish localization");
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
 using geometry::Heading;
-using geometry::line2f;
+using geometry::Line2f;
 using geometry_msgs::PoseWithCovarianceStamped;
 using math_util::AngleMod;
 using math_util::DegToRad;
@@ -291,7 +291,7 @@ void Simulator::initSimulatorVizMarkers() {
 
 void Simulator::drawMap() {
   ros_helpers::ClearMarker(&lineListMarker);
-  for (const line2f& l : map_.lines) {
+  for (const Line2f& l : map_.lines) {
     ros_helpers::DrawEigen2DLine(l.p0, l.p1, &lineListMarker);
   }
 }
@@ -299,7 +299,7 @@ void Simulator::drawMap() {
 void Simulator::drawObjects() {
   // draw objects
   ros_helpers::ClearMarker(&objectLinesMarker);
-  for (const line2f& l : map_.object_lines) {
+  for (const Line2f& l : map_.object_lines) {
     ros_helpers::DrawEigen2DLine(l.p0, l.p1, &objectLinesMarker);
   }
 }
@@ -434,7 +434,7 @@ void Simulator::update() {
   for (size_t i=0; i < objects.size(); i++){
     objects[i]->Step(CONFIG_DT);
     auto pose_lines = objects[i]->GetLines();
-    for (line2f line: pose_lines){
+    for (Line2f line: pose_lines){
       map_.object_lines.push_back(line);
     }
   }

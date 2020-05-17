@@ -36,10 +36,10 @@ Pose2Df EntityBase::GetPose() {
   return pose_;
 }
 
-std::vector<geometry::line2f> EntityBase::GetTemplateLines() {
+std::vector<geometry::Line2f> EntityBase::GetTemplateLines() {
   return template_lines_;
 }
 
-std::vector<geometry::line2f> EntityBase::GetLines() {
+std::vector<geometry::Line2f> EntityBase::GetLines() {
   return pose_lines_;
 }

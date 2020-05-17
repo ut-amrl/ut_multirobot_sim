@@ -29,10 +29,10 @@ ShortTermObject::ShortTermObject() {
   // Example of a simple shape
   const float r = 0.5;
   const float eps = 0.001;
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
   pose_lines_ = template_lines_;
 }
 
@@ -52,10 +52,10 @@ ShortTermObject::ShortTermObject(const std::string& config_file) {
   // TODO(yifeng): Load the shape from a config file, replace the example in the future
   const double r = 0.5;
   const double eps = 0.001;
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
-  template_lines_.push_back(geometry::line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
+  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
 
   Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
   Eigen::Vector2f T = pose_.translation;

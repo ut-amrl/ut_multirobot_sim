@@ -35,9 +35,9 @@ class EntityBase{
  protected:
     Pose2Df pose_;
     // template lines always assuming at pose (0., 0., 0.)
-    std::vector<geometry::line2f> template_lines_;
+    std::vector<geometry::Line2f> template_lines_;
     // actual line position given current pose pose_
-    std::vector<geometry::line2f> pose_lines_;
+    std::vector<geometry::Line2f> pose_lines_;
  public:
     EntityBase();
     virtual ~EntityBase() = default;
@@ -48,9 +48,9 @@ class EntityBase{
     // get current  pose of the obstacle
     virtual Pose2Df GetPose();
     // get current shape (lines) based on the pose
-    virtual std::vector<geometry::line2f> GetLines();
+    virtual std::vector<geometry::Line2f> GetLines();
     // get template shape
-    virtual std::vector<geometry::line2f> GetTemplateLines();
+    virtual std::vector<geometry::Line2f> GetTemplateLines();
 };
 
 #endif  // SRC_SIMULATOR_ENTITY_BASE_H_
