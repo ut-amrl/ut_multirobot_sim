@@ -35,7 +35,6 @@
 #include "simulator/ackermann_model.h"
 #include "simulator/cobot_model.h"
 #include "simulator/diff_drive_model.h"
-#include "config_reader/config_reader.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
 #include "shared/math/math_util.h"
@@ -78,13 +77,9 @@ CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
 CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
-CONFIG_INT(robot_type, "robot_type");
+CONFIG_STRING(robot_type, "robot_type");
+CONFIG_STRING(robot_config, "robot_config");
 CONFIG_STRING(laser_topic, "laser_topic");
-const vector<string> config_list = {"config/sim_config.lua",
-                                    "config/ackermann_config.lua",
-                                    "config/cobot_config.lua",
-                                    "config/bwibot_config.lua"};
-config_reader::ConfigReader reader(config_list);
 
 CONFIG_STRING(map_name, "map_name");
 // Initial location
@@ -99,11 +94,12 @@ config_reader::ConfigReader init_config_reader({CONFIG_init_config_file});
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
 
-Simulator::Simulator() :
+Simulator::Simulator(const std::string& sim_config) :
+    reader_({sim_config}),
     vel_(0, {0,0}),
     cur_loc_(0, {0,0}),
     laser_noise_(0, 1),
-    robot_type_(static_cast<RobotType>(CONFIG_robot_type)) {
+    robot_type_(CONFIG_robot_type) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
 }
@@ -131,19 +127,15 @@ void Simulator::init(ros::NodeHandle& n) {
 
   // Create motion model based on robot type
   // TODO extend to handle the multi-robot case
-  switch(robot_type_) {
-    case F1TEN:
-      motion_model_ =
-          unique_ptr<AckermannModel>(new AckermannModel(config_list, &n));
-      break;
-    case COBOT:
-      motion_model_ =
-          unique_ptr<CobotModel>(new CobotModel(config_list, &n));
-      break;
-    case BWIBOT:
-      motion_model_ =
-          unique_ptr<DiffDriveModel>(new DiffDriveModel(config_list, &n));
-      break;
+  if (robot_type_ == "F1TEN") {
+    motion_model_ =
+          unique_ptr<AckermannModel>(new AckermannModel({CONFIG_robot_config}, &n));
+  } else if (robot_type_ == "COBOT") {
+    motion_model_ =
+          unique_ptr<CobotModel>(new CobotModel({CONFIG_robot_config}, &n));
+  } else if (robot_type_ == "BWIBOT") {
+    motion_model_ =
+          unique_ptr<DiffDriveModel>(new DiffDriveModel({CONFIG_robot_config}, &n));
   }
   motion_model_->SetPose(cur_loc_);
   initSimulatorVizMarkers();

@@ -44,12 +44,16 @@ angular_error_rate = 0.1;
 
 -- Defining robot type enumerator
 local RobotType = {
-    F1TEN=0,
-    COBOT=1, 
-    BWIBOT=2
+    F1TEN="F1TEN",
+    COBOT="COBOT",
+    BWIBOT="BWIBOT"
 }
 
 -- robot_type = RobotType.F1TEN
+-- robot_config = "config/ackermann_config.lua"
 -- robot_type = RobotType.BWIBOT
+-- robot_config = "config/bwibot_config.lua"
 robot_type = RobotType.COBOT
+robot_config = "config/cobot_config.lua"
+
 laser_topic = "/Cobot/Laser"
