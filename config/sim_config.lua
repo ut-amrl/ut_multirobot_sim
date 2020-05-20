@@ -10,11 +10,9 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-map_name =  "maps/GDC1.txt"
--- Simulator starting location.
-start_x = -21
-start_y = 8.6
-start_angle = 0.0
+init_config_file = "config/default_init_config.lua"
+-- example of loading human crow scenario configs
+-- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
 
 -- Time-step for simulation.
 delta_t = 0.025

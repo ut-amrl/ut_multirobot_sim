@@ -60,7 +60,7 @@ using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
 
-CONFIG_STRING(map_name, "map_name");
+CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
 CONFIG_FLOAT(car_length, "car_length");
 CONFIG_FLOAT(car_width, "car_width");
@@ -70,10 +70,6 @@ CONFIG_FLOAT(rear_axle_offset, "rear_axle_offset");
 CONFIG_FLOAT(laser_x, "laser_loc.x");
 CONFIG_FLOAT(laser_y, "laser_loc.y");
 CONFIG_FLOAT(laser_z, "laser_loc.z");
-// Initial location
-CONFIG_FLOAT(start_x, "start_x");
-CONFIG_FLOAT(start_y, "start_y");
-CONFIG_FLOAT(start_angle, "start_angle");
 // Timestep size
 CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
@@ -89,6 +85,16 @@ const vector<string> config_list = {"config/sim_config.lua",
                                     "config/cobot_config.lua",
                                     "config/bwibot_config.lua"};
 config_reader::ConfigReader reader(config_list);
+
+CONFIG_STRING(map_name, "map_name");
+// Initial location
+CONFIG_FLOAT(start_x, "start_x");
+CONFIG_FLOAT(start_y, "start_y");
+CONFIG_FLOAT(start_angle, "start_angle");
+CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
+CONFIG_STRINGLIST(human_config_list, "human_config_list");
+
+config_reader::ConfigReader init_config_reader({CONFIG_init_config_file});
 
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
@@ -165,13 +171,16 @@ void Simulator::init(ros::NodeHandle& n) {
 
 // TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
-  ShortTermObject* shortTermObject =
-      new ShortTermObject("short_term_config.lua");
-  objects.push_back(shortTermObject);
+  // TODO (yifeng): load short term objects from list
+  objects.push_back(
+    std::unique_ptr<ShortTermObject>(new ShortTermObject("short_term_config.lua")));
 
-  const vector<string> object_config_0 = {"config/human_config.lua"};
-  HumanObject* human_object0 = new HumanObject(object_config_0);
-  objects.push_back(human_object0);
+  // human
+  for (const string& config_str: CONFIG_human_config_list) {
+    objects.push_back(
+      std::unique_ptr<HumanObject>(new HumanObject({config_str})));
+
+  }
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {

@@ -60,7 +60,7 @@ class Simulator {
   Pose2Df vel_;
   Pose2Df cur_loc_;
 
-  std::vector<EntityBase *> objects;
+  std::vector<std::unique_ptr<EntityBase>> objects;
 
   ros::Subscriber initSubscriber;
 

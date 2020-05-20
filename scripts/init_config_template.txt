@@ -1,0 +1,8 @@
+map_name =  "{0}"
+-- Simulator starting location.
+start_x = {1}
+start_y = {2}
+start_angle = {3}
+
+human_config_list = {{ {4} }}
+
