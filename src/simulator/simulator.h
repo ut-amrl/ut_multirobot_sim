@@ -42,6 +42,7 @@
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
 #include "simulator/vector_map.h"
+#include "config_reader/config_reader.h"
 
 #include "entity_base.h"
 #include "human_object.h"
@@ -54,13 +55,13 @@
 using namespace std;
 using pose_2d::Pose2Df;
 
-enum RobotType { F1TEN, COBOT, BWIBOT };
-
 class Simulator {
+  config_reader::ConfigReader reader_;
+
   Pose2Df vel_;
   Pose2Df cur_loc_;
 
-  std::vector<EntityBase *> objects;
+  std::vector<std::unique_ptr<EntityBase>> objects;
 
   ros::Subscriber initSubscriber;
 
@@ -90,7 +91,7 @@ class Simulator {
   std::normal_distribution<float> laser_noise_;
 
   std::unique_ptr<robot_model::RobotModel> motion_model_;
-  RobotType robot_type_;
+  std::string robot_type_;
 
  private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
@@ -111,7 +112,8 @@ class Simulator {
   void loadObject();
 
  public:
-  Simulator();
+  Simulator() = delete;
+  explicit Simulator(const std::string& sim_config);
   ~Simulator();
   void init(ros::NodeHandle &n);
   void Run();

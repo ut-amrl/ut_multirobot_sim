@@ -29,6 +29,7 @@
 #include "shared/util/timer.h"
 #include "simulator.h"
 
+DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
 
 int main(int argc, char **argv) {
   google::ParseCommandLineFlags(&argc, &argv, false);
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "F1Tenth_Simulator");
   ros::NodeHandle n;
 
-  Simulator simulator;
+  Simulator simulator(FLAGS_sim_config);
   simulator.init(n);
 
   // main loop

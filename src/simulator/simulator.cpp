@@ -35,7 +35,6 @@
 #include "simulator/ackermann_model.h"
 #include "simulator/cobot_model.h"
 #include "simulator/diff_drive_model.h"
-#include "config_reader/config_reader.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
 #include "shared/math/math_util.h"
@@ -60,7 +59,7 @@ using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
 
-CONFIG_STRING(map_name, "map_name");
+CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
 CONFIG_FLOAT(car_length, "car_length");
 CONFIG_FLOAT(car_width, "car_width");
@@ -70,10 +69,6 @@ CONFIG_FLOAT(rear_axle_offset, "rear_axle_offset");
 CONFIG_FLOAT(laser_x, "laser_loc.x");
 CONFIG_FLOAT(laser_y, "laser_loc.y");
 CONFIG_FLOAT(laser_z, "laser_loc.z");
-// Initial location
-CONFIG_FLOAT(start_x, "start_x");
-CONFIG_FLOAT(start_y, "start_y");
-CONFIG_FLOAT(start_angle, "start_angle");
 // Timestep size
 CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
@@ -82,22 +77,29 @@ CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
 CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
-CONFIG_INT(robot_type, "robot_type");
+CONFIG_STRING(robot_type, "robot_type");
+CONFIG_STRING(robot_config, "robot_config");
 CONFIG_STRING(laser_topic, "laser_topic");
-const vector<string> config_list = {"config/sim_config.lua",
-                                    "config/ackermann_config.lua",
-                                    "config/cobot_config.lua",
-                                    "config/bwibot_config.lua"};
-config_reader::ConfigReader reader(config_list);
+
+CONFIG_STRING(map_name, "map_name");
+// Initial location
+CONFIG_FLOAT(start_x, "start_x");
+CONFIG_FLOAT(start_y, "start_y");
+CONFIG_FLOAT(start_angle, "start_angle");
+CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
+CONFIG_STRINGLIST(human_config_list, "human_config_list");
+
+config_reader::ConfigReader init_config_reader({CONFIG_init_config_file});
 
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
 
-Simulator::Simulator() :
+Simulator::Simulator(const std::string& sim_config) :
+    reader_({sim_config}),
     vel_(0, {0,0}),
     cur_loc_(0, {0,0}),
     laser_noise_(0, 1),
-    robot_type_(static_cast<RobotType>(CONFIG_robot_type)) {
+    robot_type_(CONFIG_robot_type) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
 }
@@ -125,19 +127,15 @@ void Simulator::init(ros::NodeHandle& n) {
 
   // Create motion model based on robot type
   // TODO extend to handle the multi-robot case
-  switch(robot_type_) {
-    case F1TEN:
-      motion_model_ =
-          unique_ptr<AckermannModel>(new AckermannModel(config_list, &n));
-      break;
-    case COBOT:
-      motion_model_ =
-          unique_ptr<CobotModel>(new CobotModel(config_list, &n));
-      break;
-    case BWIBOT:
-      motion_model_ =
-          unique_ptr<DiffDriveModel>(new DiffDriveModel(config_list, &n));
-      break;
+  if (robot_type_ == "F1TEN") {
+    motion_model_ =
+          unique_ptr<AckermannModel>(new AckermannModel({CONFIG_robot_config}, &n));
+  } else if (robot_type_ == "COBOT") {
+    motion_model_ =
+          unique_ptr<CobotModel>(new CobotModel({CONFIG_robot_config}, &n));
+  } else if (robot_type_ == "BWIBOT") {
+    motion_model_ =
+          unique_ptr<DiffDriveModel>(new DiffDriveModel({CONFIG_robot_config}, &n));
   }
   motion_model_->SetPose(cur_loc_);
   initSimulatorVizMarkers();
@@ -165,13 +163,16 @@ void Simulator::init(ros::NodeHandle& n) {
 
 // TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
-  ShortTermObject* shortTermObject =
-      new ShortTermObject("short_term_config.lua");
-  objects.push_back(shortTermObject);
+  // TODO (yifeng): load short term objects from list
+  objects.push_back(
+    std::unique_ptr<ShortTermObject>(new ShortTermObject("short_term_config.lua")));
 
-  const vector<string> object_config_0 = {"config/human_config.lua"};
-  HumanObject* human_object0 = new HumanObject(object_config_0);
-  objects.push_back(human_object0);
+  // human
+  for (const string& config_str: CONFIG_human_config_list) {
+    objects.push_back(
+      std::unique_ptr<HumanObject>(new HumanObject({config_str})));
+
+  }
 }
 
 void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
