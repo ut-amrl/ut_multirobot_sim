@@ -57,6 +57,7 @@ using pose_2d::Pose2Df;
 
 class Simulator {
   config_reader::ConfigReader reader_;
+  config_reader::ConfigReader init_config_reader_;
 
   Pose2Df vel_;
   Pose2Df cur_loc_;

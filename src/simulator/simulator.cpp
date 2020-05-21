@@ -89,13 +89,12 @@ CONFIG_FLOAT(start_angle, "start_angle");
 CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
 CONFIG_STRINGLIST(human_config_list, "human_config_list");
 
-config_reader::ConfigReader init_config_reader({CONFIG_init_config_file});
-
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
 
 Simulator::Simulator(const std::string& sim_config) :
     reader_({sim_config}),
+    init_config_reader_({CONFIG_init_config_file}),
     vel_(0, {0,0}),
     cur_loc_(0, {0,0}),
     laser_noise_(0, 1),
