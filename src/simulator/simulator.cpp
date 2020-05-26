@@ -26,6 +26,7 @@
 
 #include <random>
 #include <string>
+#include <iterator>
 
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
@@ -116,6 +117,9 @@ Simulator::Simulator(const std::string& sim_config) :
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   // TODO: add static cast robot_type_(static_cast<RobotType>(CONFIG_robot_type))
+  // initialize object lines associated with each robot
+  motion_models_lines_.resize(robot_number_, std::vector<line2f>(0));
+  printf("motion model line size: %lu \n", motion_models_lines_.size());
 }
 
 Simulator::~Simulator() { }
@@ -550,11 +554,14 @@ void Simulator::publishVisualizationMarkers(int cur_car_number) {
   objectLinesPublisher.publish(objectLinesMarker);
 }
 
-void Simulator::update(int cur_car_number) {
+void Simulator::updateLocation(int cur_car_number){
   // Step the motion model forward one time step
   motion_models_[cur_car_number]->Step(CONFIG_DT);
   // Update the simulator with the motion model result.
   cur_locs_[cur_car_number] = motion_models_[cur_car_number]->GetPose();
+}
+
+void Simulator::update(int cur_car_number) {
   cur_loc_ = cur_locs_[cur_car_number];
   vel_ = motion_models_[cur_car_number]->GetVel();
 
@@ -579,6 +586,27 @@ void Simulator::update(int cur_car_number) {
     }
   }
   this->drawObjects();
+  // update objects associated with each robot
+  for (line2f line: motion_models_lines_[cur_car_number]){
+      map_.object_lines.push_back(line);    
+  }
+}
+
+void Simulator::updateSimulatorLines(){
+  // Runtime is O(n^2),  but n (number of robot)
+  // is always small, so this is fine.
+  for(int i = 0; i < robot_number_; i++){
+    motion_models_lines_[i].clear();
+  }
+  for(int i = 0; i < robot_number_; i++){
+    for(int j = 0; j < robot_number_; j++){
+      if(i != j){
+        for(line2f line: motion_models_[j]->GetLines()){
+          motion_models_lines_[i].push_back(line);
+        }
+      }
+    }
+  }
 }
 
 string GetMapNameFromFilename(string path) {
@@ -593,16 +621,15 @@ string GetMapNameFromFilename(string path) {
 }
 
 void Simulator::Run() {
-  // update the position of the robots
-  for(int i = 0; i < robot_number_; i++){
-    updateLocation(i);
-  }
-  // update object lines associated with each robot
-  this->updateSimulatorLines();
+
 
   for(int i = 0; i < robot_number_; i++){
     cur_loc_ = cur_locs_[i];
     // Simulate time-step.
+    updateLocation(i);
+  }
+  this->updateSimulatorLines();
+  for(int i = 0; i < robot_number_; i++){
     update(i);
     //publish odometry and status
     publishOdometry(i); 
@@ -622,5 +649,4 @@ void Simulator::Run() {
     }
   }
   
-
 }

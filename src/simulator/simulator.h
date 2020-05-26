@@ -105,6 +105,9 @@ class Simulator {
   std::vector<std::string> robot_types_;
 
   std::vector<Pose2Df> cur_locs_;
+
+  // object lines associated with each vector
+  std::vector<std::vector<geometry::line2f>> motion_models_lines_;
  private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
                      string type, geometry_msgs::PoseStamped p,
@@ -122,7 +125,10 @@ class Simulator {
   void publishVisualizationMarkers(int cur_car_number);
   void publishTransform(string topic_prefix);
   void update(int cur_car_number);
+  void updateLocation(int cur_car_number);
+  void updateSimulatorLines();
   void loadObject();
+
 
   // TODO: figure out higher order function
   void InitalLocationCallbackMulti(

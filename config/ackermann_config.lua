@@ -8,3 +8,8 @@ ak_angular_error_bias = DegToRad(0);
 ak_angular_error_rate = 0.1;
 
 ak_drive_callback_topic = "/ackermann_curvature_drive"
+
+-- Car configuration
+arkermann_num_segments = 20
+arkermann_radius = 0.05
+arkermann_offset = {0.02, 0} -- position of lidar
