@@ -25,20 +25,8 @@ CONFIG_FLOAT(radius, "arkermann_radius");
 CONFIG_FLOAT(num_segments, "arkermann_num_segments");
 CONFIG_VECTOR2F(offset_vec, "arkermann_offset");
 
-AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) :
-    RobotModel(),
-    last_cmd_(),
-    t_last_cmd_(0),
-    angular_error_(0, 1),
-    config_reader_(config_file){
-  // Use the config reader to initialize the subscriber
-  last_cmd_.velocity = 0;
-  last_cmd_.curvature = 0;
-  drive_subscriber_ = n->subscribe(
-      CONFIG_drive_topic,
-      1,
-      &AckermannModel::DriveCallback,
-      this);
+AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) : 
+    AckermannModel(config_file, n, ""){
 }
 
 AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n, string topic_prefix) :

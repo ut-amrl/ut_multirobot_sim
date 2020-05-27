@@ -90,4 +90,8 @@ RGB_list = {{255.0, 165.0, 39.0}, {52.0, 101.0, 164.0}, {92.0, 53.0, 102.0}}
 
 
 
+-- cobot configuration
+cobot_num_segments = 20
+cobot_radius = 0.5
+cobot_offset = {0, 0} -- position of lidar
 
