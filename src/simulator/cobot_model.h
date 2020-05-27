@@ -26,11 +26,13 @@ class CobotModel : public robot_model::RobotModel {
   // Initialize associated template lines (shape of robot)
   void SetTemplateLines(const float r, const int num_segments);
   void Transform();
+
  public:
   CobotModel() = delete;
   // Intialize a default object reading from a file
   CobotModel(const std::vector<std::string>& config_files, ros::NodeHandle* n);
-  CobotModel(const std::vector<std::string>& config_files, ros::NodeHandle* n, std::string topic_prefix);
+  CobotModel(const std::vector<std::string> &config_files, ros::NodeHandle *n,
+             std::string topic_prefix);
 
   ~CobotModel() = default;
   // define Step function for updating

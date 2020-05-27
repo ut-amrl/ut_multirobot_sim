@@ -24,9 +24,9 @@
 #include <memory>
 #include <stdio.h>
 
+#include <iterator>
 #include <random>
 #include <string>
-#include <iterator>
 
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
@@ -119,10 +119,9 @@ Simulator::Simulator(const std::string& sim_config) :
   // TODO: add static cast robot_type_(static_cast<RobotType>(CONFIG_robot_type))
   // initialize object lines associated with each robot
   motion_models_lines_.resize(robot_number_, std::vector<line2f>(0));
-  printf("motion model line size: %lu \n", motion_models_lines_.size());
 }
 
-Simulator::~Simulator() { }
+Simulator::~Simulator() {}
 
 void Simulator::init(ros::NodeHandle& n) {
   // TODO(jaholtz) Too much hard coding, move to config
@@ -181,64 +180,49 @@ void Simulator::init(ros::NodeHandle& n) {
     }
   }
   // initialize hard coded initial pose
-  for(int i = 0; i < robot_number_; i++){
-    if(i == 7){
+  for (int i = 0; i < robot_number_; i++) {
+    if (i == 7) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[7] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar7,
-                      this)); 
-    }
-    else if (i == 6){
+                      &Simulator::InitalLocationCallbackCar7, this));
+    } else if (i == 6) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[6] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar6,
-                      this)); 
-    }
-    else if (i == 5){
+                      &Simulator::InitalLocationCallbackCar6, this));
+    } else if (i == 5) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[5] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar5,
-                      this)); 
-    }
-    else if (i == 4){
+                      &Simulator::InitalLocationCallbackCar5, this));
+    } else if (i == 4) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[4] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar4,
-                      this)); 
-    }
-    else if (i == 3){
+                      &Simulator::InitalLocationCallbackCar4, this));
+    } else if (i == 3) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[3] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar3,
-                      this)); 
-    }
-    else if (i == 2){
+                      &Simulator::InitalLocationCallbackCar3, this));
+    } else if (i == 2) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[2] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar2,
-                      this)); 
-    }
-    else if (i == 1){
+                      &Simulator::InitalLocationCallbackCar2, this));
+    } else if (i == 1) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[1] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar1,
-                      this)); 
-    }
-    else if (i == 0){
+                      &Simulator::InitalLocationCallbackCar1, this));
+    } else if (i == 0) {
       initSubscribers.push_back(
           n.subscribe(topic_prefixs_[0] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar0,
-                      this)); 
+                      &Simulator::InitalLocationCallbackCar0, this));
     }
   }
   // initialize topics shared jointly
   truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
         "/simulator_true_pose", 1); 
+
   posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6); 
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
-
   objectLinesPublisher = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
   if (FLAGS_localize) {
@@ -279,35 +263,43 @@ void Simulator::InitalLocationCallbackMulti(const PoseWithCovarianceStamped& msg
   motion_models_[car_num]->SetPose({angle, loc}); // TODO, add loop
 }
 
-void Simulator::InitalLocationCallbackCar0(const PoseWithCovarianceStamped& msg) { 
+void Simulator::InitalLocationCallbackCar0(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 0);
 }
 
-void Simulator::InitalLocationCallbackCar1(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar1(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 1);
 }
 
-void Simulator::InitalLocationCallbackCar2(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar2(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 2);
 }
 
-void Simulator::InitalLocationCallbackCar3(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar3(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 3);
 }
 
-void Simulator::InitalLocationCallbackCar4(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar4(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 4);
 }
 
-void Simulator::InitalLocationCallbackCar5(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar5(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 5);
 }
 
-void Simulator::InitalLocationCallbackCar6(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar6(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 6);
 }
 
-void Simulator::InitalLocationCallbackCar7(const PoseWithCovarianceStamped& msg) {
+void Simulator::InitalLocationCallbackCar7(
+    const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 7);
 }
 
@@ -395,10 +387,10 @@ void Simulator::initSimulatorVizMarkers() {
   scale.x = CONFIG_car_length;
   scale.y = CONFIG_car_width;
   scale.z = CONFIG_car_height;
-  color[0] = 94.0 / 255.0;
-  color[1] = 156.0 / 255.0;
-  color[2] = 255.0 / 255.0;
-  color[3] = 0.8;
+  color[0] = 0;
+  color[1] = 0;
+  color[2] = 0;
+  color[3] = 0.8; // luminosity
 
   for(int i = 0; i < robot_number_; i++){
     robotPosMarkers.push_back(visualization_msgs::Marker());
@@ -512,12 +504,14 @@ void Simulator::publishLaser(int cur_car_number) {
   viz_laser_publishers_[cur_car_number].publish(scanDataMsg);
 }
 
-void Simulator::publishTransform(string topic_prefix) {
+void Simulator::publishTransform(int cur_car_number) {
   if (!CONFIG_publish_tfs) {
     return;
   }
   tf::Transform transform;
   tf::Quaternion q;
+
+  string topic_prefix = topic_prefixs_[cur_car_number];
 
   if(CONFIG_publish_map_to_odom) {
     transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
@@ -622,13 +616,15 @@ string GetMapNameFromFilename(string path) {
 
 void Simulator::Run() {
 
-
+  // update the position of the robots
   for(int i = 0; i < robot_number_; i++){
     cur_loc_ = cur_locs_[i];
     // Simulate time-step.
     updateLocation(i);
   }
+  // update object lines associated with each robot
   this->updateSimulatorLines();
+  // publish messages related to the robots
   for(int i = 0; i < robot_number_; i++){
     update(i);
     //publish odometry and status
@@ -638,7 +634,7 @@ void Simulator::Run() {
     // publish visualization marker messages
     publishVisualizationMarkers(i);
     //publish tf
-    publishTransform(topic_prefixs_[i]);
+    publishTransform(i);
     if (FLAGS_localize) {
       localizationMsg.header.stamp = ros::Time::now();
       localizationMsg.map = GetMapNameFromFilename(map_.file_name);

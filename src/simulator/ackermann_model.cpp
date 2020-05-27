@@ -25,7 +25,8 @@ CONFIG_FLOAT(radius, "arkermann_radius");
 CONFIG_FLOAT(num_segments, "arkermann_num_segments");
 CONFIG_VECTOR2F(offset_vec, "arkermann_offset");
 
-AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) : 
+AckermannModel::AckermannModel(const vector<string> &config_file,
+                               ros::NodeHandle *n):
     AckermannModel(config_file, n, ""){
 }
 

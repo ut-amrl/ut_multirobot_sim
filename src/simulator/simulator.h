@@ -123,7 +123,7 @@ class Simulator {
   void publishOdometry(int cur_car_number);
   void publishLaser(int cur_car_number);
   void publishVisualizationMarkers(int cur_car_number);
-  void publishTransform(string topic_prefix);
+  void publishTransform(int cur_car_number);
   void update(int cur_car_number);
   void updateLocation(int cur_car_number);
   void updateSimulatorLines();
