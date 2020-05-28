@@ -118,7 +118,7 @@ Simulator::Simulator(const std::string& sim_config) :
   truePoseMsg.header.frame_id = "map";
   // TODO: add static cast robot_type_(static_cast<RobotType>(CONFIG_robot_type))
   // initialize object lines associated with each robot
-  motion_models_lines_.resize(robot_number_, std::vector<line2f>(0));
+  motion_models_lines_.resize(robot_number_, std::vector<Line2f>(0));
 }
 
 Simulator::~Simulator() {}
@@ -581,7 +581,7 @@ void Simulator::update(int cur_car_number) {
   }
   this->drawObjects();
   // update objects associated with each robot
-  for (line2f line: motion_models_lines_[cur_car_number]){
+  for (Line2f line: motion_models_lines_[cur_car_number]){
       map_.object_lines.push_back(line);    
   }
 }
@@ -595,7 +595,7 @@ void Simulator::updateSimulatorLines(){
   for(int i = 0; i < robot_number_; i++){
     for(int j = 0; j < robot_number_; j++){
       if(i != j){
-        for(line2f line: motion_models_[j]->GetLines()){
+        for(Line2f line: motion_models_[j]->GetLines()){
           motion_models_lines_[i].push_back(line);
         }
       }

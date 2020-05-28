@@ -159,10 +159,10 @@ void CobotModel::SetTemplateLines(const float r, const int num_segments){
 
     // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
     Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
-    template_lines_.push_back(geometry::line2f(v0 + eps_vec + offset_vec, v1 - eps_vec + offset_vec));
+    template_lines_.push_back(geometry::Line2f(v0 + eps_vec + offset_vec, v1 - eps_vec + offset_vec));
     v0 = v1;
   }
-  template_lines_.push_back(geometry::line2f(v1, Eigen::Vector2f(r, 0.0)));
+  template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(r, 0.0)));
   pose_lines_ = template_lines_;
 }
 
