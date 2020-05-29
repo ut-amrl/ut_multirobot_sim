@@ -18,6 +18,7 @@ init_config_file = "config/default_init_config.lua"
 delta_t = 0.025
 
 -- Simulator TF publications
+publish_tfs = true;
 publish_foot_to_base = true;
 publish_map_to_odom = true;
 

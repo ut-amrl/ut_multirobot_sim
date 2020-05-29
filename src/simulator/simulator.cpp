@@ -73,6 +73,7 @@ CONFIG_FLOAT(laser_z, "laser_loc.z");
 CONFIG_FLOAT(DT, "delta_t");
 CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
 // TF publications
+CONFIG_BOOL(publish_tfs, "publish_tfs");
 CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
 CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
@@ -374,6 +375,9 @@ void Simulator::publishLaser() {
 }
 
 void Simulator::publishTransform() {
+  if (!CONFIG_publish_tfs) {
+    return;
+  }
   tf::Transform transform;
   tf::Quaternion q;
   
