@@ -57,3 +57,4 @@ robot_type = RobotType.COBOT
 robot_config = "config/cobot_config.lua"
 
 laser_topic = "/Cobot/Laser"
+laser_frame = "base_laser"

@@ -80,6 +80,7 @@ CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 CONFIG_STRING(robot_type, "robot_type");
 CONFIG_STRING(robot_config, "robot_config");
 CONFIG_STRING(laser_topic, "laser_topic");
+CONFIG_STRING(laser_frame, "laser_frame");
 
 CONFIG_STRING(map_name, "map_name");
 // Initial location
@@ -108,7 +109,7 @@ Simulator::~Simulator() { }
 void Simulator::init(ros::NodeHandle& n) {
   // TODO(jaholtz) Too much hard coding, move to config
   scanDataMsg.header.seq = 0;
-  scanDataMsg.header.frame_id = "base_laser";
+  scanDataMsg.header.frame_id = CONFIG_laser_frame;
   scanDataMsg.angle_min = DegToRad(-135.0);
   scanDataMsg.angle_max = DegToRad(135.0);
   scanDataMsg.range_min = 0.02;
