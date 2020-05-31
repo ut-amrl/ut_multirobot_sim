@@ -10,6 +10,11 @@ You can install all the dependencies on *buntu using:
 sudo apt install libgoogle-glog-dev libpopt-dev
 ```
 
+To set up the pre-commit and pre-push hooks that verify changes are able to build locally, run 
+```
+scripts/setup_hooks.sh
+```
+from inside the root of the repo.
 
 ## Build
 
