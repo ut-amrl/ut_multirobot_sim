@@ -22,7 +22,8 @@
 
 #include "simulator/entity_base.h"
 
-EntityBase::EntityBase() {
+EntityBase::EntityBase(){
+
 }
 
 void EntityBase::Step(const double& dt) {
