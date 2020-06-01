@@ -20,7 +20,7 @@ class AckermannModel : public robot_model::RobotModel {
   config_reader::ConfigReader config_reader_;
 
   // Receives drive callback messages and stores them
-  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg &msg);
+  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
   // Initialize associated template lines (shape of robot)
   void SetTemplateLines(const float r, const int num_segments);
   void Transform();

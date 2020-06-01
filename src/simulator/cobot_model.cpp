@@ -6,8 +6,6 @@
 
 #include <string>
 
-#include <string>
-
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
 using ut_multirobot_sim::CobotDriveMsg;

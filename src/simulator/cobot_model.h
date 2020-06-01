@@ -22,7 +22,7 @@ class CobotModel : public robot_model::RobotModel {
   ros::Publisher odom_publisher_;
 
   // Receives drive callback messages and stores Line2f
-  void DriveCallback(const f1tenth_simulator::CobotDriveMsg& msg);
+  void DriveCallback(const ut_multirobot_sim::CobotDriveMsg& msg);
   // Initialize associated template lines (shape of robot)
   void SetTemplateLines(const float r, const int num_segments);
   void Transform();

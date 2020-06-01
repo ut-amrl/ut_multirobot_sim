@@ -116,8 +116,7 @@ class Simulator {
   void drawObjects();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
-
-  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg &msg);
+  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
   void publishOdometry(int cur_car_number);
   void publishLaser(int cur_car_number);
   void publishVisualizationMarkers(int cur_car_number);
