@@ -37,7 +37,7 @@
 #include "tf/transform_datatypes.h"
 #include "visualization_msgs/Marker.h"
 
-#include "f1tenth_simulator/AckermannCurvatureDriveMsg.h"
+#include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -104,7 +104,7 @@ class Simulator {
   void drawObjects();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg &msg);
+  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
   void publishOdometry();
   void publishLaser();
   void publishVisualizationMarkers();

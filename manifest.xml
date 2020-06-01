@@ -1,9 +1,9 @@
 <package>
-  <description brief="f1tenth_simulator">F1/10 Simulator</description>
+  <description brief="ut_multirobot_sim">UT Multi-Robot Simulator</description>
   <author>Maintained by Joydeep Biswas</author>
   <license>LGPLv3.0</license>
   <review status="unreviewed" notes=""/>
-  <url>https://github.com/ut-amrl/f1tenth_simulator</url>
+  <url>https://github.com/ut-amrl/ut_multirobot_sim</url>
   <depend package="roscpp"/>
   <depend package="std_msgs"/>
   <depend package="geometry_msgs"/>

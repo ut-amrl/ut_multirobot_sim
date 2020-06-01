@@ -1,7 +1,7 @@
 #include <random>
 #include <string>
 #include "config_reader/config_reader.h"
-#include "f1tenth_simulator/AckermannCurvatureDriveMsg.h"
+#include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
 #include "ros/ros.h"
 #include "simulator/robot_model.h"
 
@@ -12,7 +12,7 @@ namespace ackermann {
 
 class AckermannModel : public robot_model::RobotModel {
  private:
-  f1tenth_simulator::AckermannCurvatureDriveMsg last_cmd_;
+  ut_multirobot_sim::AckermannCurvatureDriveMsg last_cmd_;
   double t_last_cmd_;
   std::default_random_engine rng_;
   std::normal_distribution<float> angular_error_;
@@ -20,7 +20,7 @@ class AckermannModel : public robot_model::RobotModel {
   config_reader::ConfigReader config_reader_;
 
   // Receives drive callback messages and stores them
-  void DriveCallback(const f1tenth_simulator::AckermannCurvatureDriveMsg &msg);
+  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
 
  public:
   AckermannModel() = delete;

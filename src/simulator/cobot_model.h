@@ -1,7 +1,7 @@
 #include <random>
 #include <string>
 #include "config_reader/config_reader.h"
-#include "f1tenth_simulator/CobotDriveMsg.h"
+#include "ut_multirobot_sim/CobotDriveMsg.h"
 #include "ros/publisher.h"
 #include "ros/ros.h"
 #include "simulator/robot_model.h"
@@ -13,7 +13,7 @@ namespace cobot {
 
 class CobotModel : public robot_model::RobotModel {
  private:
-  f1tenth_simulator::CobotDriveMsg last_cmd_;
+  ut_multirobot_sim::CobotDriveMsg last_cmd_;
   double t_last_cmd_;
   std::default_random_engine rng_;
   std::normal_distribution<float> angular_error_;
@@ -22,7 +22,7 @@ class CobotModel : public robot_model::RobotModel {
   ros::Publisher odom_publisher_;
 
   // Receives drive callback messages and stores them
-  void DriveCallback(const f1tenth_simulator::CobotDriveMsg& msg);
+  void DriveCallback(const ut_multirobot_sim::CobotDriveMsg& msg);
 
  public:
   CobotModel() = delete;

@@ -1,4 +1,4 @@
-PROJECT(f1tenth_simulator)
+PROJECT(ut_multirobot_sim)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1.0)
 
 MESSAGE(STATUS "Compilers found: ${CMAKE_CXX_COMPILER_LIST}")

@@ -1,16 +1,17 @@
-# F1/10 Simulator [![Build Status](https://travis-ci.com/ut-amrl/f1tenth_simulator.svg?branch=master)](https://travis-ci.com/ut-amrl/f1tenth_simulator)
+# UT Multi-Robot Simulator [![Build Status](https://travis-ci.com/ut-amrl/ut_multirobot_sim.svg?branch=master)](https://travis-ci.com/ut-amrl/ut_multirobot_sim)
 
 ## Dependencies
 
 1. [glog](https://github.com/google/glog)
-1. [popt](https://directory.fsf.org/wiki/Popt)
+1. [gflags](https://github.com/google/glog)
+1. [Lua5.1](https://github.com/google/glog)
 
 You can install all the dependencies on *buntu using:
 ```
 sudo apt install libgoogle-glog-dev libpopt-dev
 ```
 
-To set up the pre-commit and pre-push hooks that verify changes are able to build locally, run 
+To set up the pre-commit and pre-push hooks that verify changes are able to build locally, run
 ```
 scripts/setup_hooks.sh
 ```
@@ -23,13 +24,17 @@ from inside the root of the repo.
     export ROS_PACKAGE_PATH=MYDIRECTORY:$ROS_PACKAGE_PATH
     ```
     (Replace `MYDIRECTORY` with the actual directory)
-    You can also add this to your `~/.bashrc` file so that you don't have to do 
+    You can also add this to your `~/.bashrc` file so that you don't have to do
     this every time you open a new terminal.
 1. Build the program:
     ```
     make
     ```
-1. Do **not** run `cmake`, `catkin_make`, `rosbuild` or any other such alternate commands that the internet may suggest.
+    Optionally, to compile on all cores (make sure you have sufficient RAM!)
+    ```
+    make -j
+    ```
+1. Do **not** run `cmake`, `catkin_make`, `rosbuild`.
 
 
 ## Run

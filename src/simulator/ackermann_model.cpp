@@ -5,7 +5,7 @@
 
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
-using f1tenth_simulator::AckermannCurvatureDriveMsg;
+using ut_multirobot_sim::AckermannCurvatureDriveMsg;
 using math_util::Bound;
 using math_util::AngleDiff;
 using math_util::AngleMod;

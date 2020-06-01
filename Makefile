@@ -11,7 +11,7 @@ all: build build/CMakeLists.txt.copy
 	$(MAKE) --no-print-directory -C build
 
 clean:
-	rm -rf bin lib msg_gen src/f1tenth_simulator
+	rm -rf bin build lib msg_gen src/ut_multirobot_sim
 
 build/CMakeLists.txt.copy: build CMakeLists.txt Makefile
 	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) ..
