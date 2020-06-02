@@ -19,6 +19,7 @@
 */
 //========================================================================
 
+#include <libgen.h>
 #include <math.h>
 #include <memory>
 #include <stdio.h>
@@ -40,6 +41,7 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
+#include "ut_multirobot_sim/Localization2DMsg.h"
 #include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
@@ -155,8 +157,12 @@ void Simulator::init(ros::NodeHandle& n) {
       "/simulator_visualization", 6);
   truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
       "/simulator_true_pose", 1);
-  localizationPublisher = n.advertise<geometry_msgs::Pose2D>(
-      "/localization", 1);
+  if (FLAGS_localize) {
+    localizationPublisher = n.advertise<ut_multirobot_sim::Localization2DMsg>(
+        "/localization", 1);
+    localizationMsg.header.frame_id = "map";
+    localizationMsg.header.seq = 0;
+  }
   br = new tf::TransformBroadcaster();
 
   this->loadObject();
@@ -446,6 +452,17 @@ void Simulator::update() {
   this->drawObjects();
 }
 
+string GetMapNameFromFilename(string path) {
+  char path_cstring[path.length()];
+  strcpy(path_cstring, path.c_str());
+  const string file_name(basename(path_cstring));
+  if (file_name.length() > 4 && 
+      file_name.substr(file_name.length() - 4, 4) == ".txt") {
+    return file_name.substr(0, file_name.length() - 4);
+  }
+  return file_name;
+}
+
 void Simulator::Run() {
   // Simulate time-step.
   update();
@@ -459,10 +476,11 @@ void Simulator::Run() {
   publishTransform();
 
   if (FLAGS_localize) {
-    geometry_msgs::Pose2D localization_msg;
-    localization_msg.x = cur_loc_.translation.x();
-    localization_msg.y = cur_loc_.translation.y();
-    localization_msg.theta = cur_loc_.angle;
-    localizationPublisher.publish(localization_msg);
+    localizationMsg.header.stamp = ros::Time::now();
+    localizationMsg.map = GetMapNameFromFilename(map_.file_name);
+    localizationMsg.pose.x = cur_loc_.translation.x();
+    localizationMsg.pose.y = cur_loc_.translation.y();
+    localizationMsg.pose.theta = cur_loc_.angle;
+    localizationPublisher.publish(localizationMsg);
   }
 }

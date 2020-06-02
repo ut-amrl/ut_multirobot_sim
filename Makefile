@@ -13,7 +13,7 @@ all: build build/CMakeLists.txt.copy
 clean:
 	rm -rf bin build lib msg_gen src/ut_multirobot_sim
 
-build/CMakeLists.txt.copy: build CMakeLists.txt Makefile
+build/CMakeLists.txt.copy: build CMakeLists.txt Makefile msg
 	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) ..
 	cp CMakeLists.txt build/CMakeLists.txt.copy
 

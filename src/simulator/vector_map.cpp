@@ -292,7 +292,6 @@ void VectorMap::RayCast(const Vector2f& loc,
     int iidx;
     RayCastRay(const Vector2f& ray_end, int iidx) :
         ray_end(ray_end), iidx(iidx) {}
-    // EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   };
   // Go through all lines, and check for intersection of rays.
   vector<RayCastRay> ray_cast_rays;
@@ -371,7 +370,7 @@ void VectorMap::Cleanup() {
   const float kMinLineLength = 0.05;
   vector<Line2f> new_lines;
   for (size_t i = 0; i < lines.size(); ++i) {
-    const Line2f& l1 = lines[i];
+    const Line2f l1 = lines[i];
     if (l1.Length() < kMinLineLength) continue;
     // Check if l1 intersects with any line in new lines.
     Vector2f p;

@@ -4,3 +4,6 @@
 [submodule "submodules/shared"]
 	path = submodules/shared
 	url = https://github.com/ut-amrl/amrl_shared_lib.git
+[submodule "maps"]
+	path = maps
+	url = https://github.com/ut-amrl/amrl_maps.git
