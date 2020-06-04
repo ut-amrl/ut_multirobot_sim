@@ -48,9 +48,8 @@ angular_error_rate = 0.1;
 -- robot_config = "config/ackermann_config.lua"
 -- robot_type = RobotType.BWIBOT
 -- robot_config = "config/bwibot_config.lua"
-
-robot_type = RobotType.COBOT 
-robot_config = "config/cobot_config.lua"
+-- robot_type = RobotType.COBOT 
+-- robot_config = "config/cobot_config.lua"
 
 laser_topic = "/Cobot/Laser"
 laser_frame = "base_laser"
@@ -75,7 +74,7 @@ local RobotType = {
 type_list = {"F1TEN", "COBOT", "BWIBOT"}
 
 -- config of robot
-config_list = {"config/cobot_config.lua", "config/cobot_config.lua", "config/cobot_config.lua"}
+config_list = {"config/ackermann_config.lua", "config/cobot_config.lua", "config/cobot_config.lua"}
 
 -- init cartesian location of robots
 location_list = {{0.0, 0.0}, {-10.0, 10.0}, {10.0, 10.0}}

@@ -85,8 +85,8 @@ CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
 CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
-CONFIG_INTLIST(robot_types, "type_list");
-CONFIG_STRING(robot_configs, "config_list");
+CONFIG_STRINGLIST(robot_types, "type_list");
+CONFIG_STRINGLIST(robot_configs, "config_list");
 CONFIG_STRING(laser_topic, "laser_topic");
 CONFIG_STRING(laser_frame, "laser_frame");
 CONFIG_VECTOR3FLIST(robot_colors, "RGB_list");
@@ -149,9 +149,12 @@ void Simulator::init(ros::NodeHandle& n) {
       motion_models_.push_back(unique_ptr<CobotModel>(
           new CobotModel({CONFIG_robot_configs[i]}, &n, topic_prefix)));
     }
-    else if (robot_type_ == "BWIBOT") {
+    else if (robot_type == "BWIBOT") {
+      if(robot_number_ != 1){
+        printf("Warning, Diff Drive Currently does not support multiple robots\n");
+      }
       motion_models_.push_back(unique_ptr<DiffDriveModel>(
-          new DiffDriveModel({CONFIG_robot_configs[i]}, &n, topic_prefix)));
+          new DiffDriveModel({CONFIG_robot_configs[i]}, &n)));
     }
     // initialize starting location
     cur_locs_.push_back(
