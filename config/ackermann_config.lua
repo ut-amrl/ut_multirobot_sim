@@ -1,3 +1,7 @@
+function DegToRad(d)
+  return math.pi * d / 180
+end
+
 -- Kinematic and dynamic constraints for the car.
 ak_min_turn_radius = 0.98
 ak_max_speed = 1.2

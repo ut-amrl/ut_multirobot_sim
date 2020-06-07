@@ -57,7 +57,7 @@ laser_frame = "base_laser"
 -- define multi robot senerio
 -- The simulator will only use the first robot_number items in each list
 -- to configure each robot.
-robot_number = 3
+robot_number = 1
 
 -- topic prefix of robots
 topic_prefix_list = {"car0", "car1", "car2"}
@@ -69,6 +69,13 @@ local RobotType = {
     BWIBOT="BWIBOT"
 }
 
+--(Tongrui Li: rplease use type_list and config_list below)
+-- robot_type = RobotType.F1TEN
+-- robot_config = "config/ackermann_config.lua"
+-- robot_type = RobotType.BWIBOT
+-- robot_config = "config/bwibot_config.lua"
+-- robot_type = RobotType.COBOT
+-- robot_config = "config/cobot_config.lua"
 
 -- type of robot
 type_list = {"F1TEN", "COBOT", "BWIBOT"}
