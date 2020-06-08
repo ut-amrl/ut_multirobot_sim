@@ -28,8 +28,6 @@ class AckermannModel : public robot_model::RobotModel {
   AckermannModel() = delete;
   // Intialize a default object reading from a file
   AckermannModel(const std::vector<std::string> &config_file,
-                 ros::NodeHandle *n);
-  AckermannModel(const std::vector<std::string> &config_file,
                  ros::NodeHandle *n, std::string prefix);
   ~AckermannModel() = default;
   // define Step function for updating

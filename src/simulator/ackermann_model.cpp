@@ -3,6 +3,7 @@
 #include "shared/math/math_util.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 #include <string>
+
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
 using ut_multirobot_sim::AckermannCurvatureDriveMsg;
@@ -21,16 +22,12 @@ CONFIG_FLOAT(max_speed, "ak_max_speed");
 CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
 CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
 CONFIG_STRING(drive_topic, "ak_drive_callback_topic");
-CONFIG_FLOAT(radius, "arkermann_radius");
-CONFIG_FLOAT(num_segments, "arkermann_num_segments");
-CONFIG_VECTOR2F(offset_vec, "arkermann_offset");
+CONFIG_FLOAT(radius, "ackermann_radius");
+CONFIG_FLOAT(num_segments, "ackermann_num_segments");
+CONFIG_VECTOR2F(offset_vec, "ackermann_offset");
 
-AckermannModel::AckermannModel(const vector<string> &config_file,
-                               ros::NodeHandle *n):
-    AckermannModel(config_file, n, ""){
-}
 
-AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n, string topic_prefix) :
+AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n, string topic_prefix = "") :
     RobotModel(),
     last_cmd_(),
     t_last_cmd_(0),
@@ -126,11 +123,10 @@ void AckermannModel::SetTemplateLines(const float r, const int num_segments){
   Eigen::Vector2f v0(r, 0.);
   Eigen::Vector2f v1;
   Eigen::Vector2f offset_vec = CONFIG_offset_vec;
-  const float eps = 0.0005; // lets see if this causes this issue.
+  const float eps = 0.0005;
   for (int i = 1; i < num_segments; i++) {
     v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
 
-    // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
     Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
     template_lines_.push_back(geometry::Line2f(v0 + eps_vec + offset_vec, v1 - eps_vec + offset_vec));
     v0 = v1;

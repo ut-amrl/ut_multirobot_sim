@@ -82,7 +82,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: car0/Cobot/Laser
+      Topic: robot0/Cobot/Laser
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -92,9 +92,9 @@ Visualization Manager:
       Marker Topic: /simulator_visualization
       Name: Map
       Namespaces:
-        car0_robot_position: true
-        car1_robot_position: true
-        car2_robot_position: true
+        robot0_robot_position: true
+        robot0_robot_position: true
+        robot0_robot_position: true
         map_lines: true
         object_lines: true
       Queue Size: 100
@@ -138,7 +138,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: car1/Cobot/Laser
+      Topic: robot1/Cobot/Laser
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -168,7 +168,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: car2/Cobot/Laser
+      Topic: robot2/Cobot/Laser
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -189,42 +189,42 @@ Visualization Manager:
     - Class: rviz/Measure
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car0/initialpose
+      Topic: /single_robot/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car1/initialpose
+      Topic: /robot_1/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car2/initialpose
+      Topic: /robot_2/initialpose
+      X std deviation: 0.5
+      Y std deviation: 0.5 
+    - Class: rviz/SetInitialPose
+      Theta std deviation: 0.2617993950843811
+      Topic: /robot_3/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car3/initialpose
+      Topic: /robot_4/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car4/initialpose
+      Topic: /robot_5/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car5/initialpose
+      Topic: /robot_6/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetInitialPose
       Theta std deviation: 0.2617993950843811
-      Topic: /car6/initialpose
-      X std deviation: 0.5
-      Y std deviation: 0.5
-    - Class: rviz/SetInitialPose
-      Theta std deviation: 0.2617993950843811
-      Topic: /car7/initialpose
+      Topic: /robot_7/initialpose
       X std deviation: 0.5
       Y std deviation: 0.5
     - Class: rviz/SetGoal

@@ -57,7 +57,7 @@ laser_frame = "base_laser"
 -- define multi robot senerio
 -- The simulator will only use the first robot_number items in each list
 -- to configure each robot.
-robot_number = 1
+robot_number = 2
 
 -- topic prefix of robots
 topic_prefix_list = {"car0", "car1", "car2"}

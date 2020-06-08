@@ -113,9 +113,8 @@ Simulator::Simulator(const std::string& sim_config) :
     robot_number_(CONFIG_robot_number),
     topic_prefixs_(CONFIG_topic_prefixs),
     robot_types_(CONFIG_robot_types){
-  truePoseMsg.header.seq = 0;
-  truePoseMsg.header.frame_id = "map";
-  // TODO: add static cast robot_type_(static_cast<RobotType>(CONFIG_robot_type))
+  truePoseMsg_.header.seq = 0;
+  truePoseMsg_.header.frame_id = "map";
   // initialize object lines associated with each robot
   motion_models_lines_.resize(robot_number_, std::vector<Line2f>(0));
 }
@@ -124,20 +123,20 @@ Simulator::~Simulator() {}
 
 bool Simulator::init(ros::NodeHandle& n) {
   // TODO(jaholtz) Too much hard coding, move to config
-  scanDataMsg.header.seq = 0;
-  scanDataMsg.header.frame_id = CONFIG_laser_frame;
-  scanDataMsg.angle_min = DegToRad(-135.0);
-  scanDataMsg.angle_max = DegToRad(135.0);
-  scanDataMsg.range_min = 0.02;
-  scanDataMsg.range_max = 10.0;
-  scanDataMsg.angle_increment = DegToRad(0.25);
-  scanDataMsg.intensities.clear();
-  scanDataMsg.time_increment = 0.0;
-  scanDataMsg.scan_time = 0.05;
+  scanDataMsg_.header.seq = 0;
+  scanDataMsg_.header.frame_id = CONFIG_laser_frame;
+  scanDataMsg_.angle_min = DegToRad(-135.0);
+  scanDataMsg_.angle_max = DegToRad(135.0);
+  scanDataMsg_.range_min = 0.02;
+  scanDataMsg_.range_max = 10.0;
+  scanDataMsg_.angle_increment = DegToRad(0.25);
+  scanDataMsg_.intensities.clear();
+  scanDataMsg_.time_increment = 0.0;
+  scanDataMsg_.scan_time = 0.05;
 
-  odometryTwistMsg.header.seq = 0;
-  odometryTwistMsg.header.frame_id = "odom";
-  odometryTwistMsg.child_frame_id = "base_footprint";
+  odometryTwistMsg_.header.seq = 0;
+  odometryTwistMsg_.header.frame_id = "odom";
+  odometryTwistMsg_.child_frame_id = "base_footprint";
 
   for (int i = 0; i < robot_number_; i++) {
     string robot_type = robot_types_[i];
@@ -151,7 +150,7 @@ bool Simulator::init(ros::NodeHandle& n) {
     }
     else if (robot_type == "BWIBOT") {
       if(robot_number_ != 1){
-        printf("Warning, Diff Drive Currently does not support multiple robots\n");
+        std::logic_error("Warning, Diff Drive Currently does not support multiple robots\n");
       }
       motion_models_.push_back(unique_ptr<DiffDriveModel>(
           new DiffDriveModel({CONFIG_robot_configs[i]}, &n)));
@@ -167,83 +166,82 @@ bool Simulator::init(ros::NodeHandle& n) {
     motion_models_[i]->SetPose(cur_locs_[i]);
   }
 
-  initSimulatorVizMarkers(); // TODO: need to add a vis marker for every robot
+  initSimulatorVizMarkers();
   drawMap();
 
   // Initialize topics for each robot
   for(int i = 0; i < robot_number_; i++){
     string topic_prefix = topic_prefixs_[i];
     printf("[%d] topic_prefix: %s\n", i, topic_prefix.c_str());
-    // TODO: Change this hardcoding to something nicer
-        odometryTwistPublishers.push_back(
+    // TODO(Tongrui Li): Change this hardcoding to something nicer
+        odometryTwistPublishers_.push_back(
         n.advertise<nav_msgs::Odometry>(topic_prefix + "/odom", 1));
-    laserPublishers.push_back(n.advertise<sensor_msgs::LaserScan>(
+    laserPublishers_.push_back(n.advertise<sensor_msgs::LaserScan>(
         topic_prefix + CONFIG_laser_topic, 1));
     viz_laser_publishers_.push_back(n.advertise<sensor_msgs::LaserScan>(
         topic_prefix + "/scan", 1));
     if (FLAGS_localize) {
-      localizationPublishers.push_back(n.advertise<ut_multirobot_sim::Localization2DMsg>(
+      localizationPublishers_.push_back(n.advertise<ut_multirobot_sim::Localization2DMsg>(
           topic_prefix + "/localization", 1));
     }
   }
   // initialize hard coded initial pose
   for (int i = 0; i < robot_number_; i++) {
     if (i == 7) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[7] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar7, this));
+                      &Simulator::InitalLocationCallbackRobot7, this));
     } else if (i == 6) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[6] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar6, this));
+                      &Simulator::InitalLocationCallbackRobot6, this));
     } else if (i == 5) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[5] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar5, this));
+                      &Simulator::InitalLocationCallbackRobot5, this));
     } else if (i == 4) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[4] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar4, this));
+                      &Simulator::InitalLocationCallbackRobot4, this));
     } else if (i == 3) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[3] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar3, this));
+                      &Simulator::InitalLocationCallbackRobot3, this));
     } else if (i == 2) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[2] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar2, this));
+                      &Simulator::InitalLocationCallbackRobot2, this));
     } else if (i == 1) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[1] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar1, this));
+                      &Simulator::InitalLocationCallbackRobot1, this));
     } else if (i == 0) {
-      initSubscribers.push_back(
+      initSubscribers_.push_back(
           n.subscribe(topic_prefixs_[0] + "/initialpose", 1,
-                      &Simulator::InitalLocationCallbackCar0, this));
+                      &Simulator::InitalLocationCallbackRobot0, this));
     }
   }
   // initialize topics shared jointly
-  truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
+  truePosePublisher_ = n.advertise<geometry_msgs::PoseStamped>(
         "/simulator_true_pose", 1); 
 
-  posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
+  posMarkerPublisher_ = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6); 
-  mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
+  mapLinesPublisher_ = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
-  objectLinesPublisher = n.advertise<visualization_msgs::Marker>(
+  objectLinesPublisher_ = n.advertise<visualization_msgs::Marker>(
       "/simulator_visualization", 6);
   if (FLAGS_localize) {
-    localizationMsg.header.frame_id = "map";
-    localizationMsg.header.seq = 0;
+    localizationMsg_.header.frame_id = "map";
+    localizationMsg_.header.seq = 0;
   }
 
 
-  br = new tf::TransformBroadcaster();
+  br_ = new tf::TransformBroadcaster();
 
   this->loadObject();
   return true;
 }
-
 
 // TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
@@ -260,7 +258,7 @@ void Simulator::loadObject() {
 }
 
 // TODO: figure out higher order function
-void Simulator::InitalLocationCallbackMulti(const PoseWithCovarianceStamped& msg, int car_num) {
+void Simulator::InitalLocationCallbackMulti(const PoseWithCovarianceStamped& msg, int robot_num) {
   const Vector2f loc =
       Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
   const float angle = 2.0 *
@@ -269,45 +267,45 @@ void Simulator::InitalLocationCallbackMulti(const PoseWithCovarianceStamped& msg
          cur_loc_.translation.x(),
          cur_loc_.translation.y(),
          RadToDeg(cur_loc_.angle));
-  motion_models_[car_num]->SetPose({angle, loc}); // TODO, add loop
+  motion_models_[robot_num]->SetPose({angle, loc}); // TODO, add loop
 }
 
-void Simulator::InitalLocationCallbackCar0(
+void Simulator::InitalLocationCallbackRobot0(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 0);
 }
 
-void Simulator::InitalLocationCallbackCar1(
+void Simulator::InitalLocationCallbackRobot1(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 1);
 }
 
-void Simulator::InitalLocationCallbackCar2(
+void Simulator::InitalLocationCallbackRobot2(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 2);
 }
 
-void Simulator::InitalLocationCallbackCar3(
+void Simulator::InitalLocationCallbackRobot3(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 3);
 }
 
-void Simulator::InitalLocationCallbackCar4(
+void Simulator::InitalLocationCallbackRobot4(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 4);
 }
 
-void Simulator::InitalLocationCallbackCar5(
+void Simulator::InitalLocationCallbackRobot5(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 5);
 }
 
-void Simulator::InitalLocationCallbackCar6(
+void Simulator::InitalLocationCallbackRobot6(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 6);
 }
 
-void Simulator::InitalLocationCallbackCar7(
+void Simulator::InitalLocationCallbackRobot7(
     const PoseWithCovarianceStamped &msg) {
   InitalLocationCallbackMulti(msg, 7);
 }
@@ -389,7 +387,7 @@ void Simulator::initSimulatorVizMarkers() {
   color[1] = 134.0 / 255.0;
   color[2] = 244.0 / 255.0;
   color[3] = 1.0;
-  initVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
+  initVizMarker(lineListMarker_, "map_lines", 0, "linelist", p, scale, 0.0,
       color);
 
   p.pose.position.z = 0.5 * CONFIG_car_height;
@@ -402,13 +400,13 @@ void Simulator::initSimulatorVizMarkers() {
   color[3] = 0.8; // luminosity
 
   for(int i = 0; i < robot_number_; i++){
-    robotPosMarkers.push_back(visualization_msgs::Marker());
+    robotPosMarkers_.push_back(visualization_msgs::Marker());
     color[0] = CONFIG_robot_colors[i].x()/255.0;
     color[1] = CONFIG_robot_colors[i].y()/255.0;
     color[2] = CONFIG_robot_colors[i].z()/255.0;
 
-    initVizMarker(robotPosMarkers[i],
-                  "car" + std::to_string(i) + "_robot_position", i + 2, "cube",
+    initVizMarker(robotPosMarkers_[i],
+                  "robot" + std::to_string(i) + "_robot_position", i + 2, "cube",
                   p, scale, 0.0, color);
   }
 
@@ -420,87 +418,87 @@ void Simulator::initSimulatorVizMarkers() {
   color[1] = 0.0 / 255.0;
   color[2] = 156.0 / 255.0;
   color[3] = 1.0;
-  initVizMarker(objectLinesMarker, "object_lines", 0, "linelist", p, scale,
+  initVizMarker(objectLinesMarker_, "object_lines", 0, "linelist", p, scale,
       0.0, color);
 }
 
 void Simulator::drawMap() {
-  ros_helpers::ClearMarker(&lineListMarker);
+  ros_helpers::ClearMarker(&lineListMarker_);
   for (const Line2f& l : map_.lines) {
-    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &lineListMarker);
+    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &lineListMarker_);
   }
 }
 
 void Simulator::drawObjects() {
   // draw objects
-  ros_helpers::ClearMarker(&objectLinesMarker);
+  ros_helpers::ClearMarker(&objectLinesMarker_);
   for (const Line2f& l : map_.object_lines) {
-    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &objectLinesMarker);
+    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &objectLinesMarker_);
   }
 }
 
-void Simulator::publishOdometry(int cur_car_number) {
+void Simulator::publishOdometry(int cur_robot_number) {
   tf::Quaternion robotQ = tf::createQuaternionFromYaw(cur_loc_.angle);
 
-  odometryTwistMsg.header.stamp = ros::Time::now();
-  odometryTwistMsg.pose.pose.position.x = cur_loc_.translation.x();
-  odometryTwistMsg.pose.pose.position.y = cur_loc_.translation.y();
-  odometryTwistMsg.pose.pose.position.z = 0.0;
-  odometryTwistMsg.pose.pose.orientation.x = robotQ.x();
-  odometryTwistMsg.pose.pose.orientation.y = robotQ.y();
-  odometryTwistMsg.pose.pose.orientation.z = robotQ.z();
-  odometryTwistMsg.pose.pose.orientation.w = robotQ.w();
-  odometryTwistMsg.twist.twist.angular.x = 0.0;
-  odometryTwistMsg.twist.twist.angular.y = 0.0;
-  odometryTwistMsg.twist.twist.angular.z = vel_.angle;
-  odometryTwistMsg.twist.twist.linear.x = vel_.translation.x();
-  odometryTwistMsg.twist.twist.linear.y = vel_.translation.y();
-  odometryTwistMsg.twist.twist.linear.z = 0.0;
+  odometryTwistMsg_.header.stamp = ros::Time::now();
+  odometryTwistMsg_.pose.pose.position.x = cur_loc_.translation.x();
+  odometryTwistMsg_.pose.pose.position.y = cur_loc_.translation.y();
+  odometryTwistMsg_.pose.pose.position.z = 0.0;
+  odometryTwistMsg_.pose.pose.orientation.x = robotQ.x();
+  odometryTwistMsg_.pose.pose.orientation.y = robotQ.y();
+  odometryTwistMsg_.pose.pose.orientation.z = robotQ.z();
+  odometryTwistMsg_.pose.pose.orientation.w = robotQ.w();
+  odometryTwistMsg_.twist.twist.angular.x = 0.0;
+  odometryTwistMsg_.twist.twist.angular.y = 0.0;
+  odometryTwistMsg_.twist.twist.angular.z = vel_.angle;
+  odometryTwistMsg_.twist.twist.linear.x = vel_.translation.x();
+  odometryTwistMsg_.twist.twist.linear.y = vel_.translation.y();
+  odometryTwistMsg_.twist.twist.linear.z = 0.0;
  
-  odometryTwistMsg.header.frame_id = topic_prefixs_[cur_car_number] + "/odom";
-  odometryTwistMsg.child_frame_id = topic_prefixs_[cur_car_number] + "/base_footprint";
+  odometryTwistMsg_.header.frame_id = topic_prefixs_[cur_robot_number] + "/odom";
+  odometryTwistMsg_.child_frame_id = topic_prefixs_[cur_robot_number] + "/base_footprint";
 
-  odometryTwistPublishers[cur_car_number].publish(odometryTwistMsg);
+  odometryTwistPublishers_[cur_robot_number].publish(odometryTwistMsg_);
 
-  // TODO(jaholtz) visualization should not always be based on car
+  // TODO(jaholtz) visualization should not always be based on robot
   // parameters
-  robotPosMarkers[cur_car_number].pose.position.x =
+  robotPosMarkers_[cur_robot_number].pose.position.x =
       cur_loc_.translation.x() - cos(cur_loc_.angle) * CONFIG_rear_axle_offset;
-  robotPosMarkers[cur_car_number].pose.position.y =
+  robotPosMarkers_[cur_robot_number].pose.position.y =
       cur_loc_.translation.y() - sin(cur_loc_.angle) * CONFIG_rear_axle_offset;
-  robotPosMarkers[cur_car_number].pose.position.z = 0.5 * CONFIG_car_height;
-  robotPosMarkers[cur_car_number].pose.orientation.w = 1.0;
-  robotPosMarkers[cur_car_number].pose.orientation.x = robotQ.x();
-  robotPosMarkers[cur_car_number].pose.orientation.y = robotQ.y();
-  robotPosMarkers[cur_car_number].pose.orientation.z = robotQ.z();
-  robotPosMarkers[cur_car_number].pose.orientation.w = robotQ.w();
+  robotPosMarkers_[cur_robot_number].pose.position.z = 0.5 * CONFIG_car_height;
+  robotPosMarkers_[cur_robot_number].pose.orientation.w = 1.0;
+  robotPosMarkers_[cur_robot_number].pose.orientation.x = robotQ.x();
+  robotPosMarkers_[cur_robot_number].pose.orientation.y = robotQ.y();
+  robotPosMarkers_[cur_robot_number].pose.orientation.z = robotQ.z();
+  robotPosMarkers_[cur_robot_number].pose.orientation.w = robotQ.w();
 }
 
-void Simulator::publishLaser(int cur_car_number) {
+void Simulator::publishLaser(int cur_robot_number) {
   if (map_.file_name != CONFIG_map_name) {
     map_.Load(CONFIG_map_name);
     drawMap();
   }
-  scanDataMsg.header.stamp = ros::Time::now();
-  scanDataMsg.header.frame_id = topic_prefixs_[cur_car_number] + "/base_laser";
+  scanDataMsg_.header.stamp = ros::Time::now();
+  scanDataMsg_.header.frame_id = topic_prefixs_[cur_robot_number] + "/base_laser";
 
   const Vector2f laserRobotLoc(CONFIG_laser_x, CONFIG_laser_y);
   const Vector2f laserLoc =
       cur_loc_.translation + Rotation2Df(cur_loc_.angle) * laserRobotLoc;
 
   const int num_rays = static_cast<int>(
-      1.0 + (scanDataMsg.angle_max - scanDataMsg.angle_min) /
-      scanDataMsg.angle_increment);
+      1.0 + (scanDataMsg_.angle_max - scanDataMsg_.angle_min) /
+      scanDataMsg_.angle_increment);
   map_.GetPredictedScan(laserLoc,
-                        scanDataMsg.range_min,
-                        scanDataMsg.range_max,
-                        scanDataMsg.angle_min + cur_loc_.angle,
-                        scanDataMsg.angle_max + cur_loc_.angle,
+                        scanDataMsg_.range_min,
+                        scanDataMsg_.range_max,
+                        scanDataMsg_.angle_min + cur_loc_.angle,
+                        scanDataMsg_.angle_max + cur_loc_.angle,
                         num_rays,
-                        &scanDataMsg.ranges);
-  for (float& r : scanDataMsg.ranges) {
-    if (r > scanDataMsg.range_max - 0.1) {
-      r = scanDataMsg.range_max;
+                        &scanDataMsg_.ranges);
+  for (float& r : scanDataMsg_.ranges) {
+    if (r > scanDataMsg_.range_max - 0.1) {
+      r = scanDataMsg_.range_max;
       continue;
     }
     r = max<float>(0.0, r + CONFIG_laser_stdev * laser_noise_(rng_));
@@ -509,11 +507,11 @@ void Simulator::publishLaser(int cur_car_number) {
   // TODO Avoid publishing laser twice.
   // Currently publishes once for the visualizer and once for robot
   // requirements.
-  laserPublishers[cur_car_number].publish(scanDataMsg);
-  viz_laser_publishers_[cur_car_number].publish(scanDataMsg);
+  laserPublishers_[cur_robot_number].publish(scanDataMsg_);
+  viz_laser_publishers_[cur_robot_number].publish(scanDataMsg_);
 }
 
-void Simulator::publishTransform(int cur_car_number) {
+void Simulator::publishTransform(int cur_robot_number) {
   if (!CONFIG_publish_tfs) {
     return;
   }
@@ -521,12 +519,12 @@ void Simulator::publishTransform(int cur_car_number) {
   tf::Transform transform;
   tf::Quaternion q;
 
-  string topic_prefix = topic_prefixs_[cur_car_number];
+  string topic_prefix = topic_prefixs_[cur_robot_number];
 
   if(CONFIG_publish_map_to_odom) {
     transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
     transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-    br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
+    br_->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/map",
         topic_prefix + "/odom"));
   }
 
@@ -534,52 +532,52 @@ void Simulator::publishTransform(int cur_car_number) {
         cur_loc_.translation.y(), 0.0));
   q.setRPY(0.0, 0.0, cur_loc_.angle);
   transform.setRotation(q);
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), topic_prefix + "/odom",
+  br_->sendTransform(tf::StampedTransform(transform, ros::Time::now(), topic_prefix + "/odom",
       topic_prefix + "/base_footprint"));
 
   if(CONFIG_publish_foot_to_base){
     transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
     transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-    br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+    br_->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
         topic_prefix + "/base_footprint", topic_prefix + "/base_link"));
   }
 
   transform.setOrigin(tf::Vector3(CONFIG_laser_x,
         CONFIG_laser_y, CONFIG_laser_z));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
-  br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+  br_->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
       topic_prefix + "/base_link", topic_prefix + "/base_laser"));
 }
 
-void Simulator::publishVisualizationMarkers(int cur_car_number) {
-  mapLinesPublisher.publish(lineListMarker);
+void Simulator::publishVisualizationMarkers(int cur_robot_number) {
+  mapLinesPublisher_.publish(lineListMarker_);
 
-  posMarkerPublisher.publish(robotPosMarkers[cur_car_number]);
+  posMarkerPublisher_.publish(robotPosMarkers_[cur_robot_number]);
 
-  objectLinesPublisher.publish(objectLinesMarker);
+  objectLinesPublisher_.publish(objectLinesMarker_);
 }
 
-void Simulator::updateLocation(int cur_car_number){
+void Simulator::updateLocation(int cur_robot_number){
   // Step the motion model forward one time step
-  motion_models_[cur_car_number]->Step(CONFIG_DT);
+  motion_models_[cur_robot_number]->Step(CONFIG_DT);
   // Update the simulator with the motion model result.
-  cur_locs_[cur_car_number] = motion_models_[cur_car_number]->GetPose();
+  cur_locs_[cur_robot_number] = motion_models_[cur_robot_number]->GetPose();
 }
 
-void Simulator::update(int cur_car_number) {
-  cur_loc_ = cur_locs_[cur_car_number];
-  vel_ = motion_models_[cur_car_number]->GetVel();
+void Simulator::update(int cur_robot_number) {
+  cur_loc_ = cur_locs_[cur_robot_number];
+  vel_ = motion_models_[cur_robot_number]->GetVel();
 
   // Publishing the ground truth pose
-  truePoseMsg.header.stamp = ros::Time::now();
-  truePoseMsg.pose.position.x = cur_loc_.translation.x();
-  truePoseMsg.pose.position.y = cur_loc_.translation.y();
-  truePoseMsg.pose.position.z = 0;
-  truePoseMsg.pose.orientation.w = cos(0.5 * cur_loc_.angle);
-  truePoseMsg.pose.orientation.z = sin(0.5 * cur_loc_.angle);
-  truePoseMsg.pose.orientation.x = 0;
-  truePoseMsg.pose.orientation.y = 0;
-  truePosePublisher.publish(truePoseMsg);
+  truePoseMsg_.header.stamp = ros::Time::now();
+  truePoseMsg_.pose.position.x = cur_loc_.translation.x();
+  truePoseMsg_.pose.position.y = cur_loc_.translation.y();
+  truePoseMsg_.pose.position.z = 0;
+  truePoseMsg_.pose.orientation.w = cos(0.5 * cur_loc_.angle);
+  truePoseMsg_.pose.orientation.z = sin(0.5 * cur_loc_.angle);
+  truePoseMsg_.pose.orientation.x = 0;
+  truePoseMsg_.pose.orientation.y = 0;
+  truePosePublisher_.publish(truePoseMsg_);
 
   // Update all map objects and get their lines
   map_.object_lines.clear();
@@ -592,7 +590,7 @@ void Simulator::update(int cur_car_number) {
   }
   this->drawObjects();
   // update objects associated with each robot
-  for (Line2f line: motion_models_lines_[cur_car_number]){
+  for (Line2f line: motion_models_lines_[cur_robot_number]){
       map_.object_lines.push_back(line);    
   }
 }
@@ -646,12 +644,12 @@ void Simulator::Run() {
     //publish tf
     publishTransform(i);
     if (FLAGS_localize) {
-      localizationMsg.header.stamp = ros::Time::now();
-      localizationMsg.map = GetMapNameFromFilename(map_.file_name);
-      localizationMsg.pose.x = cur_loc_.translation.x();
-      localizationMsg.pose.y = cur_loc_.translation.y();
-      localizationMsg.pose.theta = cur_loc_.angle;
-      localizationPublishers[i].publish(localizationMsg);
+        localizationMsg_.header.stamp = ros::Time::now();
+        localizationMsg_.map = GetMapNameFromFilename(map_.file_name);
+        localizationMsg_.pose.x = cur_loc_.translation.x();
+        localizationMsg_.pose.y = cur_loc_.translation.y();
+        localizationMsg_.pose.theta = cur_loc_.angle;
+        localizationPublishers_[i].publish(localizationMsg_);
     }
   }
   

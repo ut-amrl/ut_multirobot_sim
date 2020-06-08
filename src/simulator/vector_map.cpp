@@ -370,7 +370,7 @@ void VectorMap::Cleanup() {
   const float kMinLineLength = 0.05;
   vector<Line2f> new_lines;
   for (size_t i = 0; i < lines.size(); ++i) {
-    const Line2f& l1 = lines[i];
+    const Line2f l1 = lines[i];
     if (l1.Length() < kMinLineLength) continue;
     // Check if l1 intersects with any line in new lines.
     Vector2f p;

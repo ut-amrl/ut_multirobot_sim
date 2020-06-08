@@ -66,30 +66,30 @@ class Simulator {
 
   std::vector<std::unique_ptr<EntityBase>> objects;
 
-  std::vector<ros::Subscriber> initSubscribers;
+  std::vector<ros::Subscriber> initSubscribers_;
 
-  std::vector<ros::Publisher> odometryTwistPublishers;
-  std::vector<ros::Publisher> laserPublishers;
+  std::vector<ros::Publisher> odometryTwistPublishers_;
+  std::vector<ros::Publisher> laserPublishers_;
   std::vector<ros::Publisher> viz_laser_publishers_;
-  ros::Publisher mapLinesPublisher;
-  ros::Publisher posMarkerPublisher;
-  ros::Publisher objectLinesPublisher;
-  ros::Publisher truePosePublisher;
-  std::vector<ros::Publisher> localizationPublishers;
-  tf::TransformBroadcaster *br;
+  ros::Publisher mapLinesPublisher_;
+  ros::Publisher posMarkerPublisher_;
+  ros::Publisher objectLinesPublisher_;
+  ros::Publisher truePosePublisher_;
+  std::vector<ros::Publisher> localizationPublishers_;
+  tf::TransformBroadcaster *br_;
 
-  sensor_msgs::LaserScan scanDataMsg;
-  nav_msgs::Odometry odometryTwistMsg;
-  ut_multirobot_sim::Localization2DMsg localizationMsg;
+  sensor_msgs::LaserScan scanDataMsg_;
+  nav_msgs::Odometry odometryTwistMsg_;
+  ut_multirobot_sim::Localization2DMsg localizationMsg_;
 
   vector_map::VectorMap map_;
 
-  visualization_msgs::Marker lineListMarker;
-  visualization_msgs::Marker robotPosMarker;
-  visualization_msgs::Marker objectLinesMarker;
+  visualization_msgs::Marker lineListMarker_;
+  std::vector<visualization_msgs::Marker> robotPosMarkers_;
+  visualization_msgs::Marker objectLinesMarker_;
 
   static const float DT;
-  geometry_msgs::PoseStamped truePoseMsg;
+  geometry_msgs::PoseStamped truePoseMsg_;
 
   std::default_random_engine rng_;
   std::normal_distribution<float> laser_noise_;
@@ -98,7 +98,6 @@ class Simulator {
   std::vector<std::unique_ptr<robot_model::RobotModel>> motion_models_;
   int robot_number_;
   //std::vector<ros::Publisher> truePosePublishers;
-  std::vector<visualization_msgs::Marker> robotPosMarkers;
   // topic prefixes
   std::vector<std::string> topic_prefixs_;
   std::vector<std::string> robot_types_;
@@ -117,34 +116,34 @@ class Simulator {
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
-  void publishOdometry(int cur_car_number);
-  void publishLaser(int cur_car_number);
-  void publishVisualizationMarkers(int cur_car_number);
-  void publishTransform(int cur_car_number);
-  void update(int cur_car_number);
-  void updateLocation(int cur_car_number);
+  void publishOdometry(int cur_robot_number);
+  void publishLaser(int cur_robot_number);
+  void publishVisualizationMarkers(int cur_robot_number);
+  void publishTransform(int cur_robot_number);
+  void update(int cur_robot_number);
+  void updateLocation(int cur_robot_number);
   void updateSimulatorLines();
   void loadObject();
 
 
   // TODO: figure out higher order function
   void InitalLocationCallbackMulti(
-    const geometry_msgs::PoseWithCovarianceStamped &msg, int car_num);
-  void InitalLocationCallbackCar0(
+    const geometry_msgs::PoseWithCovarianceStamped &msg, int robot_num);
+  void InitalLocationCallbackRobot0(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar1(
+  void InitalLocationCallbackRobot1(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar2(
+  void InitalLocationCallbackRobot2(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar3(
+  void InitalLocationCallbackRobot3(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar4(
+  void InitalLocationCallbackRobot4(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar5(
+  void InitalLocationCallbackRobot5(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar6(
+  void InitalLocationCallbackRobot6(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void InitalLocationCallbackCar7(
+  void InitalLocationCallbackRobot7(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
 
  public:
