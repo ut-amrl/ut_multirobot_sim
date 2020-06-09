@@ -39,7 +39,9 @@ int main(int argc, char **argv) {
   ros::NodeHandle n;
 
   Simulator simulator(FLAGS_sim_config);
-  simulator.init(n);
+  if (!simulator.init(n)) {
+    return 1;
+  }
 
   // main loop
   RateLoop rate(40.0);

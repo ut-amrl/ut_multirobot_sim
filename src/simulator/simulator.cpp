@@ -109,7 +109,7 @@ Simulator::Simulator(const std::string& sim_config) :
 
 Simulator::~Simulator() { }
 
-void Simulator::init(ros::NodeHandle& n) {
+bool Simulator::init(ros::NodeHandle& n) {
   // TODO(jaholtz) Too much hard coding, move to config
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
@@ -140,6 +140,13 @@ void Simulator::init(ros::NodeHandle& n) {
     motion_model_ = unique_ptr<DiffDriveModel>(
         new DiffDriveModel({CONFIG_robot_config}, &n));
   }
+
+  if (motion_model_ == nullptr) {
+    std::cerr << "Robot type \"" << robot_type_
+              << "\" has no associated motion model!" << std::endl;
+    return false;
+  }
+
   motion_model_->SetPose(cur_loc_);
   initSimulatorVizMarkers();
   drawMap();
@@ -166,6 +173,7 @@ void Simulator::init(ros::NodeHandle& n) {
   br = new tf::TransformBroadcaster();
 
   this->loadObject();
+  return true;
 }
 
 // TODO(yifeng): Change this into a general way
