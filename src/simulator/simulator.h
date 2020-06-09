@@ -118,7 +118,7 @@ class Simulator {
   Simulator() = delete;
   explicit Simulator(const std::string& sim_config);
   ~Simulator();
-  void init(ros::NodeHandle &n);
+  bool init(ros::NodeHandle &n);
   void Run();
 };
 #endif  // SIMULATOR_H
