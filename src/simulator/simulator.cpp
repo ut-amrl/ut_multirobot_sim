@@ -34,7 +34,7 @@
 
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
-#include "simulator/cobot_model.h"
+#include "simulator/omnidirectional_model.h"
 #include "simulator/diff_drive_model.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
@@ -56,7 +56,7 @@ using math_util::DegToRad;
 using math_util::RadToDeg;
 using ackermann::AckermannModel;
 using std::atan2;
-using cobot::CobotModel;
+using omnidrive::OmnidirectionalModel;
 using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
@@ -130,15 +130,15 @@ void Simulator::init(ros::NodeHandle& n) {
 
   // Create motion model based on robot type
   // TODO extend to handle the multi-robot case
-  if (robot_type_ == "F1TEN") {
-    motion_model_ =
-          unique_ptr<AckermannModel>(new AckermannModel({CONFIG_robot_config}, &n));
-  } else if (robot_type_ == "COBOT") {
-    motion_model_ =
-          unique_ptr<CobotModel>(new CobotModel({CONFIG_robot_config}, &n));
-  } else if (robot_type_ == "BWIBOT") {
-    motion_model_ =
-          unique_ptr<DiffDriveModel>(new DiffDriveModel({CONFIG_robot_config}, &n));
+  if (robot_type_ == "ACKERMANN_DRIVE") {
+    motion_model_ = unique_ptr<AckermannModel>(
+        new AckermannModel({CONFIG_robot_config}, &n));
+  } else if (robot_type_ == "OMNIDIRECTIONAL_DRIVE") {
+    motion_model_ = unique_ptr<OmnidirectionalModel>(
+        new OmnidirectionalModel({CONFIG_robot_config}, &n));
+  } else if (robot_type_ == "DIFF_DRIVE") {
+    motion_model_ = unique_ptr<DiffDriveModel>(
+        new DiffDriveModel({CONFIG_robot_config}, &n));
   }
   motion_model_->SetPose(cur_loc_);
   initSimulatorVizMarkers();
@@ -387,7 +387,7 @@ void Simulator::publishTransform() {
   }
   tf::Transform transform;
   tf::Quaternion q;
-  
+
   if(CONFIG_publish_map_to_odom) {
       transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
       transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
@@ -400,14 +400,14 @@ void Simulator::publishTransform() {
   transform.setRotation(q);
   br->sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/odom",
       "/base_footprint"));
-  
+
   if(CONFIG_publish_foot_to_base){
       transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
       transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
       br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
         "/base_footprint", "/base_link"));
   }
-  
+
   transform.setOrigin(tf::Vector3(CONFIG_laser_x,
         CONFIG_laser_y, CONFIG_laser_z));
   transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
@@ -456,7 +456,7 @@ string GetMapNameFromFilename(string path) {
   char path_cstring[path.length()];
   strcpy(path_cstring, path.c_str());
   const string file_name(basename(path_cstring));
-  if (file_name.length() > 4 && 
+  if (file_name.length() > 4 &&
       file_name.substr(file_name.length() - 4, 4) == ".txt") {
     return file_name.substr(0, file_name.length() - 4);
   }

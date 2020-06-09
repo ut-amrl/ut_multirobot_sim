@@ -68,7 +68,7 @@ ROSBUILD_ADD_EXECUTABLE(${target}
   src/simulator/entity_base.cpp
   src/simulator/robot_model.cpp
   src/simulator/ackermann_model.cpp
-  src/simulator/cobot_model.cpp
+  src/simulator/omnidirectional_model.cpp
   src/simulator/diff_drive_model.cpp
   src/simulator/short_term_object.cpp
   src/simulator/human_object.cpp

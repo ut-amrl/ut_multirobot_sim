@@ -45,17 +45,19 @@ angular_error_rate = 0.1;
 
 -- Defining robot type enumerator
 local RobotType = {
-    F1TEN="F1TEN",
-    COBOT="COBOT",
-    BWIBOT="BWIBOT"
+    ACKERMANN_DRIVE="ACKERMANN_DRIVE",
+    OMNIDIRECTIONAL_DRIVE="OMNIDIRECTIONAL_DRIVE",
+    DIFF_DRIVE="DIFF_DRIVE"
 }
 
--- robot_type = RobotType.F1TEN
--- robot_config = "config/ackermann_config.lua"
--- robot_type = RobotType.BWIBOT
+robot_type = RobotType.ACKERMANN_DRIVE
+robot_config = "config/ut_automata_config.lua"
+-- robot_type = RobotType.DIFF_DRIVE
 -- robot_config = "config/bwibot_config.lua"
-robot_type = RobotType.COBOT
-robot_config = "config/cobot_config.lua"
+-- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
+-- robot_config = "config/cobot_config.lua"
+-- robot_type = RobotType.DIFF_DRIVE
+-- robot_config = "config/ut_jackal_config.lua"
 
 laser_topic = "/Cobot/Laser"
 laser_frame = "base_laser"

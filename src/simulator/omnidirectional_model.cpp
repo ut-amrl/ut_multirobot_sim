@@ -1,4 +1,4 @@
-#include "simulator/cobot_model.h"
+#include "simulator/omnidirectional_model.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"
@@ -16,7 +16,7 @@ using std::isfinite;
 using std::string;
 using std::vector;
 
-namespace cobot {
+namespace omnidrive {
 
 CONFIG_FLOAT(max_accel, "co_max_accel");
 CONFIG_FLOAT(max_angle_accel, "co_max_angle_accel");
@@ -30,7 +30,8 @@ CONFIG_FLOAT(base_r, "co_base_radius");
 CONFIG_STRING(drive_topic, "co_drive_callback_topic");
 CONFIG_STRING(odom_topic, "co_cobot_odom_topic");
 
-CobotModel::CobotModel(const vector<string>& config_files, ros::NodeHandle* n) :
+OmnidirectionalModel::OmnidirectionalModel(
+    const vector<string>& config_files, ros::NodeHandle* n) :
     RobotModel(),
     last_cmd_(),
     t_last_cmd_(0),
@@ -40,12 +41,12 @@ CobotModel::CobotModel(const vector<string>& config_files, ros::NodeHandle* n) :
   drive_subscriber_ = n->subscribe(
       CONFIG_drive_topic,
       1,
-      &CobotModel::DriveCallback,
+      &OmnidirectionalModel::DriveCallback,
       this);
   odom_publisher_ = n->advertise<CobotOdometryMsg>(CONFIG_odom_topic, 1);
 }
 
-void CobotModel::DriveCallback(const CobotDriveMsg& msg) {
+void OmnidirectionalModel::DriveCallback(const CobotDriveMsg& msg) {
   if (!isfinite(msg.velocity_x) ||
       !isfinite(msg.velocity_y) ||
       !isfinite(msg.velocity_r)) {
@@ -56,7 +57,7 @@ void CobotModel::DriveCallback(const CobotDriveMsg& msg) {
   t_last_cmd_ = GetMonotonicTime();
 }
 
-void CobotModel::PublishOdom(const float dt) {
+void OmnidirectionalModel::PublishOdom(const float dt) {
   const Vector2f w0 = Heading(CONFIG_w0);
   const Vector2f w1 = Heading(CONFIG_w1);
   const Vector2f w2 = Heading(CONFIG_w2);
@@ -78,7 +79,7 @@ void CobotModel::PublishOdom(const float dt) {
 }
 
 //TODO(jaholtz) Add noise
-void CobotModel::Step(const double &dt) {
+void OmnidirectionalModel::Step(const double &dt) {
   // TODO(jaholtz) For faster than real time simulation we may need
   // a wallclock invariant method for this.
   static const double kMaxCommandAge = 0.1;
@@ -121,4 +122,4 @@ void CobotModel::Step(const double &dt) {
   PublishOdom(dt);
 }
 
-} // namespace cobot
+} // namespace omnidrive
