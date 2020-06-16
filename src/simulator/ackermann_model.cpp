@@ -2,6 +2,7 @@
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
+#include <string>
 
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
@@ -21,8 +22,12 @@ CONFIG_FLOAT(max_speed, "ak_max_speed");
 CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
 CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
 CONFIG_STRING(drive_topic, "ak_drive_callback_topic");
+CONFIG_FLOAT(radius, "ackermann_radius");
+CONFIG_FLOAT(num_segments, "ackermann_num_segments");
+CONFIG_VECTOR2F(offset_vec, "ackermann_offset");
 
-AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) :
+
+AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n, string topic_prefix = "") :
     RobotModel(),
     last_cmd_(),
     t_last_cmd_(0),
@@ -32,10 +37,12 @@ AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandl
   last_cmd_.velocity = 0;
   last_cmd_.curvature = 0;
   drive_subscriber_ = n->subscribe(
-      CONFIG_drive_topic,
+      topic_prefix + CONFIG_drive_topic,
       1,
       &AckermannModel::DriveCallback,
       this);
+  this->SetTemplateLines(CONFIG_radius, CONFIG_num_segments);
+  this->Transform();
 }
 
 void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
@@ -93,6 +100,38 @@ void AckermannModel::Step(const double &dt) {
   // Update the Pose
   pose_.translation += Eigen::Rotation2Df(pose_.angle) * d_vector;
   pose_.angle = AngleMod(pose_.angle + dtheta);
+  this->Transform();
 }
 
+void AckermannModel::Transform() {
+  Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+  Eigen::Vector2f T = pose_.translation;
+
+  for (size_t i=0; i < template_lines_.size(); i++) {
+    pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+    pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+  }
+}
+
+void AckermannModel::SetTemplateLines(const float r, const int num_segments){
+  // copied directly from human model. In future refractor the code to 
+  // enable inherentance might be more optimal. For now there is an excessive
+  // amount of unwanted code in HumanModel, which disables inherenting directly.
+
+  const float angle_increment = 2 * M_PI / num_segments;
+
+  Eigen::Vector2f v0(r, 0.);
+  Eigen::Vector2f v1;
+  Eigen::Vector2f offset_vec = CONFIG_offset_vec;
+  const float eps = 0.0005;
+  for (int i = 1; i < num_segments; i++) {
+    v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
+
+    Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
+    template_lines_.push_back(geometry::Line2f(v0 + eps_vec + offset_vec, v1 - eps_vec + offset_vec));
+    v0 = v1;
+  }
+  template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(r, 0.0)));
+  pose_lines_ = template_lines_;
+}
 } // namespace ackermann

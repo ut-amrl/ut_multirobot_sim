@@ -21,14 +21,17 @@ class OmnidirectionalModel : public robot_model::RobotModel {
   config_reader::ConfigReader config_reader_;
   ros::Publisher odom_publisher_;
 
-  // Receives drive callback messages and stores them
+  // Receives drive callback messages and stores Line2f
   void DriveCallback(const ut_multirobot_sim::CobotDriveMsg& msg);
+  // Initialize associated template lines (shape of robot)
+  void SetTemplateLines(const float r, const int num_segments);
+  void Transform();
 
  public:
   OmnidirectionalModel() = delete;
   // Intialize a default object reading from a file
   OmnidirectionalModel(
-      const std::vector<std::string>& config_files, ros::NodeHandle* n);
+      const std::vector<std::string>& config_files, ros::NodeHandle* n, std::string topic_prefix);
   ~OmnidirectionalModel() = default;
   // define Step function for updating
   void Step(const double& dt);

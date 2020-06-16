@@ -21,12 +21,14 @@ class AckermannModel : public robot_model::RobotModel {
 
   // Receives drive callback messages and stores them
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
-
+  // Initialize associated template lines (shape of robot)
+  void SetTemplateLines(const float r, const int num_segments);
+  void Transform();
  public:
   AckermannModel() = delete;
   // Intialize a default object reading from a file
   AckermannModel(const std::vector<std::string> &config_file,
-                 ros::NodeHandle *n);
+                 ros::NodeHandle *n, std::string prefix);
   ~AckermannModel() = default;
   // define Step function for updating
   void Step(const double &dt);
