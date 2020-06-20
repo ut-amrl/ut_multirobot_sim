@@ -105,6 +105,11 @@ Simulator::Simulator(const std::string& sim_config) :
     robot_type_(CONFIG_robot_type) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
+  if (CONFIG_map_name == "") {
+    std::cerr << "Failed to load map from init config file '"
+              << CONFIG_init_config_file << "'" << std::endl;
+    exit(1);
+  }
 }
 
 Simulator::~Simulator() { }
