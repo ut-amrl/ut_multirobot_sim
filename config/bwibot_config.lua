@@ -1,3 +1,6 @@
+function Vector3(x, y, z)
+  return {x = x, y = y, z = z}
+end
 -- MODEL PARAMETERS
 invert_linear_vel_cmds = false
 invert_angular_vel_cmds = false

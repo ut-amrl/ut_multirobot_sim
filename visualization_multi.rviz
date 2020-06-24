@@ -82,7 +82,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: robot0/Cobot/Laser
+      Topic: single_robot/Cobot/Laser
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -138,7 +138,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: robot1/Cobot/Laser
+      Topic: robot_1/Cobot/Laser
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -168,7 +168,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.05000000074505806
       Style: Flat Squares
-      Topic: robot2/Cobot/Laser
+      Topic: robot_2/Cobot/Laser
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true

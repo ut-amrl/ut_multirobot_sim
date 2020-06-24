@@ -48,8 +48,6 @@
 
 DEFINE_bool(localize, false, "Publish localization");
 
-using ackermann::AckermannModel;
-using cobot::CobotModel;
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
 using Eigen::Vector3f;
@@ -145,10 +143,10 @@ bool Simulator::init(ros::NodeHandle& n) {
       motion_models_.push_back(unique_ptr<AckermannModel>(
           new AckermannModel({CONFIG_robot_configs[i]}, &n, topic_prefix)));
     } else if (robot_type == "OMNIDIRECTIONAL_DRIVE"){
-      motion_models_.push_back(unique_ptr<CobotModel>(
+      motion_models_.push_back(unique_ptr<OmnidirectionalModel>(
           new OmnidirectionalModel({CONFIG_robot_configs[i]}, &n, topic_prefix)));
     }
-    else if (robot_type == "BWIBOT") {
+    else if (robot_type == "DIFF_DRIVE") {
       if(robot_number_ != 1){
         std::logic_error("Warning, Diff Drive Currently does not support multiple robots\n");
       }
@@ -156,9 +154,9 @@ bool Simulator::init(ros::NodeHandle& n) {
           new DiffDriveModel({CONFIG_robot_configs[i]}, &n)));
     }
     else{
-    std::cerr << "Robot type \"" << robot_type
-              << "\" has no associated motion model!" << std::endl;
-    return false;
+      std::cerr << "Robot type \"" << robot_type
+                << "\" has no associated motion model!" << std::endl;
+      return false;
     }
     // initialize starting location
     cur_locs_.push_back(
@@ -257,7 +255,7 @@ void Simulator::loadObject() {
   }
 }
 
-// TODO: figure out higher order function
+// TODO(Tongrui Li): figure out higher order function
 void Simulator::InitalLocationCallbackMulti(const PoseWithCovarianceStamped& msg, int robot_num) {
   const Vector2f loc =
       Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
