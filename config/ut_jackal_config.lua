@@ -10,7 +10,7 @@ angular_neg_accel_limit = 3.0
 max_angular = 3.0
 max_linear_vel = 2.0
 drive_callback_topic = "/navigation/cmd_vel"
-diff_drive_odom_topic = "/odometry/filtered"
+diff_drive_odom_topic = "/jackal_velocity_controller/odom"
 linear_odom_scale = 1.0
 angular_odom_scale = 1.0
 
@@ -26,8 +26,13 @@ rear_axle_offset = 0.0
 min_turn_radius = 0.0
 
 laser_topic = "velodyne_2dscan"
-laser_loc = Vector3(0.15, 0, 0.155)
+laser_loc = Vector3(0.07, 0, 0.5)
 car_width = 0.43
 car_length = 0.50
 car_height = 0.65;
 
+laser_angle_min = DegToRad(-180.0);
+laser_angle_max = DegToRad(180.0);
+laser_angle_increment = DegToRad(0.1);
+laser_min_range = 0.02;
+laser_max_range = 150.0;
