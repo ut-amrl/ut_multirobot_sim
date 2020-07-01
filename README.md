@@ -3,12 +3,12 @@
 ## Dependencies
 
 1. [glog](https://github.com/google/glog)
-1. [gflags](https://github.com/google/glog)
-1. [Lua5.1](https://github.com/google/glog)
+1. [gflags](https://github.com/gflags/gflags)
+1. [Lua5.1](http://www.lua.org/)
 
 You can install all the dependencies on *buntu using:
 ```
-sudo apt install libgoogle-glog-dev libpopt-dev
+sudo apt install libgoogle-glog-dev libgflags-dev liblua5.1-0-dev
 ```
 
 To set up the pre-commit and pre-push hooks that verify changes are able to build locally, run

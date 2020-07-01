@@ -127,9 +127,15 @@ void DiffDriveModel::Step(const double &dt) {
         }
     }
 
+    // Assumes uniform acceleration between current velocity and desired velocity.
+    // dx = vi * dt + 0.5 acc dt^2
+    // dx = vi * dt + 0.5 (acc * dt) dt
+    const float acc_times_dt = (linear_vel_ - vel_.translation.x());
+    const float dx = vel_.translation.x() * dt + 0.5 * acc_times_dt * dt;
+
     vel_.translation.x() = linear_vel_;
     vel_.angle = angular_vel_;
-    pose_.translation += Rotation2Df(pose_.angle) * vel_.translation * dt;
+    pose_.translation += geometry::Heading(pose_.angle) * dx;
     pose_.angle = AngleMod(pose_.angle + vel_.angle * dt);
 
     // Create a Quaternion from the angle
