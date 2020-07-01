@@ -85,6 +85,13 @@ CONFIG_STRING(robot_config, "robot_config");
 CONFIG_STRING(laser_topic, "laser_topic");
 CONFIG_STRING(laser_frame, "laser_frame");
 
+// Laser scanner parameters.
+CONFIG_FLOAT(laser_angle_min, "laser_angle_min");
+CONFIG_FLOAT(laser_angle_max, "laser_angle_max");
+CONFIG_FLOAT(laser_angle_increment, "laser_angle_increment");
+CONFIG_FLOAT(laser_min_range, "laser_min_range");
+CONFIG_FLOAT(laser_max_range, "laser_max_range");
+
 CONFIG_STRING(map_name, "map_name");
 // Initial location
 CONFIG_FLOAT(start_x, "start_x");
@@ -113,11 +120,11 @@ bool Simulator::init(ros::NodeHandle& n) {
   // TODO(jaholtz) Too much hard coding, move to config
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
-  scanDataMsg.angle_min = DegToRad(-135.0);
-  scanDataMsg.angle_max = DegToRad(135.0);
-  scanDataMsg.range_min = 0.02;
-  scanDataMsg.range_max = 10.0;
-  scanDataMsg.angle_increment = DegToRad(0.25);
+  scanDataMsg.angle_min = CONFIG_laser_angle_min;
+  scanDataMsg.angle_max = CONFIG_laser_angle_max;
+  scanDataMsg.angle_increment = CONFIG_laser_angle_increment;
+  scanDataMsg.range_min = CONFIG_laser_min_range;
+  scanDataMsg.range_max = CONFIG_laser_max_range;
   scanDataMsg.intensities.clear();
   scanDataMsg.time_increment = 0.0;
   scanDataMsg.scan_time = 0.05;
@@ -376,7 +383,7 @@ void Simulator::publishLaser() {
                         &scanDataMsg.ranges);
   for (float& r : scanDataMsg.ranges) {
     if (r > scanDataMsg.range_max - 0.1) {
-      r = scanDataMsg.range_max;
+      r = 0;
       continue;
     }
     r = max<float>(0.0, r + CONFIG_laser_stdev * laser_noise_(rng_));
@@ -464,9 +471,11 @@ string GetMapNameFromFilename(string path) {
   char path_cstring[path.length()];
   strcpy(path_cstring, path.c_str());
   const string file_name(basename(path_cstring));
-  if (file_name.length() > 4 &&
-      file_name.substr(file_name.length() - 4, 4) == ".txt") {
-    return file_name.substr(0, file_name.length() - 4);
+  static const string suffix = ".vectormap.txt";
+  const size_t suffix_len = suffix.length();
+  if (file_name.length() > suffix_len &&
+      file_name.substr(file_name.length() - suffix_len, suffix_len) == suffix) {
+    return file_name.substr(0, file_name.length() - suffix_len);
   }
   return file_name;
 }
