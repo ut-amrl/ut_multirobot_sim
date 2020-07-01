@@ -1,4 +1,6 @@
-# UT Multi-Robot Simulator [![Build Status](https://travis-ci.com/ut-amrl/ut_multirobot_sim.svg?branch=master)](https://travis-ci.com/ut-amrl/ut_multirobot_sim)
+# UT Multi-Robot Simulator
+
+![Build Status](https://travis-ci.com/ut-amrl/ut_multirobot_sim.svg?branch=master)
 
 ## Dependencies
 
