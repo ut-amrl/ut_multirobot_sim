@@ -1,23 +1,23 @@
 /*
  * The MIT License (MIT)
  * Copyright (c) 2011 William Woodall <wjwwood@gmail.com>
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a 
- * copy of oftware and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of oftware and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and ermission notice shall be included 
+ *
+ * The above copyright notice and ermission notice shall be included
  * in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
 
@@ -60,7 +60,7 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
     t_last_cmd_(0),
     angular_error_(0, 1),
     config_reader_(config_files) {
-        
+
     drive_subscriber_ = n->subscribe(
       CONFIG_drive_topic,
       1,
@@ -79,26 +79,31 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
 }
 
 void DiffDriveModel::Step(const double &dt) {
+  // TODO(joydeepb): Make the 0.1 either a flag or config.
+  if (t_last_cmd_ < GetMonotonicTime() - 0.1) {
+    target_angular_vel_ = 0;
+    target_linear_vel_ = 0;
+  }
     ros::Time current_time = ros::Time::now();
     // Update the linear velocity based on the linear acceleration limits
     if (linear_vel_ < target_linear_vel_) {
         // Must increase linear speed
-        if (CONFIG_linear_pos_accel_limit == 0.0 
+        if (CONFIG_linear_pos_accel_limit == 0.0
             || target_linear_vel_ - linear_vel_ < CONFIG_linear_pos_accel_limit) {
             linear_vel_ = target_linear_vel_;
         }
         else {
-             linear_vel_ += CONFIG_linear_pos_accel_limit; 
+             linear_vel_ += CONFIG_linear_pos_accel_limit;
         }
     } else if (linear_vel_ > target_linear_vel_) {
         // Must decrease linear speed
-        if (CONFIG_linear_neg_accel_limit == 0.0 
+        if (CONFIG_linear_neg_accel_limit == 0.0
             || linear_vel_ - target_linear_vel_ < CONFIG_linear_neg_accel_limit) {
             linear_vel_ = target_linear_vel_;
         }
         else {
-             linear_vel_ -= CONFIG_linear_neg_accel_limit; 
-        }        
+             linear_vel_ -= CONFIG_linear_neg_accel_limit;
+        }
     }
 
     // Update the angular velocity based on the angular acceleration limits
@@ -109,19 +114,19 @@ void DiffDriveModel::Step(const double &dt) {
             angular_vel_ = target_angular_vel_;
         }
         else {
-             angular_vel_ += CONFIG_angular_pos_accel_limit; 
+             angular_vel_ += CONFIG_angular_pos_accel_limit;
         }
     } else if (angular_vel_ > target_angular_vel_) {
         // Must decrease angular speed
-        if (CONFIG_angular_neg_accel_limit == 0.0 
+        if (CONFIG_angular_neg_accel_limit == 0.0
             || angular_vel_ - target_angular_vel_ < CONFIG_angular_neg_accel_limit) {
             angular_vel_ = target_angular_vel_;
         }
         else {
-             angular_vel_ -= CONFIG_angular_neg_accel_limit; 
+             angular_vel_ -= CONFIG_angular_neg_accel_limit;
         }
     }
-    
+
     vel_.translation.x() = linear_vel_;
     vel_.angle = angular_vel_;
     pose_.translation += Rotation2Df(pose_.angle) * vel_.translation * dt;
@@ -130,7 +135,7 @@ void DiffDriveModel::Step(const double &dt) {
     // Create a Quaternion from the angle
     quat_ = tf::createQuaternionMsgFromYaw(pose_.angle);
     last_time_ = current_time;
-   
+
     PublishOdom(dt);
 }
 
@@ -146,7 +151,7 @@ void DiffDriveModel::PublishOdom(const float dt) {
     odom_msg_.pose.covariance[21] = 1000000000000.0;
     odom_msg_.pose.covariance[28] = 1000000000000.0;
     odom_msg_.pose.covariance[35] = 0.001;
-    
+
     odom_msg_.twist.twist.linear.x = vel_.translation.x();
     odom_msg_.twist.twist.linear.y = vel_.translation.y();
     odom_msg_.twist.twist.angular.z = vel_.angle;
