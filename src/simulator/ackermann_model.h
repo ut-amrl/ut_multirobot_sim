@@ -1,7 +1,14 @@
+// comment out to use ut_multirobot_sim's message.
+#define AMRL_MSGS
+
 #include <random>
 #include <string>
 #include "config_reader/config_reader.h"
-#include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
+#ifdef AMRL_MSGS
+  #include "amrl_msgs/AckermannCurvatureDriveMsg.h"
+#else
+  #include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
+#endif
 #include "ros/ros.h"
 #include "simulator/robot_model.h"
 
@@ -12,7 +19,11 @@ namespace ackermann {
 
 class AckermannModel : public robot_model::RobotModel {
  private:
-  ut_multirobot_sim::AckermannCurvatureDriveMsg last_cmd_;
+  #ifdef AMRL_MSGS
+    amrl_msgs::AckermannCurvatureDriveMsg last_cmd_;
+  #else
+    ut_multirobot_sim::AckermannCurvatureDriveMsg last_cmd_;
+  #endif
   double t_last_cmd_;
   std::default_random_engine rng_;
   std::normal_distribution<float> angular_error_;
@@ -20,7 +31,11 @@ class AckermannModel : public robot_model::RobotModel {
   config_reader::ConfigReader config_reader_;
 
   // Receives drive callback messages and stores them
-  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
+  #ifdef AMRL_MSGS
+    void DriveCallback(const amrl_msgs::AckermannCurvatureDriveMsg &msg);
+  #else
+    void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
+  #endif
   // Initialize associated template lines (shape of robot)
   void SetTemplateLines(const float r, const int num_segments);
   void Transform();

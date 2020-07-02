@@ -18,6 +18,8 @@
 \author  Joydeep Biswas, (C) 2011
 */
 //========================================================================
+// comment out to use ut_multirobot_sim's message.
+#define AMRL_MSGS
 
 #include <stdio.h>
 #include <iostream>
@@ -37,8 +39,13 @@
 #include "tf/transform_datatypes.h"
 #include "visualization_msgs/Marker.h"
 
-#include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
-#include "ut_multirobot_sim/Localization2DMsg.h"
+#ifdef AMRL_MSGS
+  #include "amrl_msgs/Localization2DMsg.h"
+#else
+  #include "ut_multirobot_sim/Localization2DMsg.h"
+  //#include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
+#endif
+
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -80,7 +87,11 @@ class Simulator {
 
   sensor_msgs::LaserScan scanDataMsg_;
   nav_msgs::Odometry odometryTwistMsg_;
-  ut_multirobot_sim::Localization2DMsg localizationMsg_;
+  #ifdef AMRL_MSGS
+    amrl_msgs::Localization2DMsg localizationMsg_;
+  #else
+    ut_multirobot_sim::Localization2DMsg localizationMsg_;
+  #endif
 
   vector_map::VectorMap map_;
 
@@ -115,7 +126,7 @@ class Simulator {
   void drawObjects();
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
+  // void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
   void publishOdometry(int cur_robot_number);
   void publishLaser(int cur_robot_number);
   void publishVisualizationMarkers(int cur_robot_number);

@@ -6,7 +6,11 @@
 
 using Eigen::Vector2f;
 using Eigen::Rotation2Df;
-using ut_multirobot_sim::AckermannCurvatureDriveMsg;
+#ifdef AMRL_MSGS
+  using amrl_msgs::AckermannCurvatureDriveMsg;
+#else
+  using ut_multirobot_sim::AckermannCurvatureDriveMsg;
+#endif
 using math_util::Bound;
 using math_util::AngleDiff;
 using math_util::AngleMod;

@@ -18,6 +18,7 @@
 \author  Joydeep Biswas, (C) 2011
 */
 //========================================================================
+#define AMRL_MSGS
 
 #include <libgen.h>
 #include <math.h>
@@ -43,8 +44,13 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
-#include "ut_multirobot_sim/Localization2DMsg.h"
 #include "vector_map.h"
+
+#ifdef AMRL_MSGS
+  #include "amrl_msgs/Localization2DMsg.h"
+#else
+  #include "ut_multirobot_sim/Localization2DMsg.h"
+#endif
 
 DEFINE_bool(localize, false, "Publish localization");
 
@@ -179,8 +185,13 @@ bool Simulator::init(ros::NodeHandle& n) {
     viz_laser_publishers_.push_back(n.advertise<sensor_msgs::LaserScan>(
         topic_prefix + "/scan", 1));
     if (FLAGS_localize) {
+      #ifdef AMRL_MSGS
+      localizationPublishers_.push_back(n.advertise<amrl_msgs::Localization2DMsg>(
+          topic_prefix + "/localization", 1));
+      #else
       localizationPublishers_.push_back(n.advertise<ut_multirobot_sim::Localization2DMsg>(
           topic_prefix + "/localization", 1));
+      #endif
     }
   }
   // initialize hard coded initial pose
