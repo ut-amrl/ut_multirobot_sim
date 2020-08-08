@@ -20,8 +20,10 @@
 */
 //========================================================================
 
+#include "eigen3/Eigen/Eigen"
 #include "simulator/human_object.h"
 
+using Eigen::Vector2f;
 using std::string;
 using std::vector;
 
@@ -68,7 +70,7 @@ CONFIG_INT(mode, "hu_mode");
 }
  */
 HumanObject::HumanObject(const vector<string>& config_file) :
-    EntityBase(),
+    EntityBase(HUMAN_OBJECT),
     start_pose_(),
     goal_pose_(),
     trans_vel_(0., 0.),
@@ -173,6 +175,14 @@ double HumanObject::GetMaxSpeed() {
 
 double HumanObject::GetAvgSpeed() {
   return avg_speed_;
+}
+
+Vector2f HumanObject::GetTransVel() const {
+  return trans_vel_;
+}
+
+double HumanObject::GetRotVel() {
+  return rot_vel_;
 }
 
 bool HumanObject::CheckReachGoal() {

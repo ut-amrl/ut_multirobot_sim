@@ -80,6 +80,8 @@ class HumanObject: public EntityBase{
   void SetMode(const HumanMode& mode);
   double GetMaxSpeed();
   double GetAvgSpeed();
+  Eigen::Vector2f GetTransVel() const;
+  double GetRotVel();
 };
 
 }  // namespace human

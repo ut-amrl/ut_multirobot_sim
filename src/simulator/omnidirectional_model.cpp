@@ -32,7 +32,7 @@ CONFIG_STRING(odom_topic, "co_cobot_odom_topic");
 
 OmnidirectionalModel::OmnidirectionalModel(
     const vector<string>& config_files, ros::NodeHandle* n) :
-    RobotModel(),
+    RobotModel(OMNIDIRECTIONAL_MODEL),
     last_cmd_(),
     t_last_cmd_(0),
     angular_error_(0, 1),

@@ -75,6 +75,7 @@ class Simulator {
   ros::Publisher objectLinesPublisher;
   ros::Publisher truePosePublisher;
   ros::Publisher localizationPublisher;
+  ros::Publisher humanStateArrayPublisher;
   tf::TransformBroadcaster *br;
 
   sensor_msgs::LaserScan scanDataMsg;

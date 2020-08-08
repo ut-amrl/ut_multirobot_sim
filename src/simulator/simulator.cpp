@@ -41,6 +41,7 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
+#include "ut_multirobot_sim/HumanStateArrayMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "vector_map.h"
 
@@ -182,6 +183,8 @@ bool Simulator::init(ros::NodeHandle& n) {
     localizationMsg.header.frame_id = "map";
     localizationMsg.header.seq = 0;
   }
+  humanStateArrayPublisher =
+    n.advertise<ut_multirobot_sim::HumanStateArrayMsg>("/human_states", 1);
   br = new tf::TransformBroadcaster();
 
   this->loadObject();
@@ -198,7 +201,6 @@ void Simulator::loadObject() {
   for (const string& config_str: CONFIG_human_config_list) {
     objects.push_back(
       std::unique_ptr<HumanObject>(new HumanObject({config_str})));
-
   }
 }
 
@@ -281,7 +283,7 @@ void Simulator::initSimulatorVizMarkers() {
   vector<float> color;
   color.resize(4);
 
-  p.header.frame_id = "/map";
+  p.header.frame_id = "map";
 
   p.pose.orientation.w = 1.0;
   scale.x = 0.02;
@@ -496,6 +498,32 @@ void Simulator::Run() {
   publishVisualizationMarkers();
   //publish tf
   publishTransform();
+
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+
+      Vector2f position = human->GetPose().translation;
+      double angle = human->GetPose().angle;
+      Vector2f trans_vel = human->GetTransVel();
+      double rot_vel = human->GetRotVel();
+
+      ut_multirobot_sim::HumanStateMsg human_state_msg;
+      human_state_msg.pose.x = position.x();
+      human_state_msg.pose.y = position.y();
+      human_state_msg.pose.theta = angle;
+      human_state_msg.translational_velocity.x = trans_vel.x();
+      human_state_msg.translational_velocity.y = trans_vel.y();
+      human_state_msg.translational_velocity.z = 0.0;
+      human_state_msg.rotational_velocity = rot_vel;
+
+      human_array_msg.human_states.push_back(human_state_msg);
+    }
+  }
+  human_array_msg.header.stamp = ros::Time::now();
+  humanStateArrayPublisher.publish(human_array_msg);
 
   if (FLAGS_localize) {
     localizationMsg.header.stamp = ros::Time::now();
