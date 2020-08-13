@@ -60,23 +60,30 @@ class Simulator {
   config_reader::ConfigReader reader_;
   config_reader::ConfigReader init_config_reader_;
 
-  Pose2Df vel_;
-  Pose2Df cur_loc_;
-
   std::vector<std::unique_ptr<EntityBase>> objects;
 
-  ros::Subscriber initSubscriber;
+  struct RobotPubSub {
+    Pose2Df vel;
+    Pose2Df cur_loc;
 
-  ros::Publisher odometryTwistPublisher;
-  ros::Publisher laserPublisher;
-  ros::Publisher viz_laser_publisher_;
+    ros::Subscriber initSubscriber;
+    ros::Publisher odometryTwistPublisher;
+    ros::Publisher laserPublisher;
+    ros::Publisher vizLaserPublisher;
+    ros::Publisher posMarkerPublisher;
+    ros::Publisher truePosePublisher;
+    ros::Publisher localizationPublisher;
+    std::unique_ptr<robot_model::RobotModel> motion_model;
+
+    visualization_msgs::Marker robotPosMarker;
+  };
+
   ros::Publisher mapLinesPublisher;
-  ros::Publisher posMarkerPublisher;
   ros::Publisher objectLinesPublisher;
-  ros::Publisher truePosePublisher;
-  ros::Publisher localizationPublisher;
-  tf::TransformBroadcaster *br;
 
+  std::vector<RobotPubSub> robot_pub_subs_;
+
+  tf::TransformBroadcaster *br;
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
   ut_multirobot_sim::Localization2DMsg localizationMsg;
@@ -84,7 +91,6 @@ class Simulator {
   vector_map::VectorMap map_;
 
   visualization_msgs::Marker lineListMarker;
-  visualization_msgs::Marker robotPosMarker;
   visualization_msgs::Marker objectLinesMarker;
 
   static const float DT;
@@ -92,9 +98,6 @@ class Simulator {
 
   std::default_random_engine rng_;
   std::normal_distribution<float> laser_noise_;
-
-  std::unique_ptr<robot_model::RobotModel> motion_model_;
-  std::string robot_type_;
 
  private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
@@ -111,6 +114,7 @@ class Simulator {
   void publishLaser();
   void publishVisualizationMarkers();
   void publishTransform();
+  void publishLocalization();
   void update();
   void loadObject();
 
