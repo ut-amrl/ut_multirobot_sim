@@ -61,7 +61,7 @@ local RobotType = {
 -- robot_config = "config/bwibot_config.lua"
 -- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
 -- robot_config = "config/cobot_config.lua"
-robot_type = RobotType.DIFF_DRIVE
+robot_types = { RobotType.DIFF_DRIVE }
 robot_config = "config/ut_jackal_config.lua"
 
 laser_topic = "/Cobot/Laser"
