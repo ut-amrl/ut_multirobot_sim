@@ -112,8 +112,9 @@ class Simulator {
   void publishLaser();
   void publishVisualizationMarkers();
   void publishTransform();
+  void publishHumanStates();
   void update();
-  void loadObject();
+  void loadObject(ros::NodeHandle &n);
 
  public:
   Simulator() = delete;

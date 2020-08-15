@@ -77,3 +77,7 @@ TARGET_LINK_LIBRARIES(${target}
   ${libs}
 )
 
+ROSBUILD_ADD_EXECUTABLE(human_controller
+  src/human_controller/human_controller.cpp
+)
+TARGET_LINK_LIBRARIES(human_controller ${libs} ncurses)
