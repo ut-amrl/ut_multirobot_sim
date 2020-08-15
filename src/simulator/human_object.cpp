@@ -20,8 +20,13 @@
 */
 //========================================================================
 
+#include <stdexcept>
+#include "eigen3/Eigen/Eigen"
 #include "simulator/human_object.h"
 
+using Eigen::Vector2f;
+using Eigen::Vector3f;
+using std::invalid_argument;
 using std::string;
 using std::vector;
 
@@ -41,6 +46,8 @@ CONFIG_FLOAT(max_omega, "hu_max_omega");
 CONFIG_FLOAT(avg_omega, "hu_avg_omega");
 CONFIG_FLOAT(reach_goal_threshold, "hu_reach_goal_threshold");
 CONFIG_INT(mode, "hu_mode");
+CONFIG_STRING(control_topic, "hu_control_topic");
+CONFIG_VECTOR3FLIST(waypoints, "hu_waypoints");
 
 /* HumanObject::HumanObject() {
   // angle, (x, y)
@@ -68,8 +75,7 @@ CONFIG_INT(mode, "hu_mode");
 }
  */
 HumanObject::HumanObject(const vector<string>& config_file) :
-    EntityBase(),
-    start_pose_(),
+    EntityBase(HUMAN_OBJECT),
     goal_pose_(),
     trans_vel_(0., 0.),
     rot_vel_(0.),
@@ -79,17 +85,30 @@ HumanObject::HumanObject(const vector<string>& config_file) :
     avg_omega_(0.),
     mode_(HumanMode::Repeat),
     reach_goal_threshold_(0.3),
-    config_reader_(config_file){
-  
-  start_pose_ = Pose2Df(CONFIG_start_theta, {CONFIG_start_x, CONFIG_start_y});
-  pose_ = start_pose_;
-  goal_pose_ = Pose2Df(CONFIG_goal_theta, {CONFIG_goal_x, CONFIG_goal_y});
+    control_topic_("/human_control"),
+    config_reader_(config_file) {
+  waypoints_ = CONFIG_waypoints;
+  if (waypoints_.empty()) {
+    throw invalid_argument("Human must have at least one starting waypoint!");
+  }
+  mode_ = static_cast<HumanMode>(CONFIG_mode);
+  Vector3f start_vec = waypoints_[0];
+  float start_x = start_vec[0], start_y = start_vec[1], start_theta = start_vec[2];
+  pose_ = Pose2Df(start_theta, {start_x, start_y});
+
+  if (mode_ != HumanMode::Controlled) {
+    waypoint_index_ = (waypoints_.size() == 1) ? 0 : 1;
+    Vector3f goal_vec = waypoints_[waypoint_index_];
+    float goal_x = goal_vec[0], goal_y = goal_vec[1], goal_theta = goal_vec[2];
+    goal_pose_ = Pose2Df(goal_theta, {goal_x, goal_y});
+  }
+
   max_speed_ = CONFIG_max_speed;
   avg_speed_ = CONFIG_avg_speed;
   max_omega_ = CONFIG_max_omega;
   avg_omega_ = CONFIG_avg_omega;
   reach_goal_threshold_ = CONFIG_reach_goal_threshold;
-  mode_ = static_cast<HumanMode>(CONFIG_mode);
+  control_topic_ = CONFIG_control_topic;
 
   // just a cylinder for now
   const float r = CONFIG_radius;
@@ -110,6 +129,17 @@ HumanObject::HumanObject(const vector<string>& config_file) :
   }
   template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(r, 0.0)));
   pose_lines_ = template_lines_;
+}
+
+void HumanObject::InitializeManualControl(ros::NodeHandle& nh) {
+  SetMode(HumanMode::Controlled);
+  control_subscriber_ = nh.subscribe(control_topic_, 1, &HumanObject::ManualControlCallback, this);
+}
+
+void HumanObject::ManualControlCallback(const ut_multirobot_sim::HumanControlCommand& hcc) {
+  trans_vel_.x() = hcc.translational_velocity.x;
+  trans_vel_.y() = hcc.translational_velocity.y;
+  rot_vel_ = hcc.rotational_velocity;
 }
 
 
@@ -145,9 +175,11 @@ void HumanObject::SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel
 }
 
 void HumanObject::Step(const double& dt) {
-  // very simple dynamic update
-  trans_vel_ = (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
-  // TODO(yifeng): Add gaussian noise to the velocity
+  if (GetMode() != HumanMode::Controlled) {
+    // very simple dynamic update
+    trans_vel_ = (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
+    // TODO(yifeng): Add gaussian noise to the velocity
+  }
 
   // clip velocity if it is larger than max speed
   if (trans_vel_.norm() > max_speed_) {
@@ -175,18 +207,45 @@ double HumanObject::GetAvgSpeed() {
   return avg_speed_;
 }
 
+Vector2f HumanObject::GetTransVel() const {
+  return trans_vel_;
+}
+
+double HumanObject::GetRotVel() {
+  return rot_vel_;
+}
+
+HumanMode HumanObject::GetMode() const {
+  return mode_;
+}
+
 bool HumanObject::CheckReachGoal() {
-  if ((pose_.translation - goal_pose_.translation).norm() < this->reach_goal_threshold_) {
+  // since the human is controlled by some external program, there is no goal
+  // to reach.
+  if (mode_ == HumanMode::Controlled) {
+    return false;
+  }
+
+  if ((pose_.translation - goal_pose_.translation).norm() < reach_goal_threshold_) {
     // reached goal
-    if (mode_ == HumanMode::Singleshot) {
+
+    if (mode_ == HumanMode::Singleshot && waypoint_index_ == waypoints_.size() - 1) {
       trans_vel_.setZero();
       rot_vel_ = 0.;
       return true;
-    } else if (mode_ == HumanMode::Repeat) {
-      Pose2Df temp = goal_pose_;
-      goal_pose_ = start_pose_;
-      start_pose_ = temp;
+    } else if (mode_ == HumanMode::Singleshot || mode_ == HumanMode::Repeat) {
+      if (waypoint_index_ == waypoints_.size() - 1) {
+        going_forwards_ = false;
+      } else if (waypoint_index_ == 0) {
+        going_forwards_ = true;
+      }
+      waypoint_index_ += going_forwards_ ? 1 : -1;
+    } else if (mode_ == HumanMode::Cycle) {
+      waypoint_index_ = (waypoint_index_ + 1) % waypoints_.size();
     }
+    Vector3f next_waypoint = waypoints_[waypoint_index_];
+    float next_x = next_waypoint[0], next_y = next_waypoint[1], next_theta = next_waypoint[2];
+    goal_pose_ = Pose2Df(next_theta, {next_x, next_y});
   }
   return false;
 }

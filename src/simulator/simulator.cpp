@@ -41,6 +41,7 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
+#include "ut_multirobot_sim/HumanStateArrayMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "vector_map.h"
 
@@ -182,14 +183,16 @@ bool Simulator::init(ros::NodeHandle& n) {
     localizationMsg.header.frame_id = "map";
     localizationMsg.header.seq = 0;
   }
+  humanStateArrayPublisher =
+    n.advertise<ut_multirobot_sim::HumanStateArrayMsg>("/human_states", 1);
   br = new tf::TransformBroadcaster();
 
-  this->loadObject();
+  this->loadObject(n);
   return true;
 }
 
 // TODO(yifeng): Change this into a general way
-void Simulator::loadObject() {
+void Simulator::loadObject(ros::NodeHandle& nh) {
   // TODO (yifeng): load short term objects from list
   objects.push_back(
     std::unique_ptr<ShortTermObject>(new ShortTermObject("short_term_config.lua")));
@@ -198,7 +201,16 @@ void Simulator::loadObject() {
   for (const string& config_str: CONFIG_human_config_list) {
     objects.push_back(
       std::unique_ptr<HumanObject>(new HumanObject({config_str})));
+  }
 
+  for (const std::unique_ptr<EntityBase>& e : objects) {
+    if (e->GetType() == HUMAN_OBJECT) {
+      EntityBase* e_raw = e.get();
+      HumanObject* human = static_cast<HumanObject*>(e_raw);
+      if (human->GetMode() == human::HumanMode::Controlled) {
+        human->InitializeManualControl(nh);
+      }
+    }
   }
 }
 
@@ -207,11 +219,11 @@ void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
       Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
   const float angle = 2.0 *
       atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
-  printf("Set robot pose: %.2f,%.2f, %.1f\u00b0\n",
-         cur_loc_.translation.x(),
-         cur_loc_.translation.y(),
-         RadToDeg(cur_loc_.angle));
   motion_model_->SetPose({angle, loc});
+  printf("Set robot pose: %.2f,%.2f, %.1f\u00b0\n",
+         loc.x(),
+         loc.y(),
+         RadToDeg(angle));
 }
 
 /**
@@ -281,7 +293,7 @@ void Simulator::initSimulatorVizMarkers() {
   vector<float> color;
   color.resize(4);
 
-  p.header.frame_id = "/map";
+  p.header.frame_id = "map";
 
   p.pose.orientation.w = 1.0;
   scale.x = 0.02;
@@ -441,6 +453,34 @@ void Simulator::publishVisualizationMarkers() {
   objectLinesPublisher.publish(objectLinesMarker);
 }
 
+void Simulator::publishHumanStates() {
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+
+      Vector2f position = human->GetPose().translation;
+      double angle = human->GetPose().angle;
+      Vector2f trans_vel = human->GetTransVel();
+      double rot_vel = human->GetRotVel();
+
+      ut_multirobot_sim::HumanStateMsg human_state_msg;
+      human_state_msg.pose.x = position.x();
+      human_state_msg.pose.y = position.y();
+      human_state_msg.pose.theta = angle;
+      human_state_msg.translational_velocity.x = trans_vel.x();
+      human_state_msg.translational_velocity.y = trans_vel.y();
+      human_state_msg.translational_velocity.z = 0.0;
+      human_state_msg.rotational_velocity = rot_vel;
+
+      human_array_msg.human_states.push_back(human_state_msg);
+    }
+  }
+  human_array_msg.header.stamp = ros::Time::now();
+  humanStateArrayPublisher.publish(human_array_msg);
+}
+
 void Simulator::update() {
   // Step the motion model forward one time step
   motion_model_->Step(CONFIG_DT);
@@ -496,6 +536,8 @@ void Simulator::Run() {
   publishVisualizationMarkers();
   //publish tf
   publishTransform();
+  //publish array of human states
+  publishHumanStates();
 
   if (FLAGS_localize) {
     localizationMsg.header.stamp = ros::Time::now();

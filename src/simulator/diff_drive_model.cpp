@@ -55,7 +55,7 @@ CONFIG_STRING(drive_topic, "drive_callback_topic");
 CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
 
 DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHandle* n) :
-    RobotModel(),
+    RobotModel(DIFF_DRIVE_MODEL),
     last_cmd_(),
     t_last_cmd_(0),
     angular_error_(0, 1),

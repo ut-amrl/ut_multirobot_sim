@@ -22,7 +22,10 @@
 
 #include "simulator/entity_base.h"
 
-EntityBase::EntityBase() {
+EntityBase::EntityBase() : type_(ENTITY_BASE) {
+}
+
+EntityBase::EntityBase(EntityType type) : type_(type) {
 }
 
 void EntityBase::Step(const double& dt) {
@@ -42,4 +45,8 @@ std::vector<geometry::Line2f> EntityBase::GetTemplateLines() {
 
 std::vector<geometry::Line2f> EntityBase::GetLines() {
   return pose_lines_;
+}
+
+EntityType EntityBase::GetType() {
+  return type_;
 }
