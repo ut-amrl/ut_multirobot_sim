@@ -34,6 +34,7 @@
 
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
+#include "simulator/door.h"
 #include "simulator/omnidirectional_model.h"
 #include "simulator/diff_drive_model.h"
 #include "shared/math/geometry.h"
@@ -43,6 +44,7 @@
 #include "shared/util/timer.h"
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
+#include "ut_multirobot_sim/DoorControlMsg.h"
 #include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
@@ -61,6 +63,9 @@ using omnidrive::OmnidirectionalModel;
 using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
+using door::Door;
+using door::DoorState;
+using ut_multirobot_sim::DoorControlMsg;
 
 CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
@@ -100,6 +105,7 @@ CONFIG_FLOAT(start_y, "start_y");
 CONFIG_FLOAT(start_angle, "start_angle");
 CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
 CONFIG_STRINGLIST(human_config_list, "human_config_list");
+CONFIG_STRINGLIST(door_config_list, "door_config_list");
 
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
@@ -164,6 +170,8 @@ bool Simulator::init(ros::NodeHandle& n) {
   initSimulatorVizMarkers();
   drawMap();
 
+  doorSubscriber = n.subscribe("/door/command", 1, &Simulator::DoorCallback, this);
+
   initSubscriber = n.subscribe(
       "/initialpose", 1, &Simulator::InitalLocationCallback, this);
   odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
@@ -203,6 +211,13 @@ void Simulator::loadObject(ros::NodeHandle& nh) {
       std::unique_ptr<HumanObject>(new HumanObject({config_str})));
   }
 
+  // door
+  for (const string& config_str : CONFIG_door_config_list) {
+    objects.push_back(
+      std::unique_ptr<Door>(new Door({config_str}))
+    );
+  }
+
   for (const std::unique_ptr<EntityBase>& e : objects) {
     if (e->GetType() == HUMAN_OBJECT) {
       EntityBase* e_raw = e.get();
@@ -210,6 +225,17 @@ void Simulator::loadObject(ros::NodeHandle& nh) {
       if (human->GetMode() == human::HumanMode::Controlled) {
         human->InitializeManualControl(nh);
       }
+    }
+  }
+}
+
+void Simulator::DoorCallback(const DoorControlMsg& msg) {
+  DoorState state = static_cast<DoorState>(msg.command);
+  for (const std::unique_ptr<EntityBase>& e : objects) {
+    if (e->GetType() == DOOR) {
+      EntityBase* e_raw = e.get();
+      Door* door = static_cast<Door*>(e_raw);
+      door->SetState(state);
     }
   }
 }

@@ -34,6 +34,7 @@ using pose_2d::Pose2Df;
 enum EntityType {
    ACKERMANN_MODEL,
    DIFF_DRIVE_MODEL,
+   DOOR,
    ENTITY_BASE,
    HUMAN_OBJECT,
    OMNIDIRECTIONAL_MODEL,

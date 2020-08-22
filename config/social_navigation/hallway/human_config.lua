@@ -3,9 +3,8 @@ hu_radius = 0.1
 hu_num_segments = 20
 
 hu_waypoints = {
-    -- x, y, theta
-    {39, 18.7, 0.0},
-    {42, 22.7, 0.0},
+    {20, 21.5, 0},
+    {0, 21.5, 0},
 }
 
 -- Human speed information
@@ -18,10 +17,7 @@ hu_reach_goal_threshold = 0.3
 -- Human walking mode
 local HumanMode = {
     Singleshot=0,
-    Repeat=1,
-    Controlled=2,
-    Cycle=3,
+    Repeat=1
 }
 
 hu_mode = HumanMode.Repeat
--- hu_control_topic = "/human1/command"

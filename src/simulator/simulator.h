@@ -39,6 +39,7 @@
 
 #include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
+#include "ut_multirobot_sim/DoorControlMsg.h"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -66,6 +67,7 @@ class Simulator {
   std::vector<std::unique_ptr<EntityBase>> objects;
 
   ros::Subscriber initSubscriber;
+  ros::Subscriber doorSubscriber;
 
   ros::Publisher odometryTwistPublisher;
   ros::Publisher laserPublisher;
@@ -105,6 +107,7 @@ class Simulator {
   void initSimulatorVizMarkers();
   void drawMap();
   void drawObjects();
+  void DoorCallback(const ut_multirobot_sim::DoorControlMsg& msg);
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);

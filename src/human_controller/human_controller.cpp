@@ -52,6 +52,10 @@ void UpdateHCC(HumanControlCommand& hcc, char wasd) {
     case 'd':
       hcc.translational_velocity.x += 1.0;
       break;
+    case ' ':
+      hcc.translational_velocity.x = 0.0;
+      hcc.translational_velocity.y = 0.0;
+      break;
     default:
       throw std::invalid_argument("unknown command");
   }
@@ -73,6 +77,7 @@ int main(int argc, char* argv[]) {
       case 'a':
       case 's':
       case 'd':
+      case ' ':
         UpdateHCC(hcc, c);
         hcc.header.stamp = ros::Time::now();
         pub.publish(hcc);
