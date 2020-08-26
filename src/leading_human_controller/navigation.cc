@@ -165,7 +165,7 @@ void Navigation::Run() {
 
   AckermannCurvatureDriveMsg msg;
   msg.curvature = clamped_angle_diff;
-  msg.velocity = (state_ == STOPPED) ? 0.05 : 1;
+  msg.velocity = (state_ == STOPPED) ? 0.0 : 1;
   msg.header.stamp = ros::Time::now();
   drive_pub_.publish(msg);
 
