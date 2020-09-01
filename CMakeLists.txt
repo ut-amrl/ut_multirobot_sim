@@ -98,6 +98,12 @@ ROSBUILD_ADD_EXECUTABLE(following_human_controller
 )
 TARGET_LINK_LIBRARIES(following_human_controller ${libs})
 
+ROSBUILD_ADD_EXECUTABLE(package_delivery_controller
+  src/package_delivery_controller/navigation.cc
+  src/package_delivery_controller/navigation_main.cc
+)
+TARGET_LINK_LIBRARIES(package_delivery_controller ${libs})
+
 ROSBUILD_ADD_EXECUTABLE(hallway_controller
   src/hallway_controller/navigation.cc
   src/hallway_controller/navigation_main.cc
