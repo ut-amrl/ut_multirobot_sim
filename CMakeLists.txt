@@ -34,8 +34,8 @@ ENDIF()
 
 INCLUDE($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 ROSBUILD_INIT()
-SET(ROS_BUILD_STATIC_LIBS true)
-SET(ROS_BUILD_SHARED_LIBS false)
+#SET(ROS_BUILD_STATIC_LIBS true)
+SET(ROS_BUILD_SHARED_LIBS true)
 
 MESSAGE(STATUS "ROS-Overrride Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
@@ -77,6 +77,8 @@ ROSBUILD_ADD_EXECUTABLE(${target}
 TARGET_LINK_LIBRARIES(${target}
   ${libs}
 )
+
+ADD_SUBDIRECTORY(src/state_switcher_rviz_plugin)
 
 ROSBUILD_ADD_EXECUTABLE(human_controller
   src/human_controller/human_controller.cpp
