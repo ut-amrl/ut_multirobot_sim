@@ -1,7 +1,18 @@
 <launch>
+
+    <arg name="x" default="15" />
+    <arg name="y" default="13" />
+    <arg name="theta" default="0" />
+
     <!-- <node pkg="ut_multirobot_sim" type="doorman" name="doorman" /> -->
     <node pkg="ut_multirobot_sim" type="simulator_link" name="simulator" cwd="node"
-        args="-sim_config config/social_navigation/package_delivery/sim_config.lua" />
-    <node pkg="ut_multirobot_sim" type="package_delivery_controller" name="package_delivery_controller" />
+        args="-sim_config config/social_navigation/package_delivery/sim_config.lua --localize" />
+    <!-- <node pkg="ut_multirobot_sim" type="package_delivery_controller" name="package_delivery_controller" /> -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" />
+    <!-- <node pkg="social_demo" type="social_demo.py" name="social_demo" args="15 13 0" /> -->
+    <node pkg="graph_navigation" type="navigation" name="graph_navigation"
+        args="-map $(find ut_multirobot_sim)/config/GDC1.navigation.txt" />
+    <node pkg="c++-pips" type="mpdm_ref" name="mpdm_ref" args="-x $(arg x) -y $(arg y) -theta $(arg theta)" />
+
+    <param name="enable_statistics" value="true" />
 </launch>

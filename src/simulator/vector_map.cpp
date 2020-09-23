@@ -246,11 +246,13 @@ void VectorMap::SceneRender(const Vector2f& loc,
   }
 
   if (lines_list.size() >= MaxLines) {
+    /*
     fprintf(stderr,
             "Runaway Analytic Scene Render at %.30f,%.30f, %.3f : %.3f\u00b0\n",
             loc.x(), loc.y(),
             RadToDeg(angle_min),
             RadToDeg(angle_max));
+    */
   }
   for(const Line2f& l : scene) {
     if (l.SqLength() > eps) render->push_back(l);
