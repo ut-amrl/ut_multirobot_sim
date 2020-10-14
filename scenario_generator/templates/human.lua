@@ -23,11 +23,11 @@ hu_waypoints = {
 --hu_goal_theta = 0.
 
 -- Human speed information
-hu_max_speed = 1.8
-hu_avg_speed = 1.5
+hu_max_speed = {{ human_speed }}
+hu_avg_speed = {{ human_speed }}
 hu_max_omega = 0.2
 hu_avg_omega = 0.
-hu_reach_goal_threshold = 0.3
+hu_reach_goal_threshold = 0.1
 
 -- Human walking mode
 local HumanMode = {
@@ -37,5 +37,5 @@ local HumanMode = {
     Cycle=3,
 }
 
-hu_mode = HumanMode.Repeat
+hu_mode = HumanMode.Cycle
 hu_control_topic = "/human1/command"
