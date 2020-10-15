@@ -96,6 +96,9 @@ class Simulator {
   std::default_random_engine rng_;
   std::normal_distribution<float> laser_noise_;
 
+  uint64_t sim_step_count;
+  double sim_time;
+
   std::unique_ptr<robot_model::RobotModel> motion_model_;
   std::string robot_type_;
 
@@ -125,5 +128,8 @@ class Simulator {
   ~Simulator();
   bool init(ros::NodeHandle &n);
   void Run();
+  double GetSimTime() const { return sim_time; }
+  uint64_t GetSimStepCount() const { return sim_step_count; }
+  double GetStepSize() const;
 };
 #endif  // SIMULATOR_H

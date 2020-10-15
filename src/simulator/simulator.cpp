@@ -116,6 +116,8 @@ Simulator::Simulator(const std::string& sim_config) :
     vel_(0, {0,0}),
     cur_loc_(0, {0,0}),
     laser_noise_(0, 1),
+    sim_step_count(0),
+    sim_time(0.0),
     robot_type_(CONFIG_robot_type) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
@@ -127,6 +129,10 @@ Simulator::Simulator(const std::string& sim_config) :
 }
 
 Simulator::~Simulator() { }
+
+double Simulator::GetStepSize() const {
+  return CONFIG_DT;
+}
 
 bool Simulator::init(ros::NodeHandle& n) {
   // TODO(jaholtz) Too much hard coding, move to config
@@ -510,6 +516,8 @@ void Simulator::publishHumanStates() {
 void Simulator::update() {
   // Step the motion model forward one time step
   motion_model_->Step(CONFIG_DT);
+  ++sim_step_count;
+  sim_time += CONFIG_DT;
 
   // Update the simulator with the motion model result.
   cur_loc_ = motion_model_->GetPose();
