@@ -104,7 +104,9 @@ config_reader::ConfigReader object_reader(object_config_list); */
 Simulator::Simulator(const std::string& sim_config) :
     reader_({sim_config}),
     init_config_reader_({CONFIG_init_config_file}),
-    laser_noise_(0, 1) {
+    laser_noise_(0, 1),
+    sim_step_count(0),
+    sim_time(0.0) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   if (CONFIG_map_name == "") {
@@ -115,6 +117,10 @@ Simulator::Simulator(const std::string& sim_config) :
 }
 
 Simulator::~Simulator() { }
+
+double Simulator::GetStepSize() const {
+  return CONFIG_DT;
+}
 
 robot_model::RobotModel* MakeMotionModel(const std::string& robot_type, 
                                          ros::NodeHandle& n, 
@@ -177,11 +183,10 @@ bool Simulator::init(ros::NodeHandle& n) {
     auto& rps = robot_pub_subs_.back();
     rps.motion_model = std::unique_ptr<robot_model::RobotModel>(mm);
 
-    rps.initSubscriber = n.subscribe<PoseWithCovarianceStamped>(
-       pf + "/initialpose", 1, [&](const boost::shared_ptr<const PoseWithCovarianceStamped>& msg) {
-        const Vector2f loc(msg->pose.pose.position.x, msg->pose.pose.position.y);
-        const float angle = 2.0 *
-            atan2(msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
+    rps.initSubscriber = n.subscribe<ut_multirobot_sim::Localization2DMsg>(
+       pf + "/initialpose", 1, [&](const boost::shared_ptr<const ut_multirobot_sim::Localization2DMsg>& msg) {
+        const Vector2f loc(msg->pose.x, msg->pose.y);
+        const float angle = msg->pose.theta;
         rps.motion_model->SetPose({angle, loc});
       });
     rps.odometryTwistPublisher = n.advertise<nav_msgs::Odometry>(pf + "/odom", 1);
@@ -468,6 +473,8 @@ void Simulator::publishVisualizationMarkers() {
 
 void Simulator::update() {
   // Step the motion model forward one time step
+  ++sim_step_count;
+  sim_time += CONFIG_DT;
   for (auto& rps : robot_pub_subs_) {
     rps.motion_model->Step(CONFIG_DT);
     for (const Line2f& line: rps.motion_model->GetLines()){
