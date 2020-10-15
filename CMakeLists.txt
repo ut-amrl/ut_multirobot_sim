@@ -57,7 +57,7 @@ ROSBUILD_GENMSG()
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/submodules/shared)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/shared)
 
-SET(libs roslib roscpp glog gflags amrl-shared-lib
+SET(libs roslib roscpp glog gflags amrl_shared_lib
     ${BUILD_SPECIFIC_LIBRARIES} rosbag X11 lua5.1 boost_system)
 
 SET(target simulator)
