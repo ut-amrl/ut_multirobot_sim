@@ -10,13 +10,13 @@ function Vector2(x, y)
     return math.pi * d / 180
   end
   
-  init_config_file = "config/social_navigation/{{ scenario_name }}/robot.lua"
+  init_config_file = "scenarios/{{ scenario_name }}/robot.lua"
   -- example of loading human crow scenario configs
   -- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
   
   human_config_list = {
     {% for i in range(human_count) %}
-        "config/social_navigation/{{ scenario_name }}/humans/human{{ i }}.lua",
+        "scenarios/{{ scenario_name }}/humans/human{{ i }}.lua",
     {% endfor %}
   }
   

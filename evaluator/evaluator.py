@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import os
 import time
 import rospy
 import roslib
+import sys
+import json
 
 roslib.load_manifest('ut_multirobot_sim')
 from amrl_msgs.msg import NavStatusMsg, Pose2Df
@@ -35,8 +38,9 @@ class TimeToGoalTracker(Tracker):
         if self.end_time is not None:
             return
         nav_is_complete = data.nav_complete
-        if nav_is_complete:
+        if nav_is_complete or rospy.Time.now() - self.start_time > rospy.Duration(secs=20):
             self.end_time = rospy.Time.now()
+            os.system('pkill roslaunch')
 
 class SpeedStatsTracker(Tracker):
     def __init__(self, name):
@@ -56,11 +60,12 @@ class SpeedStatsTracker(Tracker):
         self.speeds.append(speed)
 
 class CollisionCountTracker(Tracker):
-    def __init__(self, name):
+    def __init__(self, name, threshold):
         super().__init__(name)
         rospy.Subscriber('localization', Localization2DMsg, self.position_update)
         rospy.Subscriber('human_states', HumanStateArrayMsg, self.human_update)
         self.collision_count = 0
+        self.threshold = threshold
         self.robot_pos = None
         self.currently_colliding_with = []
 
@@ -75,7 +80,7 @@ class CollisionCountTracker(Tracker):
             self.currently_colliding_with = [False] * len(human_states)
         for human_id, state in enumerate(human_states):
             human_pos = np.array([state.pose.x, state.pose.y])
-            if np.linalg.norm(human_pos - self.robot_pos) < 0.5: # not reliable
+            if np.linalg.norm(human_pos - self.robot_pos) < self.threshold: # not reliable
                 if not self.currently_colliding_with[human_id]:
                     self.collision_count += 1
                     self.currently_colliding_with[human_id] = True
@@ -175,23 +180,24 @@ class SpeedMatchingTracker(Tracker):
         }
 
 
-def report_evaluation(trackers):
+def report_evaluation(out, trackers):
     evaluation = {}
     for tracker in trackers:
         evaluation[tracker.name] = tracker.report()
-    pprint(evaluation)
+    report = json.dumps(evaluation)
+    with open(out, 'w') as f:
+        f.write(report)
 
 def main():
     rospy.init_node('evaluator')
     ttg_track = TimeToGoalTracker('time_to_goal')
     ss_track = SpeedStatsTracker('speed_stats')
-    col_track = CollisionCountTracker('collision_count')
+    col_track = CollisionCountTracker('collision_count', 0.5)
     mdth_track = MinDistanceToHumanTracker('min_distance_to_human')
     tis_track = TimeInStateTracker('time_in_states')
     sm_track = SpeedMatchingTracker('difference_in_speed_with_near_humans', 2)
-    rospy.on_shutdown(lambda: report_evaluation([ttg_track, ss_track, col_track, mdth_track, tis_track, sm_track]))
-
-    print('hello')
+    out = sys.argv[1]
+    rospy.on_shutdown(lambda: report_evaluation(out, [ttg_track, ss_track, col_track, mdth_track, tis_track, sm_track]))
 
     rospy.spin()
 
