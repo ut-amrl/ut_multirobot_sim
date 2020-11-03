@@ -13,6 +13,7 @@ from amrl_msgs.msg import NavStatusMsg, Pose2Df
 from ut_multirobot_sim.msg import HumanStateArrayMsg, Localization2DMsg
 from std_msgs.msg import String
 from pprint import pprint
+from math import sqrt
 
 class Tracker:
     def __init__(self, name):
@@ -179,6 +180,86 @@ class SpeedMatchingTracker(Tracker):
             'stdev': np.std(self.speed_differences)
         }
 
+class ForceTracker(Tracker):
+    def __init__(self, name):
+        super().__init__(name)
+        rospy.Subscriber('human_states', HumanStateArrayMsg, self.human_update)
+        rospy.Subscriber('localization', Localization2DMsg, self.pos_update)
+        self.nearest_human_pos = None
+        self.robot_pos = None
+        self.forces = []
+
+    def pos_update(self, data):
+        self.robot_pos = [data.pose.x, data.pose.y]
+
+    def human_update(self, data):
+        if self.robot_pos is None:
+            return
+        human_states = data.human_states
+        for state in human_states:
+            human_pos = np.array([state.pose.x, state.pose.y])
+            distance = np.linalg.norm(self.robot_pos - human_pos)
+            force_magnitude = np.exp(-distance**2 / 5)
+            self.forces.append(force_magnitude)
+
+    def report(self):
+        return self.forces
+
+class BlameTracker(Tracker):
+
+    def pistar(self, end1, end2, p):
+        x1, y1 = end1
+        x2, y2 = end2
+        x3, y3 = p
+        dx, dy = x2-x1, y2-y1
+        det = dx*dx + dy*dy
+        a = (dy*(y3-y1)+dx*(x3-x1))/det
+        return x1+a*dx, y1+a*dy
+
+
+    def __init__(self, name):
+        super().__init__(name)
+        rospy.Subscriber('human_states', HumanStateArrayMsg, self.human_update)
+        rospy.Subscriber('localization', Localization2DMsg, self.pos_update)
+        rospy.Subscriber('nav_status', NavStatusMsg, self.vel_update)
+        self.robot_pos = None
+        self.robot_vel = None
+        self.blames = []
+
+    def pos_update(self, data):
+        self.robot_pos = np.array([data.pose.x, data.pose.y])
+
+    def vel_update(self, data):
+        x = data.velocity.x
+        y = data.velocity.y
+        self.robot_vel = np.array([x, y])
+
+    def human_update(self, data):
+        if self.robot_pos is None or self.robot_vel is None:
+            return
+
+        p1 = (self.robot_pos + self.robot_vel * 0.5).tolist()
+        p2 = self.robot_pos.tolist()
+
+
+        human_states = data.human_states
+        blame = 0
+        for state in human_states:
+            human_pos = [state.pose.x, state.pose.y]
+            try:
+                pi_star = self.pistar(p1, p2, human_pos)
+                vec = np.array(pi_star) - np.array(human_pos)
+                mag = np.linalg.norm(vec)
+                sig = 1 / (1 + np.exp(-mag))
+                blame = max(blame, sig)
+            except ZeroDivisionError:
+                blame = 1
+        self.blames.append(blame)
+
+    def report(self):
+        return self.blames
+
+        
 
 def report_evaluation(out, trackers):
     evaluation = {}
@@ -196,8 +277,10 @@ def main():
     mdth_track = MinDistanceToHumanTracker('min_distance_to_human')
     tis_track = TimeInStateTracker('time_in_states')
     sm_track = SpeedMatchingTracker('difference_in_speed_with_near_humans', 2)
+    force_track = ForceTracker('forces')
+    blame_track = BlameTracker('blame')
     out = sys.argv[1]
-    rospy.on_shutdown(lambda: report_evaluation(out, [ttg_track, ss_track, col_track, mdth_track, tis_track, sm_track]))
+    rospy.on_shutdown(lambda: report_evaluation(out, [ttg_track, ss_track, col_track, mdth_track, tis_track, sm_track, force_track, blame_track]))
 
     rospy.spin()
 

@@ -10,6 +10,6 @@
     <node pkg="graph_navigation" type="navigation" name="graph_navigation"
         args="-map $(find ut_multirobot_sim)/config/GDC1.navigation.txt" />
     <node pkg="c++-pips" type="mpdm_ref" name="mpdm_ref" args="-x {{ goal_x }} -y {{ goal_y }} -theta {{ goal_angle }}" />
-    <node pkg="ut_multirobot_sim" type="evaluator.py" name="evaluator" output="screen" args="$(arg outfile)" />
+    <node pkg="ut_multirobot_sim" type="recorder.py" name="recorder" output="screen" args="$(arg outfile)" />
     <param name="enable_statistics" value="true" />
 </launch>
