@@ -78,6 +78,7 @@ class Simulator {
   ros::Publisher truePosePublisher;
   ros::Publisher localizationPublisher;
   ros::Publisher humanStateArrayPublisher;
+  ros::Publisher doorStatePublisher;
   tf::TransformBroadcaster *br;
 
   sensor_msgs::LaserScan scanDataMsg;
@@ -119,6 +120,7 @@ class Simulator {
   void publishVisualizationMarkers();
   void publishTransform();
   void publishHumanStates();
+  void PublishDoorStates();
   void update();
   void loadObject(ros::NodeHandle &n);
 

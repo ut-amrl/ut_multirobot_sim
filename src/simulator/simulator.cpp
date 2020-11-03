@@ -43,6 +43,8 @@
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
+#include "ut_multirobot_sim/DoorArrayMsg.h"
+#include "ut_multirobot_sim/DoorStateMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "ut_multirobot_sim/DoorControlMsg.h"
 #include "vector_map.h"
@@ -199,6 +201,8 @@ bool Simulator::init(ros::NodeHandle& n) {
   }
   humanStateArrayPublisher =
     n.advertise<ut_multirobot_sim::HumanStateArrayMsg>("/human_states", 1);
+  doorStatePublisher =
+    n.advertise<ut_multirobot_sim::DoorArrayMsg>("/door_states", 1);
   br = new tf::TransformBroadcaster();
 
   this->loadObject(n);
@@ -513,6 +517,36 @@ void Simulator::publishHumanStates() {
   humanStateArrayPublisher.publish(human_array_msg);
 }
 
+void Simulator::PublishDoorStates() {
+  ut_multirobot_sim::DoorArrayMsg door_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == DOOR) {
+      EntityBase* base = objects[i].get();
+      Door* door = static_cast<Door*>(base);
+
+      Vector2f position = door->GetPose().translation;
+      double angle = door->GetPose().angle;
+
+      ut_multirobot_sim::DoorStateMsg door_state_msg;
+      door_state_msg.pose.x = position.x();
+      door_state_msg.pose.y = position.y();
+      door_state_msg.pose.theta = angle;
+      auto state = door->GetState();
+      if (state == door::OPENING || state == door::CLOSING) {
+        door_state_msg.doorStatus = 0;
+      } else if (state == door::CLOSED) {
+        door_state_msg.doorStatus = 1;
+      } else {
+        door_state_msg.doorStatus = 2;
+      }
+
+      door_array_msg.door_states.push_back(door_state_msg);
+    }
+  }
+  door_array_msg.header.stamp = ros::Time::now();
+  doorStatePublisher.publish(door_array_msg);
+}
+
 void Simulator::update() {
   // Step the motion model forward one time step
   motion_model_->Step(CONFIG_DT);
@@ -572,6 +606,8 @@ void Simulator::Run() {
   publishTransform();
   //publish array of human states
   publishHumanStates();
+  //publish array of door states
+  PublishDoorStates();
 
   if (FLAGS_localize) {
     localizationMsg.header.stamp = ros::Time::now();
