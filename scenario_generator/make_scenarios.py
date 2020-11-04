@@ -5,20 +5,20 @@ import os
 
 # Format: (x, y, theta)
 starting_positions = {
-    'rd': (29, 11, -pi/2), # rightmost doorway for "main" hall
-    'ld': (15, 12, -pi/2), # leftmost doorway
+    'rd': (36, 9, 0), # rightmost doorway for "main" hall
+    #  'ld': (15, 12, -pi/2), # leftmost doorway
     'fh': (7, 9, 0)       # part of the hallway past where humans are walking
 }
 
 ending_positions = {
     'rd': { 'ld': (15, 12, pi/2), 'fh': (7, 9, pi) },
-    'ld': { 'rd': (29, 11, pi/2), 'fh': (7, 9, pi) },
-    'fh': { 'rd': (29, 11, pi/2), 'ld': (15, 12, pi/2) }
+    #  'ld': { 'rd': (29, 11, pi/2), 'fh': (7, 9, pi) },
+    'fh': { 'rd': (36, 9, pi/2), 'ld': (15, 12, pi/2), '2d': (29, 11, pi/2) }
 }
 
 human_speeds = (1, 1.5, 2) # m/s
 
-human_counts = (1, 5, 10, 15, 20, 25)
+human_counts = (1, 3, 5, 8, 10, 13, 15, 20)
 
 for start_pos_name in starting_positions:
     start_x, start_y, start_angle = starting_positions[start_pos_name]
@@ -28,7 +28,7 @@ for start_pos_name in starting_positions:
         for human_speed in human_speeds:
             for human_count in human_counts:
                 scenario_name = f"sp.{start_pos_name}_ep.{ending_pos_name}_hs.{human_speed}_hc.{human_count}"
-                command = "python scenario_generator.py " \
+                command = "python3 scenario_generator.py " \
                     f"--out ../scenarios/{scenario_name} " \
                     f"--scenario_name {scenario_name} " \
                     f"--count {human_count} " \
