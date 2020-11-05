@@ -391,8 +391,17 @@ void Simulator::publishLaser() {
     drawMap();
   }
 
+  auto baseline_object_lines = map_.object_lines;
   for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
     auto& rps = robot_pub_subs_[i];
+    map_.object_lines = baseline_object_lines;
+    for (size_t j = 0; j < robot_pub_subs_.size(); ++j){
+      if (i != j) {
+        for (const auto& l : robot_pub_subs_[j].motion_model->GetLines()) {
+          map_.object_lines.push_back(l);
+        }
+      }
+    }
     scanDataMsg.header.stamp = ros::Time::now();
     scanDataMsg.header.frame_id = IndexToPrefix(i) + CONFIG_laser_frame;
     const Vector2f laserRobotLoc(CONFIG_laser_x, CONFIG_laser_y);
@@ -477,9 +486,6 @@ void Simulator::update() {
   sim_time += CONFIG_DT;
   for (auto& rps : robot_pub_subs_) {
     rps.motion_model->Step(CONFIG_DT);
-    for (const Line2f& line: rps.motion_model->GetLines()){
-      map_.object_lines.push_back(line);
-    }
 
     // Update the simulator with the motion model result.
     rps.cur_loc = rps.motion_model->GetPose();

@@ -35,6 +35,8 @@ class DiffDriveModel : public robot_model::RobotModel {
     // Receives drive callback messages and stores them
     void DriveCallback(const geometry_msgs::Twist& msg);
 
+    void UpdatePoseLines();
+
  public:
   DiffDriveModel() = delete;
   // Intialize a default object reading from a file

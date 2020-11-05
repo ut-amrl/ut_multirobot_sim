@@ -40,6 +40,9 @@ using math_util::AngleMod;
 
 namespace diffdrive {
 
+CONFIG_FLOAT(robot_radius, "robot_radius");
+CONFIG_FLOAT(num_segments, "num_segments");
+
 CONFIG_BOOL(invert_x, "invert_linear_vel_cmds");
 CONFIG_BOOL(invert_z, "invert_angular_vel_cmds");
 CONFIG_FLOAT(linear_pos_accel_limit, "linear_pos_accel_limit");
@@ -54,14 +57,45 @@ CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
 CONFIG_STRING(drive_topic, "drive_callback_topic");
 CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
 
+std::vector<geometry::Line2f> MakeTemplate() {
+  std::vector<geometry::Line2f> template_lines;
+  Eigen::Vector2f v0(CONFIG_robot_radius, 0.0);
+  Eigen::Vector2f v1(0, 0);
+  static constexpr float kEps = 0.001f;
+  const float angle_increment = 2 * M_PI / CONFIG_num_segments;
+  for (int i = 1; i < CONFIG_num_segments; i++) {
+    v1 = Eigen::Rotation2Df(angle_increment * i) * 
+        Eigen::Vector2f(CONFIG_robot_radius, 0.0);
+
+    // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
+    Eigen::Vector2f eps_vec = (v1 - v0).normalized() * kEps;
+    template_lines.push_back(geometry::Line2f(v0 + eps_vec, v1 - eps_vec));
+    v0 = v1;
+  }
+  template_lines.push_back(geometry::Line2f(v1, 
+      Eigen::Vector2f(CONFIG_robot_radius, 0.0)));
+  return template_lines;
+}
+
+void DiffDriveModel::UpdatePoseLines() {
+  pose_lines_ = template_lines_;
+  const Eigen::Rotation2Df rot(pose_.angle);
+  for (auto& e : pose_lines_) {
+    e.p0 = pose_.translation + rot * e.p0;
+    e.p1 = pose_.translation + rot * e.p1;
+  }
+}
+
 DiffDriveModel::DiffDriveModel(const vector<string>& config_files, 
                                ros::NodeHandle* n, 
                                const std::string topic_prefix) :
-    RobotModel(),
-    last_cmd_(),
-    t_last_cmd_(0),
-    angular_error_(0, 1),
-    config_reader_(config_files) {
+  RobotModel(),
+  last_cmd_(),
+  t_last_cmd_(0),
+  angular_error_(0, 1),
+  config_reader_(config_files) {
+    template_lines_ = MakeTemplate();
+    pose_lines_ = template_lines_;
     drive_subscriber_ = n->subscribe(
       topic_prefix + CONFIG_drive_topic,
       1,
@@ -143,7 +177,7 @@ void DiffDriveModel::Step(const double &dt) {
     // Create a Quaternion from the angle
     quat_ = tf::createQuaternionMsgFromYaw(pose_.angle);
     last_time_ = current_time;
-
+    UpdatePoseLines();
     PublishOdom(dt);
 }
 
