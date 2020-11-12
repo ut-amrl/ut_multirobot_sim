@@ -186,6 +186,7 @@ void HumanObject::Step(const double& dt) {
     trans_vel_ = trans_vel_.normalized() * max_speed_;
   }
 
+  cout << "Trans Vel: " << trans_vel_.x() << "," << trans_vel_.y() << endl;
   pose_.Set(pose_.angle + rot_vel_ * dt, pose_.translation + trans_vel_ * dt);
 
   this->Transform();

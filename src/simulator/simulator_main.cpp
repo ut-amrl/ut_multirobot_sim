@@ -40,11 +40,12 @@ bool sim_step_ = false;
 DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
 
 void SimStartStop(const std_msgs::Bool& msg) {
-  if (msg.data) {
-    sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
-  } else {
-    sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
-  }
+  sim_state_.sim_state = !sim_state_.sim_state;
+  // if (msg.data) {
+    // sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
+  // } else {
+    // sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
+  // }
 }
 
 void SimStep(const std_msgs::Bool& msg) {

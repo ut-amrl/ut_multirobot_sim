@@ -135,6 +135,9 @@ Visualization Manager:
     - Class: state_switcher_rviz_plugin/Follow
     - Class: state_switcher_rviz_plugin/GoAlone
     - Class: state_switcher_rviz_plugin/Stop
+    - Class: state_switcher_rviz_plugin/Pass
+    - Class: state_switcher_rviz_plugin/Pause
+    - Class: state_switcher_rviz_plugin/Step
   Value: true
   Views:
     Current:

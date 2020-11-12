@@ -20,4 +20,25 @@
         Stop.
     </description>
   </class>
+  <class name="state_switcher_rviz_plugin/Pass"
+         type="state_switcher_rviz_plugin::Pass"
+         base_class_type="rviz::Tool">
+    <description>
+        Pass.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/Pause"
+         type="state_switcher_rviz_plugin::Pause"
+         base_class_type="rviz::Tool">
+    <description>
+        Pause.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/Step"
+         type="state_switcher_rviz_plugin::Step"
+         base_class_type="rviz::Tool">
+    <description>
+        Step.
+    </description>
+  </class>
 </library>
