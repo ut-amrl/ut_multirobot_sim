@@ -12,6 +12,9 @@ hu_num_segments = 20
 --hu_start_theta = 0.
 
 hu_waypoints = {
+
+    {25.35, 9, 0},
+
     {17, 9.3, 0},
     {15, 9.3, 0},
     {13, 9.3, 0},
@@ -46,5 +49,5 @@ local HumanMode = {
     Cycle=3,
 }
 
-hu_mode = HumanMode.Cycle
-hu_control_topic = "/human1/command"
+hu_mode = HumanMode.Controlled
+hu_control_topic = "/human6/command"
