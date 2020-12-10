@@ -45,19 +45,42 @@ def make_scenario(dir_name: str, config: dict) -> None:
         f.write(robot_lua_template.render(config))
 
     human_positions = list()
+    human_positions_lower = list()
+    human_positions_upper = list()
 
     for i in range(config['human_count']):
         if not os.path.exists(dir_name + '/humans'):
             os.mkdir(dir_name + '/humans')
-        position_x = random.uniform(-0.5, 45)
+        position_x = random.uniform(5, 35)
         position_y = 2 if random.choice((True, False)) else 5
         human_positions.append((position_x, position_y))
-        waypoints = [(position_x, position_y)]
-        with open(dir_name + '/humans/human' + str(i) + '.lua', 'w') as f:
+        if (position_y == 2):
+            human_positions_lower.append((position_x, position_y))
+        if (position_y == 5):
+            human_positions_upper.append((position_x, position_y))
+        #  waypoints = [(position_x, position_y)]
+    count = 0
+    for i in range(len(human_positions_lower)):
+        with open(dir_name + '/humans/human' + str(count) + '.lua', 'w') as f:
+            print(count)
+            waypoints = [(human_positions_lower[i][0], human_positions_lower[i][1])]
             config['waypoints'] = waypoints  # find_random_path()
+            config['control_topic'] = '/human' + str(count) + '/command'
+            count += 1
+            f.write(human_lua_template.render(config))
+
+    for i in range(len(human_positions_upper)):
+        with open(dir_name + '/humans/human' + str(count) + '.lua', 'w') as f:
+            print(count)
+            waypoints = [(human_positions_upper[i][0], human_positions_upper[i][1])]
+            config['waypoints'] = waypoints  # find_random_path()
+            config['control_topic'] = '/human' + str(count) + '/command'
+            count += 1
             f.write(human_lua_template.render(config))
 
     config['human_positions'] = human_positions
+    config['human_positions_lower'] = human_positions_lower
+    config['human_positions_upper'] = human_positions_upper
     with open(dir_name + '/scene.xml', 'w') as f:
         f.write(scene_xml_template.render(config))
 

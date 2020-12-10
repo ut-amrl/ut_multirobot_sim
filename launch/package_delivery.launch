@@ -1,5 +1,4 @@
 <launch>
-
     <arg name="x" default="15" />
     <arg name="y" default="13" />
     <arg name="theta" default="0" />
@@ -17,5 +16,5 @@
     <param name="enable_statistics" value="true" />
 
     <include file="$(find pedestrian_simulation)/launch/GDC1.launch" />
-    <node pkg="pedestrian_simulation" type="pedsim_utmrs_proxy.py" name="pedsim_utmrs_proxy" output="screen" />
+    <node pkg="pedestrian_simulation" type="pedsim_utmrs_proxy.py" args="6" name="pedsim_utmrs_proxy" output="screen" />
 </launch>

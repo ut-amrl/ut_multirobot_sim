@@ -1,6 +1,6 @@
 <launch>
   <arg name="kbd_teleop" default="false"/>
-  <arg name="rqt_teleop" default="true"/>
+  <arg name="rqt_teleop" default="false"/>
   <arg name="visualize" default="true"/>
   <arg name="with_robot" default="true"/>
 

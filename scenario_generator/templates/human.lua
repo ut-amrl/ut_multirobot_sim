@@ -38,4 +38,5 @@ local HumanMode = {
 }
 
 hu_mode = HumanMode.Controlled
-hu_control_topic = "/human1/command"
+-- hu_control_topic = "/human1/command"
+hu_control_topic = "{{ control_topic }}"

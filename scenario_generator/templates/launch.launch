@@ -12,7 +12,7 @@
 
     <node pkg="c++-pips" type="mpdm_ref" name="mpdm_ref" args="-x {{ goal_x }} -y {{ goal_y }} -theta {{ goal_angle }}" />
 
-    <!-- <node pkg="ut_multirobot_sim" type="recorder.py" name="recorder" output="screen" args="$(arg outfile)" /> -->
+    <node pkg="ut_multirobot_sim" type="recorder.py" name="recorder" output="screen" args="$(arg outfile)" />
 
     <include file="$(find ut_multirobot_sim)/scenarios/{{ scenario_name }}/pedsim_launch.launch" />
     <node pkg="pedestrian_simulation" type="pedsim_utmrs_proxy.py" name="pedsim_utmrs_proxy" args="{{ human_count }}" output="screen" />
