@@ -77,7 +77,7 @@ def main():
 
     def wait_for_end(data):
         nav_is_complete = data.nav_complete
-        if nav_is_complete or rospy.Time.now() - start_time > rospy.Duration(secs=20):
+        if (nav_is_complete and False) or rospy.Time.now() - start_time > rospy.Duration(secs=20):
             time.sleep(0.5)
             subprocess.Popen(['pkill', 'roslaunch'])
 

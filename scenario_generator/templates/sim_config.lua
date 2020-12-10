@@ -61,14 +61,14 @@ function Vector2(x, y)
       DIFF_DRIVE="DIFF_DRIVE"
   }
   
-  robot_type = RobotType.ACKERMANN_DRIVE
-  robot_config = "config/ut_automata_config.lua"
+  -- robot_type = RobotType.ACKERMANN_DRIVE
+  -- robot_config = "config/ut_automata_config.lua"
   -- robot_type = RobotType.DIFF_DRIVE
   -- robot_config = "config/bwibot_config.lua"
   -- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
   -- robot_config = "config/cobot_config.lua"
-  -- robot_type = RobotType.DIFF_DRIVE
-  -- robot_config = "config/ut_jackal_config.lua"
+  robot_type = RobotType.DIFF_DRIVE
+  robot_config = "config/ut_jackal_config.lua"
   
   laser_topic = "/Cobot/Laser"
   laser_frame = "base_laser"

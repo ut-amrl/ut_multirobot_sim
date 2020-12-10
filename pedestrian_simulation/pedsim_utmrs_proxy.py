@@ -2,6 +2,7 @@
 
 import rospy
 import roslib
+import sys
 
 NODE_NAME = 'pedestrian_simulation'
 roslib.load_manifest(NODE_NAME)
@@ -9,7 +10,7 @@ roslib.load_manifest(NODE_NAME)
 from pedsim_msgs.msg import AgentStates                # noqa: E402
 from ut_multirobot_sim.msg import HumanControlCommand  # noqa: E402
 
-human_count = 6
+human_count = int(sys.argv[1])
 human_command_pubs = [None] + [
     rospy.Publisher(f'/human{n}/command', HumanControlCommand, queue_size=2 * human_count)
     for n in range(1, human_count + 1)]
