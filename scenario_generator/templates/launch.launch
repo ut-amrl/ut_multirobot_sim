@@ -10,7 +10,7 @@
     <node pkg="graph_navigation" type="navigation" name="graph_navigation"
         args="-map $(find ut_multirobot_sim)/maps/SimHallway/SimHallway.navigation.txt" />
 
-    <node pkg="c++-pips" type="mpdm_ref" name="mpdm_ref" args="-x {{ goal_x }} -y {{ goal_y }} -theta {{ goal_angle }}" />
+    <node pkg="cpp-pips" type="mpdm_ref" name="mpdm_ref" args="-x {{ goal_x }} -y {{ goal_y }} -theta {{ goal_angle }}" />
 
     <node pkg="ut_multirobot_sim" type="recorder.py" name="recorder" output="screen" args="$(arg outfile)" />
 

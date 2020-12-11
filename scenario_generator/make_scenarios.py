@@ -5,15 +5,13 @@ import os
 
 # Format: (x, y, theta)
 starting_positions = {
-    'rd': (36, 9, 0), # rightmost doorway for "main" hall
-    #  'ld': (15, 12, -pi/2), # leftmost doorway
-    'fh': (7, 9, 0)       # part of the hallway past where humans are walking
+    'left': (3, 2, 0), # left end of hallway
+    'right': (38, 5, pi) # right end of the hallway
 }
 
 ending_positions = {
-    'rd': { 'ld': (15, 12, pi/2), 'fh': (7, 9, pi) },
-    #  'ld': { 'rd': (29, 11, pi/2), 'fh': (7, 9, pi) },
-    'fh': { 'rd': (36, 9, pi/2), 'ld': (15, 12, pi/2), '2d': (29, 11, pi/2) }
+    'left': { 'right': (47, 4.5, 0), 'up': (21.5, 9, pi/2) },
+    'right': { 'left': (3, 4.5, pi), 'up': (21.5, 9, pi/2)}
 }
 
 human_counts = (5, 10, 15)

@@ -3,7 +3,7 @@ function Vector2(x, y)
 end
 
 -- Human shape information
-hu_radius = 0.1
+hu_radius = 0.4
 hu_num_segments = 20
 
 -- Human start position

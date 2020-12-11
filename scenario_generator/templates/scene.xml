@@ -8,9 +8,9 @@
   <obstacle x1="45.0" y1="-0.5" x2="45.0" y2="2.0"/>
   <obstacle x1="45.0" y1="5.0" x2="45.0" y2="7"/>
 
-  <waypoint id="east" x="5" y="2" r="1" b="0.1"/>
+  <waypoint id="east" x="5" y="1" r="1" b="0.1"/>
   <!-- Sink -->
-  <waypoint id="west" x="35" y="2" r="1" b="0.1"/>
+  <waypoint id="west" x="35" y="1" r="1" b="0.1"/>
 
   <waypoint id="west_2" x="35" y="5" r="1" b=" 0.1"/>
   <!-- Sink -->
