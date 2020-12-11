@@ -139,9 +139,11 @@ void HumanObject::InitializeManualControl(ros::NodeHandle& nh) {
 void HumanObject::ManualControlCallback(const ut_multirobot_sim::HumanControlCommand& hcc) {
   trans_vel_.x() = hcc.translational_velocity.x;
   trans_vel_.y() = hcc.translational_velocity.y;
+  pose_.translation.x() = hcc.pose.x;
+  pose_.translation.y() = hcc.pose.y;
   rot_vel_ = hcc.rotational_velocity;
+  this->Transform();
 }
-
 
 void HumanObject::SetMode(const HumanMode& mode) {
   mode_ = mode;
@@ -181,13 +183,13 @@ void HumanObject::Step(const double& dt) {
     // TODO(yifeng): Add gaussian noise to the velocity
   }
 
-  // clip velocity if it is larger than max speed
-  if (trans_vel_.norm() > max_speed_) {
-    trans_vel_ = trans_vel_.normalized() * max_speed_;
-  }
+  // // clip velocity if it is larger than max speed
+  // if (trans_vel_.norm() > max_speed_) {
+    // trans_vel_ = trans_vel_.normalized() * max_speed_;
+  // }
 
-  cout << "Trans Vel: " << trans_vel_.x() << "," << trans_vel_.y() << endl;
-  pose_.Set(pose_.angle + rot_vel_ * dt, pose_.translation + trans_vel_ * dt);
+  // cout << "Trans Vel: " << trans_vel_.x() << "," << trans_vel_.y() << endl;
+  // pose_.Set(pose_.angle + rot_vel_ * dt, pose_.translation + trans_vel_ * dt);
 
   this->Transform();
   this->CheckReachGoal();

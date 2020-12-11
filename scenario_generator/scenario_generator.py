@@ -45,8 +45,8 @@ def make_scenario(dir_name: str, config: dict) -> None:
         f.write(robot_lua_template.render(config))
 
     human_positions = list()
-    human_positions_lower = list()
-    human_positions_upper = list()
+    human_positions_lower = []
+    human_positions_upper = []
 
     for i in range(config['human_count']):
         if not os.path.exists(dir_name + '/humans'):
@@ -59,7 +59,17 @@ def make_scenario(dir_name: str, config: dict) -> None:
         if (position_y == 5):
             human_positions_upper.append((position_x, position_y))
         #  waypoints = [(position_x, position_y)]
+
     count = 0
+    #  for i in range(len(human_positions)):
+        #  with open(dir_name + '/humans/human' + str(count) + '.lua', 'w') as f:
+            #  print(count)
+            #  waypoints = [(human_positions[i][0], human_positions[i][1])]
+            #  config['waypoints'] = waypoints  # find_random_path()
+            #  config['control_topic'] = '/human' + str(count) + '/command'
+            #  count += 1
+            #  f.write(human_lua_template.render(config))
+
     for i in range(len(human_positions_lower)):
         with open(dir_name + '/humans/human' + str(count) + '.lua', 'w') as f:
             print(count)
