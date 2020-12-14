@@ -88,26 +88,26 @@ TARGET_LINK_LIBRARIES(human_controller ${libs} ncurses)
 ROSBUILD_ADD_EXECUTABLE(doorman src/doorman/doorman.cpp)
 TARGET_LINK_LIBRARIES(doorman ${libs})
 
-ROSBUILD_ADD_EXECUTABLE(leading_human_controller
-  src/leading_human_controller/navigation.cc
-  src/leading_human_controller/navigation_main.cc
-)
-TARGET_LINK_LIBRARIES(leading_human_controller ${libs})
+# ROSBUILD_ADD_EXECUTABLE(leading_human_controller
+  # src/leading_human_controller/navigation.cc
+  # src/leading_human_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(leading_human_controller ${libs})
 
-ROSBUILD_ADD_EXECUTABLE(following_human_controller
-  src/following_human_controller/navigation.cc
-  src/following_human_controller/navigation_main.cc
-)
-TARGET_LINK_LIBRARIES(following_human_controller ${libs})
+# ROSBUILD_ADD_EXECUTABLE(following_human_controller
+  # src/following_human_controller/navigation.cc
+  # src/following_human_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(following_human_controller ${libs})
 
-ROSBUILD_ADD_EXECUTABLE(package_delivery_controller
-  src/package_delivery_controller/navigation.cc
-  src/package_delivery_controller/navigation_main.cc
-)
-TARGET_LINK_LIBRARIES(package_delivery_controller ${libs})
+# ROSBUILD_ADD_EXECUTABLE(package_delivery_controller
+  # src/package_delivery_controller/navigation.cc
+  # src/package_delivery_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(package_delivery_controller ${libs})
 
-ROSBUILD_ADD_EXECUTABLE(hallway_controller
-  src/hallway_controller/navigation.cc
-  src/hallway_controller/navigation_main.cc
-)
-TARGET_LINK_LIBRARIES(hallway_controller ${libs})
+# ROSBUILD_ADD_EXECUTABLE(hallway_controller
+  # src/hallway_controller/navigation.cc
+  # src/hallway_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(hallway_controller ${libs})

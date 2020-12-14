@@ -14,7 +14,7 @@ ending_positions = {
     'right': { 'left': (3, 4.5, pi), 'up': (21.5, 9, pi/2)}
 }
 
-human_counts = (5, 10, 15)
+human_counts = (1, 5, 10, 15, 20)
 
 scenarios_per_hc = 1
 

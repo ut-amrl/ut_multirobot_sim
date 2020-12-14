@@ -7,3 +7,4 @@
 [submodule "maps"]
 	path = maps
 	url = https://github.com/ut-amrl/amrl_maps.git
+	branch = social_nav_test
