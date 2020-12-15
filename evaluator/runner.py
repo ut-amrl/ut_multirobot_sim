@@ -12,7 +12,7 @@ roslib.load_manifest('ut_multirobot_sim')
 from amrl_msgs.msg import NavStatusMsg
 
 now = round(time.time())
-root = os.getcwd() + '/evals/'
+root = os.getcwd() + '/evals'
 policy = "mpdm_synth"
 ast_path = ""
 #  os.mkdir(root)

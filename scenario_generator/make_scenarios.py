@@ -14,9 +14,9 @@ ending_positions = {
     'right': { 'left': (3, 4.5, pi), 'up': (21.5, 9, pi/2)}
 }
 
-human_counts = (1, 5, 10, 15, 20)
+human_counts = (0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
 
-scenarios_per_hc = 1
+scenarios_per_hc = 20
 
 for start_pos_name in starting_positions:
     start_x, start_y, start_angle = starting_positions[start_pos_name]

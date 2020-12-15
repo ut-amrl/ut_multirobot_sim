@@ -1,7 +1,7 @@
 <launch>
   <arg name="kbd_teleop" default="false"/>
   <arg name="rqt_teleop" default="false"/>
-  <arg name="visualize" default="true"/>
+  <arg name="visualize" default="false"/>
   <arg name="with_robot" default="true"/>
 
   <arg name="simulation_factor" default="1.0"/> <!-- Speed up -->
@@ -24,7 +24,7 @@
     <arg name="pose_initial_theta" value="{{ start_theta }}"/>
   </include>
 
-  <include file="$(find pedsim_visualizer)/launch/visualizer.launch"/>
+  <!-- <include file="$(find pedsim_visualizer)/launch/visualizer.launch"/> -->
   <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pedsim_simulator)/rviz/social_contexts_activities.rviz" if="$(arg visualize)"/> -->
 
 </launch>
