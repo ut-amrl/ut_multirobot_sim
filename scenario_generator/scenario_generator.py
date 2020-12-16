@@ -52,11 +52,11 @@ def make_scenario(dir_name: str, config: dict) -> None:
         if not os.path.exists(dir_name + '/humans'):
             os.mkdir(dir_name + '/humans')
         position_x = random.uniform(5, 35)
-        position_y = 1 if random.choice((True, False)) else 5
+        position_y = 1.5 if random.choice((True, False)) else 3.0
         human_positions.append((position_x, position_y))
-        if (position_y == 1):
+        if (position_y == 1.5):
             human_positions_lower.append((position_x, position_y))
-        if (position_y == 5):
+        if (position_y == 3.0):
             human_positions_upper.append((position_x, position_y))
         #  waypoints = [(position_x, position_y)]
 
