@@ -1,7 +1,7 @@
 <launch>
   <arg name="kbd_teleop" default="false"/>
   <arg name="rqt_teleop" default="false"/>
-  <arg name="visualize" default="false"/>
+  <arg name="visualize" default="true"/>
   <arg name="with_robot" default="true"/>
 
   <arg name="simulation_factor" default="1.0"/> <!-- Speed up -->

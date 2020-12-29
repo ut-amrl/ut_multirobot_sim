@@ -6,18 +6,19 @@ import sys
 
 # Format: (x, y, theta)
 starting_positions = {
-    'left': (3, 2, 0), # left end of hallway
-    'right': (38, 5, pi) # right end of the hallway
+    'left': (2, 2, 0), # left end of hallway
+    #  'right': (38, 3.5, pi) # right end of the hallway
 }
 
 ending_positions = {
-    'left': { 'right': (43, 4.5, 0), 'up': (16, 7, pi/2) },
-    'right': { 'left': (3, 4.5, pi), 'up': (16, 7, pi/2)}
+    'left': { 'right': (43, 4.5, 0)},
+    #  'left': { 'right': (43, 4.5, 0), 'up': (16, 7, pi/2) },
+    #  'right': { 'left': (2, 3, pi), 'up': (16, 7, pi/2)}
 }
 
-human_counts = (2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
+human_counts = (4, 6, 8, 10, 12, 14, 16, 18)
 
-scenarios_per_hc = 5
+scenarios_per_hc = 3
 
 def main():
     scenarios_per_hc = int(sys.argv[1])

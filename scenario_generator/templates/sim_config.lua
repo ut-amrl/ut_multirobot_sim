@@ -20,6 +20,10 @@ function Vector2(x, y)
     {% endfor %}
   }
 
+  door_config_list = {
+    "config/hall_door.lua"
+  }
+
   -- Time-step for simulation.
   delta_t = 0.025
 
