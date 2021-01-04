@@ -51,6 +51,8 @@ AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandl
   // TODO: populate queue state
   AckermannCmd cmd = {-1.0, 0, 0};
   cmd_queue.push_back(cmd);
+  AckermannState state = {-1.0, pose_, vel_};
+  state_queue.push_back(state);
 }
 
 void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
@@ -122,7 +124,8 @@ void AckermannModel::SStep(double dt){
   pose_.translation += Eigen::Rotation2Df(pose_.angle) * d_vector;
   pose_.angle = AngleMod(pose_.angle + dtheta);
   this->Transform();
-
+  AckermannState s = {closed_loop_time_ + dt, pose_, vel_};  
+  state_queue.push_back(s);
 
   /*
 // dynamically forwards based on given state, actuation, and time
@@ -175,9 +178,11 @@ void AckermannModel::Step(const double &dt) {
   // a wallclock invariant method for this.
   if(closed_loop_){
     //step =
-    updateLastCmd();
-    SStep(dt);
-    closed_loop_time_ += dt;
+    for(double d = 0.0; d<dt; d += dt/100.0){
+      updateLastCmd();
+      SStep(dt/100.0);
+      closed_loop_time_ += dt/100.0;
+    }
     //printf("current command %lf", last_cmd_.velocity);
     // TODO(Tongrui): higher frequency discretization for obs and actuation delay purpose
     return;
@@ -258,6 +263,31 @@ AckermannCmd AckermannModel::getCmd(const double& t){
     cur_cmd = cmd;
   }
   return cur_cmd;
+}
+
+AckermannState AckermannModel::getState(const double t){
+  AckermannState cur_state = state_queue.front();
+  for(AckermannState s: state_queue){
+    if(s.t_ > t){
+      return cur_state;
+    }
+    cur_state = s;
+  }
+  return cur_state;
+}
+Pose2Df AckermannModel::GetPose() {
+  if(closed_loop_){
+    AckermannState s = getState(closed_loop_time_ - t_obs_delay_);
+    return s.pose_;
+  }
+  return pose_;
+}
+Pose2Df AckermannModel::GetVel() {
+  if(closed_loop_){
+    AckermannState s = getState(closed_loop_time_ - t_obs_delay_);
+    return s.vel_;
+  }
+  return vel_;
 }
 
 void AckermannModel::SetTemplateLines(const float r, const int num_segments){

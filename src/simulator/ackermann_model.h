@@ -24,15 +24,15 @@ struct AckermannCmd{
 };
 
 struct AckermannState{
-  Eigen::Vector2f pose_;
-  double angle_;
-  Eigen::Vector2f vel_;
+  double t_;
+  pose_2d::Pose2Df pose_;
+  pose_2d::Pose2Df vel_;
 };
 
 class AckermannModel : public robot_model::RobotModel {
   const bool closed_loop_ = true;
-  const double t_act_delay_ = 0.5;
-  const double t_obs_delay_ = 0.0;
+  const double t_act_delay_ = 0.0;
+  const double t_obs_delay_ = 0.6;
   const double DT = 0.05;
  private:
   #ifdef AMRL_MSGS
@@ -73,6 +73,10 @@ class AckermannModel : public robot_model::RobotModel {
   void clearRecieved();
   bool isRecieved();
   void updateLastCmd();
+  AckermannState getState(const double t);
+  pose_2d::Pose2Df GetVel() override;
+  pose_2d::Pose2Df GetPose() override;
+
   AckermannCmd getCmd(const double& t);
 };
 
