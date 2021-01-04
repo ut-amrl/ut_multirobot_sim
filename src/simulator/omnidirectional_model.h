@@ -36,6 +36,8 @@ class OmnidirectionalModel : public robot_model::RobotModel {
   // define Step function for updating
   void Step(const double& dt);
   void PublishOdom(const float dt);
+  void clearRecieved();
+  bool isRecieved();
 };
 
 }  // namespace omnidrive

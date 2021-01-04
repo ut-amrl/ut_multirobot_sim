@@ -635,31 +635,79 @@ string GetMapNameFromFilename(string path) {
 
 
 void Simulator::Run() {
-  // update the position of the robots
-  for(int i = 0; i < robot_number_; i++){
-    updateLocation(i);
-  }
-  // update object lines associated with each robot
-  this->updateSimulatorLines();
-  // publish messages related to the robots
-  for(int i = 0; i < robot_number_; i++){
-    update(i);
-    //publish odometry and status
-    publishOdometry(i); 
-    //publish laser rangefinder messages
-    publishLaser(i);
-    // publish visualization marker messages
-    publishVisualizationMarkers(i);
-    //publish tf
-    publishTransform(i);
-    if (FLAGS_localize) {
-        localizationMsg_.header.stamp = ros::Time::now();
-        localizationMsg_.map = GetMapNameFromFilename(map_.file_name);
-        localizationMsg_.pose.x = cur_loc_.translation.x();
-        localizationMsg_.pose.y = cur_loc_.translation.y();
-        localizationMsg_.pose.theta = cur_loc_.angle;
-        localizationPublishers_[i].publish(localizationMsg_);
+  
+  const bool closed_loop = true;
+  if(closed_loop){
+    bool all_recieved = true;
+    for(const auto& m: motion_models_){
+      if(!m->isRecieved()){
+        all_recieved = false;
+      }
+    }
+    if(all_recieved){
+      // change the command 
+      // update the position of the robots
+      for(int i = 0; i < robot_number_; i++){
+        updateLocation(i);
+      }
+    }
+    // update object lines associated with each robot
+    this->updateSimulatorLines();
+    // publish messages related to the robots
+    for(int i = 0; i < robot_number_; i++){
+      update(i);
+      publishOdometry(i); 
+      //publish laser rangefinder messages
+      publishLaser(i);
+      // publish visualization marker messages
+      publishVisualizationMarkers(i);
+      //publish tf
+      publishTransform(i);
+      if (FLAGS_localize) {
+          localizationMsg_.header.stamp = ros::Time::now();
+          localizationMsg_.map = GetMapNameFromFilename(map_.file_name);
+          localizationMsg_.pose.x = cur_loc_.translation.x();
+          localizationMsg_.pose.y = cur_loc_.translation.y();
+          localizationMsg_.pose.theta = cur_loc_.angle;
+          localizationMsg_.issue_time = motion_models_[i]->getClosedLoopTime();
+          localizationPublishers_[i].publish(localizationMsg_);
+      }
+    }
+    if(all_recieved){
+      for(const auto& m : motion_models_){
+        m->clearRecieved();
+      }
     }
   }
+  else{
+    // update the position of the robots
+    for(int i = 0; i < robot_number_; i++){
+
+      updateLocation(i);
+    }
+    // update object lines associated with each robot
+    this->updateSimulatorLines();
+    // publish messages related to the robots
+    for(int i = 0; i < robot_number_; i++){
+      update(i);
+      //publish odometry and status
+      publishOdometry(i); 
+      //publish laser rangefinder messages
+      publishLaser(i);
+      // publish visualization marker messages
+      publishVisualizationMarkers(i);
+      //publish tf
+      publishTransform(i);
+      if (FLAGS_localize) {
+          localizationMsg_.header.stamp = ros::Time::now();
+          localizationMsg_.map = GetMapNameFromFilename(map_.file_name);
+          localizationMsg_.pose.x = cur_loc_.translation.x();
+          localizationMsg_.pose.y = cur_loc_.translation.y();
+          localizationMsg_.pose.theta = cur_loc_.angle;
+          localizationPublishers_[i].publish(localizationMsg_);
+      }
+    }
+  }
+
   
 }

@@ -29,12 +29,17 @@ namespace robot_model {
 class RobotModel : public EntityBase {
  protected:
   Pose2Df vel_;
+  double closed_loop_time_ = 0;
 
  public:
   RobotModel();
   virtual ~RobotModel() = default;
   virtual void SetVel(const pose_2d::Pose2Df& vel);
   virtual pose_2d::Pose2Df GetVel();
+  // check if a command is recieved - closed loop sim
+  virtual bool isRecieved();
+  virtual void clearRecieved();
+  virtual double getClosedLoopTime();
 };
 }  // namespace robot_model
 

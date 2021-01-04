@@ -78,6 +78,13 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files, ros::NodeHand
 
 }
 
+void DiffDriveModel::clearRecieved(){
+}
+
+bool DiffDriveModel::isRecieved(){
+  return false;
+}
+
 void DiffDriveModel::Step(const double &dt) {
     ros::Time current_time = ros::Time::now();
     // Update the linear velocity based on the linear acceleration limits

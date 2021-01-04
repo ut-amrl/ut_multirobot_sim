@@ -15,7 +15,7 @@ init_config_file = "config/default_init_config.lua"
 -- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
 
 -- Time-step for simulation.
-delta_t = 0.025
+delta_t = 0.05
 
 -- Simulator TF publications
 publish_tfs = true;
@@ -33,8 +33,8 @@ laser_loc = Vector3(0.2, 0, 0.15)
 
 -- Kinematic and dynamic constraints for the car.
 min_turn_radius = 0.98
-max_speed = 1.2
-max_accel = 3.0
+max_speed = 5.0
+max_accel = 5.0
 
 -- Laser noise simulation.
 laser_noise_stddev = 0.01
@@ -49,10 +49,10 @@ laser_frame = "base_laser"
 -- define multi robot senerio
 -- The simulator will only use the first robot_number items in each list
 -- to configure each robot.
-robot_number = 2
+robot_number = 1
 
 -- topic prefix of robots
-topic_prefix_list = {"single_robot", "robot_1", "robot_2", "robot_3"}
+topic_prefix_list = {"robot_0", "robot_1", "robot_2", "robot_3", "robot_4", "robot_5", "robot_6", "robot_7"}
 
 -- Defining robot type enumerator
 local RobotType = {
@@ -72,13 +72,13 @@ local RobotType = {
 -- robot_config = "config/ut_jackal_config.lua
 
 -- type of robot
-type_list = {RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.DIFF_DRIVE, RobotType.OMNIDIRECTIONAL_DRIVE, RobotType.DIFF_DRIVE}
+type_list = {RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.DIFF_DRIVE, RobotType.OMNIDIRECTIONAL_DRIVE, RobotType.DIFF_DRIVE}
 
 -- config of robot
-config_list = {"config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/bwibot_config.lua", "config/cobot_config.lua", "config/ut_jackal_config.lua"}
+config_list = {"config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/bwibot_config.lua", "config/cobot_config.lua", "config/ut_jackal_config.lua"}
 
 -- init cartesian location of robots
-location_list = {{0.0, 0.0}, {1.5, 0}, {10.0, 10.0}}
+location_list = {{5.0, 1.0}, {4.0, 0}, {3.0, 0}}
 
 -- init angle of robots
 angle_list = {0.0, 0.0, 0.0}

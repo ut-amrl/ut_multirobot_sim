@@ -53,6 +53,13 @@ OmnidirectionalModel::OmnidirectionalModel(const vector<string>& config_files, r
   this->Transform();
 }
 
+void OmnidirectionalModel::clearRecieved(){
+}
+
+bool OmnidirectionalModel::isRecieved(){
+  return false;
+}
+
 void OmnidirectionalModel::DriveCallback(const CobotDriveMsg& msg) {
   if (!isfinite(msg.velocity_x) ||
       !isfinite(msg.velocity_y) ||

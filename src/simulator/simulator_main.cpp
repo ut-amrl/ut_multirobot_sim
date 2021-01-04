@@ -44,8 +44,9 @@ int main(int argc, char **argv) {
   }
 
   // main loop
-  RateLoop rate(40.0);
+  RateLoop rate(20.0);
   while (ros::ok()){
+
     ros::spinOnce();
     simulator.Run();
     rate.Sleep();
