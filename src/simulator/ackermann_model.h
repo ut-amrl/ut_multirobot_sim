@@ -31,8 +31,8 @@ struct AckermannState{
 
 class AckermannModel : public robot_model::RobotModel {
   const bool closed_loop_ = true;
-  const double t_act_delay_ = 0.0;
-  const double t_obs_delay_ = 0.6;
+  const double t_act_delay_ = 0.01;
+  const double t_obs_delay_ = 0.01;
   const double DT = 0.05;
  private:
   #ifdef AMRL_MSGS
