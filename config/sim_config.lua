@@ -15,7 +15,7 @@ init_config_file = "config/default_init_config.lua"
 -- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
 
 -- Time-step for simulation.
-delta_t = 0.05
+delta_t = 0.005
 
 -- Simulator TF publications
 publish_tfs = true;
@@ -78,7 +78,7 @@ type_list = {RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.ACK
 config_list = {"config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/bwibot_config.lua", "config/cobot_config.lua", "config/ut_jackal_config.lua"}
 
 -- init cartesian location of robots
-location_list = {{0.0, 0.0}, {0.0, 0.0}, {3.0, 0}}
+location_list = {{0.0, 0.0}, {0.8, 0.0}, {0.8, 0}}
 
 -- init angle of robots
 angle_list = {0.0, 0.0, 0.0}
