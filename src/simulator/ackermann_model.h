@@ -33,7 +33,7 @@ class AckermannModel : public robot_model::RobotModel {
   const bool closed_loop_ = false;
   const double t_act_delay_ = 0.01;
   const double t_obs_delay_ = 0.01;
-  const double DT = 0.05;
+  //const double DT = 0.05;
  private:
   #ifdef AMRL_MSGS
     amrl_msgs::AckermannCurvatureDriveMsg last_cmd_;
