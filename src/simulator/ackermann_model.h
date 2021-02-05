@@ -30,9 +30,9 @@ struct AckermannState{
 };
 
 class AckermannModel : public robot_model::RobotModel {
-  const bool closed_loop_ = false;
-  const double t_act_delay_ = 0.01;
-  const double t_obs_delay_ = 0.01;
+  const bool closed_loop_ = true;
+  const double t_act_delay_ = 0.00;
+  const double t_obs_delay_ = 0.00;
   //const double DT = 0.05;
  private:
   #ifdef AMRL_MSGS
@@ -69,15 +69,16 @@ class AckermannModel : public robot_model::RobotModel {
   // define Step function for updating
   void Step(const double &dt);
   // simulated step
-  void SStep(double dt);
+  void SStep(double dt, const double& cur_time);
   void clearRecieved();
-  bool isRecieved();
+  bool isRecieved(const double dt);
   void updateLastCmd();
   AckermannState getState(const double t);
   pose_2d::Pose2Df GetVel() override;
   pose_2d::Pose2Df GetPose() override;
 
   AckermannCmd getCmd(const double& t);
+  void SetPose(const Pose2Df& pose) override;
 };
 
 }  // namespace ackermann

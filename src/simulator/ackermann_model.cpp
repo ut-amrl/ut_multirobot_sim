@@ -51,10 +51,22 @@ AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandl
   // TODO: populate queue state
   AckermannCmd cmd = {-1.0, 0, 0};
   cmd_queue.push_back(cmd);
-  AckermannState state = {-1.0, pose_, vel_};
-  state_queue.push_back(state);
+
+  //AckermannState state = {-1.0, Pose2Df(0.0), Pose2Df()};
+  //cout << "initial state" << state.pose_.translation.x() << endl;
+  //state_queue.push_back(state);
 }
 
+void AckermannModel::SetPose(const Pose2Df& pose){
+  if(closed_loop_){
+    AckermannState state = {-1.0, pose, Pose2Df(0.0, Vector2f(0.0, 0.0))};
+    cout << "initial state" << state.pose_.translation.x() << endl;
+    state_queue.push_back(state);
+  }
+  pose_ = pose;
+  
+  
+}
 void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
   if (!isfinite(msg.velocity) || !isfinite(msg.curvature)) {
     printf("Ignoring non-finite drive values: %f %f\n",
@@ -68,8 +80,10 @@ void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
   // closed loop simulation only
   if(closed_loop_){
     // push command onto queue
+    //std::cout << "last recieved cmd is" << msg.issue_time << std::endl;
     AckermannCmd cmd = {msg.issue_time + t_act_delay_, msg.velocity, msg.curvature};
     cmd_queue.push_back(cmd);
+    t_last_cmd_ = msg.issue_time;
   }
 }
 
@@ -77,10 +91,12 @@ void AckermannModel::clearRecieved(){
   recieved_cmd_ = false;
 }
 
-bool AckermannModel::isRecieved(){
-  return recieved_cmd_;
+bool AckermannModel::isRecieved(const double sim_time){
+  const double kEps = 1e-4;
+  //cout << "recieveved cmd" << recieved_cmd_ << " tcmd" << t_last_cmd_ << " sim clock" << sim_time << endl;
+  return recieved_cmd_ && std::abs(t_last_cmd_ - sim_time) < kEps;
 }
-void AckermannModel::SStep(double dt){
+void AckermannModel::SStep(double dt, const double& cur_time){
   // simulate based on current state
   const float vel = vel_.translation.x();
   // Epsilon curvature corresponding to a very large radius of turning.
@@ -124,7 +140,7 @@ void AckermannModel::SStep(double dt){
   pose_.translation += Eigen::Rotation2Df(pose_.angle) * d_vector;
   pose_.angle = AngleMod(pose_.angle + dtheta);
   this->Transform();
-  AckermannState s = {closed_loop_time_ + dt, pose_, vel_};  
+  AckermannState s = {cur_time + dt, pose_, vel_};  
   state_queue.push_back(s);
 
   /*
@@ -170,19 +186,23 @@ void AckermannModel::SStep(double dt){
   
   new_state.pose_ = Eigen::Rotation2Df(state.pose_.angle) * d_vector;
   new_state.angle = AngleMod(state.pose_.angle + dtheta);
-  return new_state;
+  return new_state;a
   */
 }
 void AckermannModel::Step(const double &dt) {
   // TODO(jaholtz) For faster than real time simulation we may need
   // a wallclock invariant method for this.
+  //cout << "In step, dt is " << dt << "tlastcmd: " << t_last_cmd_ << "closed_loop_time_" << closed_loop_time_<< endl;
   if(closed_loop_){
     //step =
-    for(double d = 0.0; d<dt; d += dt/100.0){
+    double cur_loop_time = closed_loop_time_;
+
+    for(double d = 0.0; d<dt; d += dt/1.0){
       updateLastCmd();
-      SStep(dt/100.0);
-      closed_loop_time_ += dt/100.0;
+      SStep(dt/1.0, cur_loop_time);
+      cur_loop_time = closed_loop_time_ + d;//# dt/100.0;
     }
+    closed_loop_time_ += dt;
     //printf("current command %lf", last_cmd_.velocity);
     // TODO(Tongrui): higher frequency discretization for obs and actuation delay purpose
     return;
@@ -252,7 +272,7 @@ void AckermannModel::updateLastCmd(){
   AckermannCmd last_cmd = getCmd(closed_loop_time_);
   last_cmd_.velocity = last_cmd.vel_;
   last_cmd_.curvature = last_cmd.curv_;
-  t_last_cmd_ = last_cmd.t_;
+  //t_last_cmd_ = last_cmd.t_;
 }
 AckermannCmd AckermannModel::getCmd(const double& t){
   AckermannCmd cur_cmd = cmd_queue.front();
@@ -266,8 +286,15 @@ AckermannCmd AckermannModel::getCmd(const double& t){
 }
 
 AckermannState AckermannModel::getState(const double t){
+  if(state_queue.empty()){
+    cout << "FATAL: state queue is empty" << endl;
+    exit(0);
+  }
   AckermannState cur_state = state_queue.front();
+  
+  
   for(AckermannState s: state_queue){
+    //cout << "state at t " << s.t_ << "is " << s.pose_.translation.x() << endl; 
     if(s.t_ > t){
       return cur_state;
     }

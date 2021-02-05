@@ -158,6 +158,8 @@ class Simulator {
   void InitalLocationCallbackRobot7(
     const geometry_msgs::PoseWithCovarianceStamped &msg);
 
+  // closed loop timer
+  double sim_time_;
  public:
   Simulator() = delete;
   explicit Simulator(const std::string& sim_config);

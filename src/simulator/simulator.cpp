@@ -121,6 +121,7 @@ Simulator::Simulator(const std::string& sim_config) :
   truePoseMsg_.header.frame_id = "map";
   // initialize object lines associated with each robot
   motion_models_lines_.resize(robot_number_, std::vector<Line2f>(0));
+  sim_time_ = 0.0;
 }
 
 Simulator::~Simulator() {}
@@ -636,11 +637,11 @@ string GetMapNameFromFilename(string path) {
 
 void Simulator::Run() {
   
-  const bool closed_loop = false;
+  const bool closed_loop = true;
   if(closed_loop){
     bool all_recieved = true;
     for(const auto& m: motion_models_){
-      if(!m->isRecieved()){
+      if(!m->isRecieved(sim_time_)){
         all_recieved = false;
       }
     }
@@ -670,6 +671,7 @@ void Simulator::Run() {
           localizationMsg_.pose.y = cur_loc_.translation.y();
           localizationMsg_.pose.theta = cur_loc_.angle;
           localizationMsg_.issue_time = motion_models_[i]->getClosedLoopTime();
+          cout << "current sim time is " << sim_time_ << " issue time is " << motion_models_[i]->getClosedLoopTime() << "state is" <<  localizationMsg_.pose.x << std::endl;
           localizationPublishers_[i].publish(localizationMsg_);
       }
     }
@@ -677,6 +679,8 @@ void Simulator::Run() {
       for(const auto& m : motion_models_){
         m->clearRecieved();
       }
+      sim_time_ += CONFIG_DT;
+      cout << "current sim time is " << sim_time_ << std::endl;
     }
   }
   else{

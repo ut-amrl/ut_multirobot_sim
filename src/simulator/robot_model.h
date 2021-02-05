@@ -37,7 +37,7 @@ class RobotModel : public EntityBase {
   virtual void SetVel(const pose_2d::Pose2Df& vel);
   virtual pose_2d::Pose2Df GetVel();
   // check if a command is recieved - closed loop sim
-  virtual bool isRecieved();
+  virtual bool isRecieved(const double dt);
   virtual void clearRecieved();
   virtual double getClosedLoopTime();
 };

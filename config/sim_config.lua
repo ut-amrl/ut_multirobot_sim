@@ -15,7 +15,7 @@ init_config_file = "config/default_init_config.lua"
 -- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
 
 -- Time-step for simulation.
-delta_t = 0.005
+delta_t = 0.02
 
 -- Simulator TF publications
 publish_tfs = true;
@@ -49,7 +49,7 @@ laser_frame = "base_laser"
 -- define multi robot senerio
 -- The simulator will only use the first robot_number items in each list
 -- to configure each robot.
-robot_number = 4
+robot_number = 2
 
 -- topic prefix of robots
 topic_prefix_list = {"robot_0", "robot_1", "robot_2", "robot_3", "robot_4", "robot_5", "robot_6", "robot_7"}
@@ -78,7 +78,8 @@ type_list = {RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.ACK
 config_list = {"config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/bwibot_config.lua", "config/cobot_config.lua", "config/ut_jackal_config.lua"}
 
 -- init cartesian location of robots
-location_list = {{0.0, 0.0}, {-0.5, 0.866}, {-0.5, -0.866}, {1.0, 0.0}}
+location_list = {{0.0, 0.0}, {1.0, 0}, {-0.5, -0.866}, {1.0, 0.0}}
+-- 4 car setting location_list = {{0.0, 0.0}, {-0.5, 0.866}, {-0.5, -0.866}, {1.0, 0.0}}
 
 -- init angle of robots
 angle_list = {0.0, 0.0, 0.0, 0.0}

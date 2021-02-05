@@ -39,7 +39,7 @@ Pose2Df RobotModel::GetVel() {
 void RobotModel::clearRecieved(){
 }
 
-bool RobotModel::isRecieved(){
+bool RobotModel::isRecieved(const double dt){
   return false;
 }
 double RobotModel::getClosedLoopTime(){
