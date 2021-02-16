@@ -637,7 +637,7 @@ string GetMapNameFromFilename(string path) {
 
 void Simulator::Run() {
   
-  const bool closed_loop = true;
+  const bool closed_loop = false;
   if(closed_loop){
     bool all_recieved = true;
     for(const auto& m: motion_models_){

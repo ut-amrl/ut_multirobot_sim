@@ -236,12 +236,12 @@ void AckermannModel::Step(const double &dt) {
   //vel_.translation.x() = (vel == 0 && bounded_dv < 0.075)?0:(vel + bounded_dv);
   vel_.translation.x() = vel + bounded_dv;
   const float dist = vel_.translation.x() * dt;
-
   Vector2f d_vector(0,0);
   float dtheta = 0;
   if (linear_motion) {
     d_vector.x() = dist;
     dtheta = dt * CONFIG_angular_bias;
+    vel_.angle = 0;
   } else {
     const float r = 1.0 / desired_curvature;
     dtheta = dist * desired_curvature +
@@ -249,7 +249,10 @@ void AckermannModel::Step(const double &dt) {
         angular_error_(rng_) * CONFIG_angular_error * fabs(dist *
             desired_curvature);
     d_vector = {r * sin(dtheta), r * (1.0 - cos(dtheta))};
+    // update steering angle
+    vel_.angle = vel_.translation.x()/r;
   }
+  
   // Update the Pose
   pose_.translation += Eigen::Rotation2Df(pose_.angle) * d_vector;
   pose_.angle = AngleMod(pose_.angle + dtheta);
