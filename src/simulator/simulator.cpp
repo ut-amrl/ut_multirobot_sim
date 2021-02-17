@@ -670,7 +670,9 @@ void Simulator::Run() {
           localizationMsg_.pose.x = cur_loc_.translation.x();
           localizationMsg_.pose.y = cur_loc_.translation.y();
           localizationMsg_.pose.theta = cur_loc_.angle;
+          #ifdef CLOSE_LOOP
           localizationMsg_.issue_time = motion_models_[i]->getClosedLoopTime();
+          #endif
           cout << "current sim time is " << sim_time_ << " issue time is " << motion_models_[i]->getClosedLoopTime() << "state is" <<  localizationMsg_.pose.x << std::endl;
           localizationPublishers_[i].publish(localizationMsg_);
       }

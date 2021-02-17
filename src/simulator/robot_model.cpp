@@ -45,4 +45,7 @@ bool RobotModel::isRecieved(const double dt){
 double RobotModel::getClosedLoopTime(){
   return closed_loop_time_;
 }
+double RobotModel::GetAngVel(){
+  return 0;
+}
 }

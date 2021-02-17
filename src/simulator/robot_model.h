@@ -40,6 +40,7 @@ class RobotModel : public EntityBase {
   virtual bool isRecieved(const double dt);
   virtual void clearRecieved();
   virtual double getClosedLoopTime();
+  virtual double GetAngVel();
 };
 }  // namespace robot_model
 

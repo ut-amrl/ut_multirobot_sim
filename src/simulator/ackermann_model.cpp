@@ -78,6 +78,7 @@ void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
   t_last_cmd_ = GetMonotonicTime();
   recieved_cmd_ = true;
   // closed loop simulation only
+  #ifdef CLOSE_LOOP
   if(closed_loop_){
     // push command onto queue
     //std::cout << "last recieved cmd is" << msg.issue_time << std::endl;
@@ -85,6 +86,7 @@ void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
     cmd_queue.push_back(cmd);
     t_last_cmd_ = msg.issue_time;
   }
+  #endif
 }
 
 void AckermannModel::clearRecieved(){
@@ -235,6 +237,7 @@ void AckermannModel::Step(const double &dt) {
   // Set velocity
   //vel_.translation.x() = (vel == 0 && bounded_dv < 0.075)?0:(vel + bounded_dv);
   vel_.translation.x() = vel + bounded_dv;
+  vel_.angle = vel*desired_curvature;
   const float dist = vel_.translation.x() * dt;
   Vector2f d_vector(0,0);
   float dtheta = 0;
@@ -318,6 +321,10 @@ Pose2Df AckermannModel::GetVel() {
     return s.vel_;
   }
   return vel_;
+}
+
+double AckermannModel::GetAngVel() {
+  return ((vel_.translation.x() >=0) ? 1 : -1)*vel_.translation.norm()*last_cmd_.curvature;
 }
 
 void AckermannModel::SetTemplateLines(const float r, const int num_segments){
