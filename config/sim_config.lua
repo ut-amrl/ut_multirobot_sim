@@ -78,7 +78,7 @@ type_list = {RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.ACK
 config_list = {"config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/bwibot_config.lua", "config/cobot_config.lua", "config/ut_jackal_config.lua"}
 
 -- init cartesian location of robots
-location_list = {{0.0, 0.0}, {1.0, 0}, {-0.5, -0.866}, {1.0, 0.0}}
+location_list = {{0.0, 0.0}, {0.0, 0.5}, {-0.5, -0.866}, {1.0, 0.0}}
 -- 4 car setting location_list = {{0.0, 0.0}, {-0.5, 0.866}, {-0.5, -0.866}, {1.0, 0.0}}
 
 -- init angle of robots

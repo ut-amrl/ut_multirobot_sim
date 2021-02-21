@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   }
 
   // main loop
-  RateLoop rate(50.0); // WARINING: ALSO CHANGE CONFIG dt
+  RateLoop rate(100.0); // WARINING: ALSO CHANGE CONFIG dt
   while (ros::ok()){
 
     ros::spinOnce();
