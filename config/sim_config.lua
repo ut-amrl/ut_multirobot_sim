@@ -49,7 +49,7 @@ laser_frame = "base_laser"
 -- define multi robot senerio
 -- The simulator will only use the first robot_number items in each list
 -- to configure each robot.
-robot_number = 2
+robot_number = 3
 
 -- topic prefix of robots
 topic_prefix_list = {"robot_0", "robot_1", "robot_2", "robot_3", "robot_4", "robot_5", "robot_6", "robot_7"}
@@ -78,11 +78,11 @@ type_list = {RobotType.ACKERMANN_DRIVE, RobotType.ACKERMANN_DRIVE, RobotType.ACK
 config_list = {"config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/ut_automata_config.lua", "config/bwibot_config.lua", "config/cobot_config.lua", "config/ut_jackal_config.lua"}
 
 -- init cartesian location of robots
-location_list = {{0.0, 0.0}, {0.0, 0.5}, {-0.5, -0.866}, {1.0, 0.0}}
+location_list = {{3.0, 74.2}, {3.5, 75}, {2.5, 75}, {1.0, 0.0}}
 -- 4 car setting location_list = {{0.0, 0.0}, {-0.5, 0.866}, {-0.5, -0.866}, {1.0, 0.0}}
 
 -- init angle of robots
-angle_list = {0.0, 0.0, 0.0, 0.0}
+angle_list = {-1.8, -1.5, -1.7, 0.0}
 
 -- color of robots
 RGB_list = {{255.0, 165.0, 39.0}, {52.0, 101.0, 164.0}, {92.0, 53.0, 102.0},{255.0, 0.0, 39.0}}

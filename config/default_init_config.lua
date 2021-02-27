@@ -1,4 +1,4 @@
-map_name =  "maps/UT_AUTOmata_Track/UT_AUTOmata_Track.vectormap.txt"
+map_name =  "maps/AHG2_Track/AHG2_Track.vectormap.txt"
 -- Simulator starting location. 
 -- (Tongrui: moved corresponding code to topic_config.lua)
 -- start_x = 33.016267
