@@ -20,6 +20,7 @@
 */
 //========================================================================
 
+#include "ut_multirobot_sim/HumanControlCommand.h"
 #include "simulator/entity_base.h"
 #include "config_reader/config_reader.h"
 #include "ros/publisher.h"
@@ -34,14 +35,17 @@ namespace human{
 
 enum HumanMode{
      Singleshot,
-     Repeat
+     Repeat,
+     Controlled,
+     Cycle
 };
 
 class HumanObject: public EntityBase{
  protected:
-  Pose2Df start_pose_;
-  // TODO(yifeng): Change to a sequence of intermediate goals
   Pose2Df goal_pose_;
+  std::vector<Eigen::Vector3f> waypoints_;
+  size_t waypoint_index_;
+  bool going_forwards_;
  
   // (vx, vy, vtheta)  
   Eigen::Vector2f trans_vel_;
@@ -52,6 +56,9 @@ class HumanObject: public EntityBase{
   double avg_omega_;
   HumanMode mode_;
   double reach_goal_threshold_;
+
+  std::string control_topic_;
+  ros::Subscriber control_subscriber_;
 
   config_reader::ConfigReader config_reader_;
   // (future) predefined trajectory if needed
@@ -64,6 +71,8 @@ class HumanObject: public EntityBase{
   // Intialize a default object reading from a file
   HumanObject(const std::vector<std::string>& config_file);
   ~HumanObject() = default;
+  void InitializeManualControl(ros::NodeHandle& nh);
+  void ManualControlCallback(const ut_multirobot_sim::HumanControlCommand& hc);
 
   void SetGoalPose(const Pose2Df& goal_pose);
   // define step function for human object
@@ -80,6 +89,9 @@ class HumanObject: public EntityBase{
   void SetMode(const HumanMode& mode);
   double GetMaxSpeed();
   double GetAvgSpeed();
+  Eigen::Vector2f GetTransVel() const;
+  double GetRotVel();
+  HumanMode GetMode() const;
 };
 
 }  // namespace human

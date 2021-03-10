@@ -1,0 +1,17 @@
+<package>
+  <description brief="AAAAA">
+
+BBBBBB
+
+  </description>
+  <author>Simon Andrews</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>https://github.com/simon-andrews/social_navigation_sims</url>
+
+  <depend package="rviz"/>
+  <depend package="std_msgs"/>
+  <export>
+      <rviz plugin="${prefix}/plugin_description.xml"/>
+  </export>
+</package>

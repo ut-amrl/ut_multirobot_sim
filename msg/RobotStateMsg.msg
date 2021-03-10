@@ -1,0 +1,6 @@
+uint8 STATE_FORWARD=0
+uint8 STATE_LEFT=1
+uint8 STATE_RIGHT=2
+uint8 STATE_STOPPED=3
+
+uint8 state

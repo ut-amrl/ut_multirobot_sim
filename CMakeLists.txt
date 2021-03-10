@@ -17,7 +17,7 @@ IF(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
     "${ESCAPE}[0m")
 ENDIF()
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Werror -Wall -g")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -g")
 
 IF(${CXX} MATCHES "g++")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -rdynamic")
@@ -34,8 +34,8 @@ ENDIF()
 
 INCLUDE($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 ROSBUILD_INIT()
-SET(ROS_BUILD_STATIC_LIBS true)
-SET(ROS_BUILD_SHARED_LIBS false)
+#SET(ROS_BUILD_STATIC_LIBS true)
+SET(ROS_BUILD_SHARED_LIBS true)
 
 MESSAGE(STATUS "ROS-Overrride Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
@@ -72,8 +72,42 @@ ROSBUILD_ADD_EXECUTABLE(${target}
   src/simulator/diff_drive_model.cpp
   src/simulator/short_term_object.cpp
   src/simulator/human_object.cpp
+  src/simulator/door.cpp
   )
 TARGET_LINK_LIBRARIES(${target}
   ${libs}
 )
 
+ADD_SUBDIRECTORY(src/state_switcher_rviz_plugin)
+
+ROSBUILD_ADD_EXECUTABLE(human_controller
+  src/human_controller/human_controller.cpp
+)
+TARGET_LINK_LIBRARIES(human_controller ${libs} ncurses)
+
+ROSBUILD_ADD_EXECUTABLE(doorman src/doorman/doorman.cpp)
+TARGET_LINK_LIBRARIES(doorman ${libs})
+
+# ROSBUILD_ADD_EXECUTABLE(leading_human_controller
+  # src/leading_human_controller/navigation.cc
+  # src/leading_human_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(leading_human_controller ${libs})
+
+# ROSBUILD_ADD_EXECUTABLE(following_human_controller
+  # src/following_human_controller/navigation.cc
+  # src/following_human_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(following_human_controller ${libs})
+
+# ROSBUILD_ADD_EXECUTABLE(package_delivery_controller
+  # src/package_delivery_controller/navigation.cc
+  # src/package_delivery_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(package_delivery_controller ${libs})
+
+# ROSBUILD_ADD_EXECUTABLE(hallway_controller
+  # src/hallway_controller/navigation.cc
+  # src/hallway_controller/navigation_main.cc
+# )
+# TARGET_LINK_LIBRARIES(hallway_controller ${libs})

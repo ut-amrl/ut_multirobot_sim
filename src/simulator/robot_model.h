@@ -29,6 +29,7 @@ namespace robot_model {
 class RobotModel : public EntityBase {
  protected:
   Pose2Df vel_;
+  RobotModel(EntityType type);
 
  public:
   RobotModel();

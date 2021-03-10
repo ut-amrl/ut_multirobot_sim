@@ -25,8 +25,14 @@
 namespace robot_model {
 
 RobotModel::RobotModel() :
-    EntityBase(),
-    vel_(0,{0,0}) {}
+    EntityBase(ROBOT_MODEL),
+    vel_(0, {0,0})
+{}
+
+RobotModel::RobotModel(EntityType type) :
+    EntityBase(type),
+    vel_(0, {0, 0})
+{}
 
 void RobotModel::SetVel(const pose_2d::Pose2Df& vel) {
  vel_ = vel;

@@ -40,16 +40,17 @@ bool sim_step_ = false;
 DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
 
 void SimStartStop(const std_msgs::Bool& msg) {
-  if (msg.data) {
-    sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
-  } else {
-    sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
-  }
+  sim_state_.sim_state = !sim_state_.sim_state;
+  // if (msg.data) {
+    // sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
+  // } else {
+    // sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
+  // }
 }
 
 void SimStep(const std_msgs::Bool& msg) {
   // In case multiple step commands are received between sim updates, the
-  // simulator should step at least once.
+  // simulator should try to step at least once.
   sim_step_ = sim_step_ || msg.data;
 }
 
@@ -62,11 +63,11 @@ int main(int argc, char **argv) {
   ros::NodeHandle n;
 
   ros::Publisher sim_state_pub = n.advertise<SimulatorStateMsg>(
-      "sim_state", 1, true);
+    "sim_state", 1, true);
   sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
 
   ros::Subscriber start_stop_sub = n.subscribe(
-      "sim_start_stop", 1, SimStartStop);
+    "sim_start_stop", 1, SimStartStop);
 
   ros::Subscriber step_sub = n.subscribe(
       "sim_step", 1, SimStep);
@@ -76,13 +77,16 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  cout << "Simulator Initialized" << endl;
   // main loop
   RateLoop rate(1.0 / simulator.GetStepSize());
   while (ros::ok()){
     ros::spinOnce();
+    cout << "Spun" << endl;
     switch (sim_state_.sim_state) {
       case SimulatorStateMsg::SIM_RUNNING : {
         simulator.Run();
+        cout << "Run" << endl;
       } break;
       case SimulatorStateMsg::SIM_STOPPED : {
         // Do nothing unless stepping.

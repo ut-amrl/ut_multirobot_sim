@@ -11,7 +11,7 @@ all: build build/CMakeLists.txt.copy
 	$(MAKE) --no-print-directory -C build
 
 clean:
-	rm -rf bin build lib msg_gen src/ut_multirobot_sim
+	rm -rf bin build lib msg_gen src/ut_multirobot_sim src/state_switcher_rviz_plugin/lib
 
 build/CMakeLists.txt.copy: build CMakeLists.txt Makefile msg
 	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) ..

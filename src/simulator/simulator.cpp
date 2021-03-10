@@ -34,6 +34,7 @@
 
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
+#include "simulator/door.h"
 #include "simulator/omnidirectional_model.h"
 #include "simulator/diff_drive_model.h"
 #include "shared/math/geometry.h"
@@ -41,7 +42,11 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
+#include "ut_multirobot_sim/HumanStateArrayMsg.h"
+#include "ut_multirobot_sim/DoorArrayMsg.h"
+#include "ut_multirobot_sim/DoorStateMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
+#include "ut_multirobot_sim/DoorControlMsg.h"
 #include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
@@ -60,6 +65,9 @@ using omnidrive::OmnidirectionalModel;
 using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
+using door::Door;
+using door::DoorState;
+using ut_multirobot_sim::DoorControlMsg;
 
 CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
@@ -97,6 +105,7 @@ CONFIG_STRING(map_name, "map_name");
 CONFIG_VECTOR3FLIST(start_poses, "start_poses");
 CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
 CONFIG_STRINGLIST(human_config_list, "human_config_list");
+CONFIG_STRINGLIST(door_config_list, "door_config_list");
 
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
@@ -122,8 +131,8 @@ double Simulator::GetStepSize() const {
   return CONFIG_DT;
 }
 
-robot_model::RobotModel* MakeMotionModel(const std::string& robot_type, 
-                                         ros::NodeHandle& n, 
+robot_model::RobotModel* MakeMotionModel(const std::string& robot_type,
+                                         ros::NodeHandle& n,
                                          const std::string& topic_prefix) {
   if (robot_type == "ACKERMANN_DRIVE") {
       return new AckermannModel({CONFIG_robot_config}, &n);
@@ -207,16 +216,41 @@ bool Simulator::init(ros::NodeHandle& n) {
 
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
   objectLinesPublisher = n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
-  
 
+
+  doorSubscriber = n.subscribe("/door/command", 1, &Simulator::DoorCallback, this);
+
+  // initSubscriber = n.subscribe(
+      // "/initialpose", 1, &Simulator::InitalLocationCallback, this);
+  // odometryTwistPublisher = n.advertise<nav_msgs::Odometry>("/odom",1);
+  // laserPublisher = n.advertise<sensor_msgs::LaserScan>(CONFIG_laser_topic, 1);
+  // viz_laser_publisher_ = n.advertise<sensor_msgs::LaserScan>("/scan", 1);
+  // mapLinesPublisher = n.advertise<visualization_msgs::Marker>(
+      // "/simulator_visualization", 6);
+  // posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
+      // "/simulator_visualization", 6);
+  // objectLinesPublisher = n.advertise<visualization_msgs::Marker>(
+      // "/simulator_visualization", 6);
+  // truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
+      // "/simulator_true_pose", 1);
+  // if (FLAGS_localize) {
+    // localizationPublisher = n.advertise<ut_multirobot_sim::Localization2DMsg>(
+        // "/localization", 1);
+    // localizationMsg.header.frame_id = "map";
+    // localizationMsg.header.seq = 0;
+  // }
+  humanStateArrayPublisher =
+    n.advertise<ut_multirobot_sim::HumanStateArrayMsg>("/human_states", 1);
+  doorStatePublisher =
+    n.advertise<ut_multirobot_sim::DoorArrayMsg>("/door_states", 1);
   br = new tf::TransformBroadcaster();
 
-  this->loadObject();
+  this->loadObject(n);
   return true;
 }
 
 // TODO(yifeng): Change this into a general way
-void Simulator::loadObject() {
+void Simulator::loadObject(ros::NodeHandle& nh) {
   // TODO (yifeng): load short term objects from list
   objects.push_back(
     std::unique_ptr<ShortTermObject>(new ShortTermObject("short_term_config.lua")));
@@ -225,8 +259,47 @@ void Simulator::loadObject() {
   for (const string& config_str: CONFIG_human_config_list) {
     objects.push_back(
       std::unique_ptr<HumanObject>(new HumanObject({config_str})));
-
   }
+
+  // door
+  for (const string& config_str : CONFIG_door_config_list) {
+    objects.push_back(
+      std::unique_ptr<Door>(new Door({config_str}))
+    );
+  }
+
+  for (const std::unique_ptr<EntityBase>& e : objects) {
+    if (e->GetType() == HUMAN_OBJECT) {
+      EntityBase* e_raw = e.get();
+      HumanObject* human = static_cast<HumanObject*>(e_raw);
+      if (human->GetMode() == human::HumanMode::Controlled) {
+        human->InitializeManualControl(nh);
+      }
+    }
+  }
+}
+
+void Simulator::DoorCallback(const DoorControlMsg& msg) {
+  DoorState state = static_cast<DoorState>(msg.command);
+  for (const std::unique_ptr<EntityBase>& e : objects) {
+    if (e->GetType() == DOOR) {
+      EntityBase* e_raw = e.get();
+      Door* door = static_cast<Door*>(e_raw);
+      door->SetState(state);
+    }
+  }
+}
+
+void Simulator::InitalLocationCallback(const PoseWithCovarianceStamped& msg) {
+  const Vector2f loc =
+      Vector2f(msg.pose.pose.position.x, msg.pose.pose.position.y);
+  const float angle = 2.0 *
+      atan2(msg.pose.pose.orientation.z, msg.pose.pose.orientation.w);
+  motion_model_->SetPose({angle, loc});
+  printf("Set robot pose: %.2f,%.2f, %.1f\u00b0\n",
+         loc.x(),
+         loc.y(),
+         RadToDeg(angle));
 }
 
 /**
@@ -296,7 +369,7 @@ void Simulator::initSimulatorVizMarkers() {
   vector<float> color;
   color.resize(4);
 
-  p.header.frame_id = "/map";
+  p.header.frame_id = "map";
 
   p.pose.orientation.w = 1.0;
   scale.x = 0.02;
@@ -471,6 +544,65 @@ void Simulator::publishVisualizationMarkers() {
   }
 }
 
+// TODO(jaholtz) maybe keep humans seperate from other objects?
+void Simulator::publishHumanStates() {
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+
+      Vector2f position = human->GetPose().translation;
+      double angle = human->GetPose().angle;
+      Vector2f trans_vel = human->GetTransVel();
+      double rot_vel = human->GetRotVel();
+
+      ut_multirobot_sim::HumanStateMsg human_state_msg;
+      human_state_msg.pose.x = position.x();
+      human_state_msg.pose.y = position.y();
+      human_state_msg.pose.theta = angle;
+      human_state_msg.translational_velocity.x = trans_vel.x();
+      human_state_msg.translational_velocity.y = trans_vel.y();
+      human_state_msg.translational_velocity.z = 0.0;
+      human_state_msg.rotational_velocity = rot_vel;
+
+      human_array_msg.human_states.push_back(human_state_msg);
+    }
+  }
+  human_array_msg.header.stamp = ros::Time::now();
+  humanStateArrayPublisher.publish(human_array_msg);
+}
+
+void Simulator::PublishDoorStates() {
+  ut_multirobot_sim::DoorArrayMsg door_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == DOOR) {
+      EntityBase* base = objects[i].get();
+      Door* door = static_cast<Door*>(base);
+
+      Vector2f position = door->GetPose().translation;
+      double angle = door->GetPose().angle;
+
+      ut_multirobot_sim::DoorStateMsg door_state_msg;
+      door_state_msg.pose.x = position.x();
+      door_state_msg.pose.y = position.y();
+      door_state_msg.pose.theta = angle;
+      auto state = door->GetState();
+      if (state == door::OPENING || state == door::CLOSING) {
+        door_state_msg.doorStatus = 0;
+      } else if (state == door::CLOSED) {
+        door_state_msg.doorStatus = 1;
+      } else {
+        door_state_msg.doorStatus = 2;
+      }
+
+      door_array_msg.door_states.push_back(door_state_msg);
+    }
+  }
+  door_array_msg.header.stamp = ros::Time::now();
+  doorStatePublisher.publish(door_array_msg);
+}
+
 void Simulator::update() {
   // Step the motion model forward one time step
   ++sim_step_count;
@@ -496,6 +628,25 @@ void Simulator::update() {
     truePoseMsg.pose.orientation.y = 0;
     rps.truePosePublisher.publish(truePoseMsg);
   }
+  cout << "Robots Stepped" << endl;
+  // motion_model_->Step(CONFIG_DT);
+  // ++sim_step_count;
+  // sim_time += CONFIG_DT;
+
+  // Update the simulator with the motion model result.
+  // cur_loc_ = motion_model_->GetPose();
+  // vel_ = motion_model_->GetVel();
+
+  // // Publishing the ground truth pose
+  // truePoseMsg.header.stamp = ros::Time::now();
+  // truePoseMsg.pose.position.x = cur_loc_.translation.x();
+  // truePoseMsg.pose.position.y = cur_loc_.translation.y();
+  // truePoseMsg.pose.position.z = 0;
+  // truePoseMsg.pose.orientation.w = cos(0.5 * cur_loc_.angle);
+  // truePoseMsg.pose.orientation.z = sin(0.5 * cur_loc_.angle);
+  // truePoseMsg.pose.orientation.x = 0;
+  // truePoseMsg.pose.orientation.y = 0;
+  // truePosePublisher.publish(truePoseMsg);
 
   // Update all map objects and get their lines
   map_.object_lines.clear();
@@ -506,6 +657,7 @@ void Simulator::update() {
     }
   }
   this->drawObjects();
+  cout << "Map Updated" << endl;
 }
 
 string GetMapNameFromFilename(string path) {
@@ -535,6 +687,7 @@ void Simulator::publishLocalization() {
 void Simulator::Run() {
   // Simulate time-step.
   update();
+  cout << "Updated" << endl;
   //publish odometry and status
   publishOdometry();
   //publish laser rangefinder messages
@@ -543,6 +696,11 @@ void Simulator::Run() {
   publishVisualizationMarkers();
   //publish tf
   publishTransform();
+  //publish array of human states
+  publishHumanStates();
+  //publish array of door states
+  PublishDoorStates();
+  cout << "Published" << endl;
 
   if (FLAGS_localize) {
     publishLocalization();

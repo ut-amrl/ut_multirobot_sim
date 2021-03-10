@@ -2,15 +2,10 @@
 hu_radius = 0.1
 hu_num_segments = 20
 
--- Human start position
-hu_start_x = 39.
-hu_start_y = 18.7
-hu_start_theta = 0.
-
--- Human goal position
-hu_goal_x = 42.
-hu_goal_y = 22.7
-hu_goal_theta = 0.
+hu_waypoints = {
+    {20, 21.5, 0},
+    {0, 21.5, 0},
+}
 
 -- Human speed information
 hu_max_speed = 1.5

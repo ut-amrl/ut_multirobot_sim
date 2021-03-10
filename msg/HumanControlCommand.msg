@@ -1,0 +1,4 @@
+Header header
+geometry_msgs/Vector3 translational_velocity
+geometry_msgs/Point pose
+float32 rotational_velocity

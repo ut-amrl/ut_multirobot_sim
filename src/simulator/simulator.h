@@ -39,6 +39,7 @@
 
 #include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
+#include "ut_multirobot_sim/DoorControlMsg.h"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -77,13 +78,17 @@ class Simulator {
 
     visualization_msgs::Marker robotPosMarker;
   };
+  ros::Subscriber initSubscriber;
+  ros::Subscriber doorSubscriber;
 
   ros::Publisher mapLinesPublisher;
   ros::Publisher objectLinesPublisher;
+  ros::Publisher humanStateArrayPublisher;
+  ros::Publisher doorStatePublisher;
+  tf::TransformBroadcaster *br;
 
   std::vector<RobotPubSub> robot_pub_subs_;
 
-  tf::TransformBroadcaster *br;
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
   ut_multirobot_sim::Localization2DMsg localizationMsg;
@@ -101,6 +106,8 @@ class Simulator {
 
   uint64_t sim_step_count;
   double sim_time;
+  std::unique_ptr<robot_model::RobotModel> motion_model_;
+  // std::string robot_type_;
 
  private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
@@ -110,6 +117,7 @@ class Simulator {
   void initSimulatorVizMarkers();
   void drawMap();
   void drawObjects();
+  void DoorCallback(const ut_multirobot_sim::DoorControlMsg& msg);
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
@@ -118,8 +126,10 @@ class Simulator {
   void publishVisualizationMarkers();
   void publishTransform();
   void publishLocalization();
+  void publishHumanStates();
+  void PublishDoorStates();
   void update();
-  void loadObject();
+  void loadObject(ros::NodeHandle &n);
 
  public:
   Simulator() = delete;

@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="ut_multirobot_sim" type="doorman" name="doorman" />
+    <node pkg="ut_multirobot_sim" type="simulator_link" name="simulator" cwd="node"
+        args="-sim_config config/social_navigation/leading_human/sim_config.lua" />
+    <node pkg="ut_multirobot_sim" type="leading_human_controller" name="leading_human_controller" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" />
+</launch>

@@ -1,0 +1,44 @@
+<library path="lib/libstate_switcher_rviz_plugin">
+  <class name="state_switcher_rviz_plugin/Follow"
+         type="state_switcher_rviz_plugin::Follow"
+         base_class_type="rviz::Tool">
+    <description>
+        Follow.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/GoAlone"
+         type="state_switcher_rviz_plugin::GoAlone"
+         base_class_type="rviz::Tool">
+    <description>
+        Go alone.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/Stop"
+         type="state_switcher_rviz_plugin::Stop"
+         base_class_type="rviz::Tool">
+    <description>
+        Stop.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/Pass"
+         type="state_switcher_rviz_plugin::Pass"
+         base_class_type="rviz::Tool">
+    <description>
+        Pass.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/Pause"
+         type="state_switcher_rviz_plugin::Pause"
+         base_class_type="rviz::Tool">
+    <description>
+        Pause.
+    </description>
+  </class>
+  <class name="state_switcher_rviz_plugin/Step"
+         type="state_switcher_rviz_plugin::Step"
+         base_class_type="rviz::Tool">
+    <description>
+        Step.
+    </description>
+  </class>
+</library>
