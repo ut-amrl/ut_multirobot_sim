@@ -47,34 +47,9 @@ CONFIG_FLOAT(avg_omega, "hu_avg_omega");
 CONFIG_FLOAT(reach_goal_threshold, "hu_reach_goal_threshold");
 CONFIG_INT(mode, "hu_mode");
 CONFIG_STRING(control_topic, "hu_control_topic");
-CONFIG_VECTOR3FLIST(waypoints, "hu_waypoints");
 
-/* HumanObject::HumanObject() {
-  // angle, (x, y)
-  pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
-  // just a cylinder for now
-  const float r = 0.3;
-  const int num_segments = 20;
-
-  const float angle_increment = 2 * M_PI / num_segments;
-
-  Eigen::Vector2f v0(r, 0.);
-  Eigen::Vector2f v1;
-  const float eps = 0.001;
-  for (int i = 1; i < num_segments; i++) {
-    v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
-
-    // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
-    Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
-    template_lines_.push_back(geometry::Line2f(v0 + eps_vec, v1 - eps_vec));
-    v0 = v1;
-  }
-  template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(r, 0.0)));
-  pose_lines_ = template_lines_;
-  this->Initialize();
-}
- */
-HumanObject::HumanObject(const vector<string>& config_file) :
+HumanObject::HumanObject(const string& config_file,
+                        const string& topic_prefix) :
     EntityBase(HUMAN_OBJECT),
     goal_pose_(),
     trans_vel_(0., 0.),
@@ -84,9 +59,12 @@ HumanObject::HumanObject(const vector<string>& config_file) :
     max_omega_(0.),
     avg_omega_(0.),
     mode_(HumanMode::Repeat),
-    reach_goal_threshold_(0.3),
+    goal_threshold_(0.3),
     control_topic_("/human_control"),
-    config_reader_(config_file) {
+    config_reader_({config_file}) {
+  CONFIG_VECTOR3FLIST(waypoints, topic_prefix + "_waypoints");
+  cout << topic_prefix + "_waypoints" << endl;
+  config_reader::ConfigReader waypoint_reader({config_file});
   waypoints_ = CONFIG_waypoints;
   if (waypoints_.empty()) {
     throw invalid_argument("Human must have at least one starting waypoint!");
@@ -107,7 +85,7 @@ HumanObject::HumanObject(const vector<string>& config_file) :
   avg_speed_ = CONFIG_avg_speed;
   max_omega_ = CONFIG_max_omega;
   avg_omega_ = CONFIG_avg_omega;
-  reach_goal_threshold_ = CONFIG_reach_goal_threshold;
+  goal_threshold_ = CONFIG_reach_goal_threshold;
   control_topic_ = CONFIG_control_topic;
 
   // just a cylinder for now
@@ -122,7 +100,6 @@ HumanObject::HumanObject(const vector<string>& config_file) :
   for (int i = 1; i < num_segments; i++) {
     v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
 
-    // TODO(yifeng): Fix the vector map bug that closed shape would have wrong occlusion
     Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
     template_lines_.push_back(geometry::Line2f(v0 + eps_vec, v1 - eps_vec));
     v0 = v1;
@@ -133,10 +110,11 @@ HumanObject::HumanObject(const vector<string>& config_file) :
 
 void HumanObject::InitializeManualControl(ros::NodeHandle& nh) {
   SetMode(HumanMode::Controlled);
-  control_subscriber_ = nh.subscribe(control_topic_, 1, &HumanObject::ManualControlCallback, this);
+  control_subscriber_ =
+      nh.subscribe(control_topic_, 1, &HumanObject::ManualControlCb, this);
 }
 
-void HumanObject::ManualControlCallback(const ut_multirobot_sim::HumanControlCommand& hcc) {
+void HumanObject::ManualControlCb(const ut_multirobot_sim::HumanControlCommand& hcc) {
   trans_vel_.x() = hcc.translational_velocity.x;
   trans_vel_.y() = hcc.translational_velocity.y;
   pose_.translation.x() = hcc.pose.x;
@@ -171,7 +149,8 @@ void HumanObject::Transform() {
 }
 
 
-void HumanObject::SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel) {
+void HumanObject::SetVel(const Eigen::Vector2f& trans_vel,
+                         const double& rot_vel) {
   trans_vel_ = trans_vel;
   rot_vel_ = rot_vel;
 }
@@ -179,24 +158,19 @@ void HumanObject::SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel
 void HumanObject::Step(const double& dt) {
   if (GetMode() != HumanMode::Controlled) {
     // very simple dynamic update
-    trans_vel_ = (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
-    // TODO(yifeng): Add gaussian noise to the velocity
-    // pose_.Set(pose_.angle + rot_vel_ * dt, pose_.translation + trans_vel_ * dt);
+    trans_vel_ =
+        (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
+    pose_.translation += dt * trans_vel_;
   }
-
-  // // clip velocity if it is larger than max speed
-  // if (trans_vel_.norm() > max_speed_) {
-    // trans_vel_ = trans_vel_.normalized() * max_speed_;
-  // }
-
-  // cout << "Trans Vel: " << trans_vel_.x() << "," << trans_vel_.y() << endl;
 
   this->Transform();
   this->CheckReachGoal();
-  cout << "Human Stepped " << endl;
 }
 
-void HumanObject::SetSpeed(const double& max_speed, const double& avg_speed, const double& max_omega, const double& avg_omega) {
+void HumanObject::SetSpeed(const double& max_speed,
+                           const double& avg_speed,
+                           const double& max_omega,
+                           const double& avg_omega) {
   max_speed_ = max_speed;
   avg_speed_ = avg_speed;
   max_omega_ = max_omega;
@@ -230,10 +204,11 @@ bool HumanObject::CheckReachGoal() {
     return false;
   }
 
-  if ((pose_.translation - goal_pose_.translation).norm() < reach_goal_threshold_) {
+  if ((pose_.translation - goal_pose_.translation).norm() < goal_threshold_) {
     // reached goal
 
-    if (mode_ == HumanMode::Singleshot && waypoint_index_ == waypoints_.size() - 1) {
+    if (mode_ == HumanMode::Singleshot &&
+        waypoint_index_ == waypoints_.size() - 1) {
       trans_vel_.setZero();
       rot_vel_ = 0.;
       return true;
@@ -248,7 +223,9 @@ bool HumanObject::CheckReachGoal() {
       waypoint_index_ = (waypoint_index_ + 1) % waypoints_.size();
     }
     Vector3f next_waypoint = waypoints_[waypoint_index_];
-    float next_x = next_waypoint[0], next_y = next_waypoint[1], next_theta = next_waypoint[2];
+    const float next_x = next_waypoint[0];
+    const float next_y = next_waypoint[1];
+    const float next_theta = next_waypoint[2];
     goal_pose_ = Pose2Df(next_theta, {next_x, next_y});
   }
   return false;

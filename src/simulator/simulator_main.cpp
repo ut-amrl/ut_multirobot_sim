@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
       "sim_step", 1, SimStep);
 
   Simulator simulator(FLAGS_sim_config);
-  if (!simulator.init(n)) {
+  if (!simulator.Init(n)) {
     return 1;
   }
 

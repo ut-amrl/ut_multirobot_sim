@@ -31,23 +31,23 @@
 
 using pose_2d::Pose2Df;
 
-namespace human{
+namespace human {
 
-enum HumanMode{
+enum HumanMode {
      Singleshot,
      Repeat,
      Controlled,
      Cycle
 };
 
-class HumanObject: public EntityBase{
+class HumanObject: public EntityBase {
  protected:
   Pose2Df goal_pose_;
   std::vector<Eigen::Vector3f> waypoints_;
   size_t waypoint_index_;
   bool going_forwards_;
- 
-  // (vx, vy, vtheta)  
+
+  // (vx, vy, vtheta)
   Eigen::Vector2f trans_vel_;
   double rot_vel_;
   double max_speed_;
@@ -55,7 +55,7 @@ class HumanObject: public EntityBase{
   double max_omega_;
   double avg_omega_;
   HumanMode mode_;
-  double reach_goal_threshold_;
+  double goal_threshold_;
 
   std::string control_topic_;
   ros::Subscriber control_subscriber_;
@@ -69,10 +69,10 @@ class HumanObject: public EntityBase{
   // Initialize a default object, probably a simple cylinder?
   HumanObject() = delete;
   // Intialize a default object reading from a file
-  HumanObject(const std::vector<std::string>& config_file);
+  HumanObject(const std::string& config_file, const std::string& topic_prefix);
   ~HumanObject() = default;
   void InitializeManualControl(ros::NodeHandle& nh);
-  void ManualControlCallback(const ut_multirobot_sim::HumanControlCommand& hc);
+  void ManualControlCb(const ut_multirobot_sim::HumanControlCommand& hc);
 
   void SetGoalPose(const Pose2Df& goal_pose);
   // define step function for human object
@@ -83,7 +83,10 @@ class HumanObject: public EntityBase{
   // check if human reaches the current goal
   bool CheckReachGoal();
   // set the maximum speed for human
-  void SetSpeed(const double& max_speed, const double& avg_speed, const double& max_omega = 0.4, const double& avg_omega = 0.2);
+  void SetSpeed(const double& max_speed,
+                const double& avg_speed,
+                const double& max_omega = 0.4,
+                const double& avg_omega = 0.2);
   void SetPose(const Pose2Df& pose);
   void SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel);
   void SetMode(const HumanMode& mode);

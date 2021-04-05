@@ -107,35 +107,34 @@ class Simulator {
   uint64_t sim_step_count;
   double sim_time;
   std::unique_ptr<robot_model::RobotModel> motion_model_;
-  // std::string robot_type_;
 
  private:
-  void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
+  void InitVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
                      string type, geometry_msgs::PoseStamped p,
                      geometry_msgs::Point32 scale, double duration,
                      std::vector<float> color);
-  void initSimulatorVizMarkers();
-  void drawMap();
-  void drawObjects();
+  void InitSimulatorVizMarkers();
+  void DrawMap();
+  void DrawObjects();
   void DoorCallback(const ut_multirobot_sim::DoorControlMsg& msg);
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
-  void publishOdometry();
-  void publishLaser();
-  void publishVisualizationMarkers();
-  void publishTransform();
-  void publishLocalization();
-  void publishHumanStates();
+  void PublishOdometry();
+  void PublishLaser();
+  void PublishVisualizationMarkers();
+  void PublishTransform();
+  void PublishLocalization();
+  void PublishHumanStates();
   void PublishDoorStates();
-  void update();
-  void loadObject(ros::NodeHandle &n);
+  void Update();
+  void LoadObject(ros::NodeHandle &n);
 
  public:
   Simulator() = delete;
   explicit Simulator(const std::string& sim_config);
   ~Simulator();
-  bool init(ros::NodeHandle &n);
+  bool Init(ros::NodeHandle &n);
   void Run();
   double GetSimTime() const { return sim_time; }
   uint64_t GetSimStepCount() const { return sim_step_count; }
