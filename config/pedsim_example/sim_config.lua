@@ -10,16 +10,16 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-map_name =  "maps/GDC1/GDC1.vectormap.txt"
+map_name =  "maps/SimHallway/SimHallway.vectormap.txt"
 -- Simulator starting location.
 start_poses = {
-  {20, 9.3, -2.4}
+  {20.0, 1.5, 0.0}
 }
 
 -- Number of humans, informs the loading process (will load the first n
 -- waypoint lists
 num_humans = 6
-human_config = "config/human_examples/humans.lua"
+human_config = "config/pedsim_example/humans.lua"
 
 -- Time-step for simulation.
 delta_t = 0.025
@@ -57,21 +57,22 @@ angular_error_rate = 0.1;
 
 -- Defining robot type enumerator
 local RobotType = {
-    ACKERMANN_DRIVE="ACKERMANN_DRIVE",
-    OMNIDIRECTIONAL_DRIVE="OMNIDIRECTIONAL_DRIVE",
-    DIFF_DRIVE="DIFF_DRIVE"
+  ACKERMANN_DRIVE="ACKERMANN_DRIVE",
+  OMNIDIRECTIONAL_DRIVE="OMNIDIRECTIONAL_DRIVE",
+  DIFF_DRIVE="DIFF_DRIVE"
 }
-robot_types = {
-  RobotType.ACKERMANN_DRIVE
-}
-robot_type = RobotType.ACKERMANN_DRIVE
-robot_config = "config/human_examples/ut_automata_config.lua"
+
+-- robot_type = RobotType.ACKERMANN_DRIVE
+-- robot_config = "config/ut_automata_config.lua"
 -- robot_type = RobotType.DIFF_DRIVE
 -- robot_config = "config/bwibot_config.lua"
 -- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
 -- robot_config = "config/cobot_config.lua"
--- robot_type = RobotType.DIFF_DRIVE
--- robot_config = "config/ut_jackal_config.lua"
+robot_types = {
+  RobotType.DIFF_DRIVE
+}
+
+robot_config = "config/pedsim_example/jackal_config.lua"
 
 laser_topic = "/Cobot/Laser"
 laser_frame = "base_laser"

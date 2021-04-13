@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scenario>
+  <!--Obstacles-->
+  <obstacle x1="0" y1="0" x2="40" y2="0"/>
+  <obstacle x1="0" y1="5" x2="14" y2="5"/>
+  <obstacle x1="19" y1="5" x2="40" y2="5"/>
+  <obstacle x1="0" y1="0" x2="0" y2="5"/>
+  <obstacle x1="40.0" y1="0" x2="40" y2="1.5"/>
+  <obstacle x1="40.0" y1="3.5" x2="40.0" y2="5"/>
+
+  <waypoint id="east" x="5" y="1.5" r="1" b="0.1"/>
+  <!-- Sink -->
+  <waypoint id="west" x="30" y="1.5" r="1" b="0.1"/>
+
+  <waypoint id="west_2" x="30" y="3.5" r="1" b=" 0.1"/>
+  <!-- Sink -->
+  <waypoint id="east_2" x="5" y="3.5" r="1" b="0.1"/>
+
+  <waypoint id="robot_goal" x="22" y="27" r="2"/>
+  <waypoint id="robot_start" x="20.0" y="1.5" r="2"/>
+
+  <agent x="20.0" y="1.5" n="1" dx="0" dy="0" type="2">
+    <addwaypoint id="robot_start"/>
+    <addwaypoint id="robot_goal"/>
+  </agent>
+
+
+    <agent x="11.517275250089156" y="1.5" n="1" dx="0" dy="0" type="0">
+      <addwaypoint id="west" />
+      <addwaypoint id="west_2" />
+      <addwaypoint id="east_2"/>
+      <addwaypoint id="east"/>
+    </agent>
+
+    <agent x="20.095816727556944" y="1.5" n="1" dx="0" dy="0" type="0">
+      <addwaypoint id="west" />
+      <addwaypoint id="west_2" />
+      <addwaypoint id="east_2"/>
+      <addwaypoint id="east"/>
+    </agent>
+
+    <agent x="31.672941367084128" y="1.5" n="1" dx="0" dy="0" type="0">
+      <addwaypoint id="west" />
+      <addwaypoint id="west_2" />
+      <addwaypoint id="east_2"/>
+      <addwaypoint id="east"/>
+    </agent>
+
+    <agent x="22.869150982753368" y="1.5" n="1" dx="0" dy="0" type="0">
+      <addwaypoint id="west" />
+      <addwaypoint id="west_2" />
+      <addwaypoint id="east_2"/>
+      <addwaypoint id="east"/>
+    </agent>
+
+    <agent x="29.92911989439247" y="1.5" n="1" dx="0" dy="0" type="0">
+      <addwaypoint id="west" />
+      <addwaypoint id="west_2" />
+      <addwaypoint id="east_2"/>
+      <addwaypoint id="east"/>
+    </agent>
+
+
+
+    <agent x="22.244815464316222" y="3.0" n="1" dx="0" dy="0" type="0">
+      <addwaypoint id="east_2"/>
+      <addwaypoint id="east"/>
+      <addwaypoint id="west" />
+      <addwaypoint id="west_2" />
+    </agent>
+
+
+</scenario>

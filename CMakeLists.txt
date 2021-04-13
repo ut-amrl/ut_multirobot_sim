@@ -78,4 +78,6 @@ TARGET_LINK_LIBRARIES(${target}
   ${libs}
 )
 
+add_dependencies(simulator ${catkin_EXPORTED_TARGETS})
+
 ADD_SUBDIRECTORY(src/state_switcher_rviz_plugin)

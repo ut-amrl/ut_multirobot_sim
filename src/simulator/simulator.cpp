@@ -33,6 +33,7 @@
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "gflags/gflags.h"
 
+#include "ros/time.h"
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
 #include "simulator/door.h"
@@ -43,6 +44,7 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
+#include "ut_multirobot_sim/HumanControlCommand.h"
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
 #include "ut_multirobot_sim/DoorArrayMsg.h"
 #include "ut_multirobot_sim/DoorStateMsg.h"
@@ -70,7 +72,7 @@ using door::Door;
 using door::DoorState;
 using ut_multirobot_sim::DoorControlMsg;
 
-CONFIG_STRING(init_config_file, "init_config_file");
+// CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
 CONFIG_FLOAT(car_length, "car_length");
 CONFIG_FLOAT(car_width, "car_width");
@@ -111,15 +113,14 @@ CONFIG_STRINGLIST(door_config_list, "door_config");
 
 Simulator::Simulator(const std::string& sim_config) :
     reader_({sim_config}),
-    init_config_reader_({CONFIG_init_config_file}),
     laser_noise_(0, 1),
     sim_step_count(0),
     sim_time(0.0) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   if (CONFIG_map_name == "") {
-    std::cerr << "Failed to load map from init config file '"
-              << CONFIG_init_config_file << "'" << std::endl;
+    std::cerr << "Failed to load map from config file '"
+              << sim_config << "'" << std::endl;
     exit(1);
   }
 }
@@ -171,10 +172,6 @@ bool Simulator::Init(ros::NodeHandle& n) {
     return false;
   }
 
-
-  InitSimulatorVizMarkers();
-  DrawMap();
-
   // Create motion model based on robot type
   for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
     const auto& robot_type = CONFIG_robot_types.at(i);
@@ -217,6 +214,9 @@ bool Simulator::Init(ros::NodeHandle& n) {
       }
   }
 
+  InitSimulatorVizMarkers();
+  DrawMap();
+
   mapLinesPublisher =
       n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
   objectLinesPublisher =
@@ -241,10 +241,9 @@ void Simulator::LoadObject(ros::NodeHandle& nh) {
         new ShortTermObject("short_term_config.lua")));
 
   // human
-  for (size_t i = 1; i <= CONFIG_num_humans; i++) {
-    const string prefix = "hu" + std::to_string(i);
+  for (size_t i = 0; i < CONFIG_num_humans; i++) {
     objects.push_back(
-      std::unique_ptr<HumanObject>(new HumanObject({CONFIG_human_config}, prefix)));
+      std::unique_ptr<HumanObject>(new HumanObject({CONFIG_human_config}, i)));
   }
 
   // door
@@ -372,6 +371,8 @@ void Simulator::InitSimulatorVizMarkers() {
 
   for (auto& rps : robot_pub_subs_) {
     p.pose.position.z = 0.5 * CONFIG_car_height;
+    p.pose.position.x = rps.cur_loc.translation.x();
+    p.pose.position.y = rps.cur_loc.translation.y();
     scale.x = CONFIG_car_length;
     scale.y = CONFIG_car_width;
     scale.z = CONFIG_car_height;
@@ -532,7 +533,7 @@ void Simulator::PublishTransform() {
           CONFIG_laser_y, CONFIG_laser_z));
     transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
     br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
-        pf + "/base_link", pf + "/base_laser"));
+        pf + "/base_link", pf + CONFIG_laser_frame));
   }
 }
 
@@ -609,7 +610,7 @@ void Simulator::Update() {
   sim_time += CONFIG_DT;
   for (auto& rps : robot_pub_subs_) {
     rps.motion_model->Step(CONFIG_DT);
-    for (const Line2f& line: rps.motion_model->GetLines()){
+    for (const Line2f& line: rps.motion_model->GetLines()) {
       map_.object_lines.push_back(line);
     }
 
@@ -661,6 +662,37 @@ void Simulator::PublishLocalization() {
     localizationMsg.pose.y = rps.cur_loc.translation.y();
     localizationMsg.pose.theta = rps.cur_loc.angle;
     rps.localizationPublisher.publish(localizationMsg);
+  }
+}
+
+void Simulator::UpdateHumans(const pedsim_msgs::AgentStates& humans) {
+  const vector<pedsim_msgs::AgentState> human_list = humans.agent_states;
+  cout << human_list.size() << endl;
+  int human_id = 0;
+  // Iterate throught the objects and find the humans
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      cout << "Human ID: " << human_id << endl;
+      // Cast the object as a human
+      EntityBase* e_raw = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(e_raw);
+      cout << "UTMRS Human Get" << endl;
+      // Get the corresponding agent state from pedsim
+      pedsim_msgs::AgentState agent_state = human_list[human_id];
+      cout << "Pedsim Human Get" << endl;
+      ut_multirobot_sim::HumanControlCommand command;
+      command.header.frame_id = agent_state.header.frame_id;
+      command.header.stamp = ros::Time::now();
+      command.translational_velocity = agent_state.twist.linear;
+      command.rotational_velocity = 0.0;
+      command.pose = agent_state.pose.position;
+
+      // Subtracting one to get this to place nice with arrays and
+      // basically every other step
+      human->ManualControlCb(command);
+      cout << " Human Updated " << endl;
+      human_id++;
+    }
   }
 }
 

@@ -69,7 +69,7 @@ class HumanObject: public EntityBase {
   // Initialize a default object, probably a simple cylinder?
   HumanObject() = delete;
   // Intialize a default object reading from a file
-  HumanObject(const std::string& config_file, const std::string& topic_prefix);
+  HumanObject(const std::string& config_file, const int& index);
   ~HumanObject() = default;
   void InitializeManualControl(ros::NodeHandle& nh);
   void ManualControlCb(const ut_multirobot_sim::HumanControlCommand& hc);

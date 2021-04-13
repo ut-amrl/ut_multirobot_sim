@@ -21,6 +21,7 @@
 //========================================================================
 
 #include <stdexcept>
+#include <string>
 #include "eigen3/Eigen/Eigen"
 #include "simulator/human_object.h"
 
@@ -49,7 +50,7 @@ CONFIG_INT(mode, "hu_mode");
 CONFIG_STRING(control_topic, "hu_control_topic");
 
 HumanObject::HumanObject(const string& config_file,
-                        const string& topic_prefix) :
+                         const int& index) :
     EntityBase(HUMAN_OBJECT),
     goal_pose_(),
     trans_vel_(0., 0.),
@@ -62,8 +63,8 @@ HumanObject::HumanObject(const string& config_file,
     goal_threshold_(0.3),
     control_topic_("/human_control"),
     config_reader_({config_file}) {
-  CONFIG_VECTOR3FLIST(waypoints, topic_prefix + "_waypoints");
-  cout << topic_prefix + "_waypoints" << endl;
+
+  CONFIG_VECTOR3FLIST(waypoints, "hu" + std::to_string(index) + "_waypoints");
   config_reader::ConfigReader waypoint_reader({config_file});
   waypoints_ = CONFIG_waypoints;
   if (waypoints_.empty()) {
@@ -86,7 +87,7 @@ HumanObject::HumanObject(const string& config_file,
   max_omega_ = CONFIG_max_omega;
   avg_omega_ = CONFIG_avg_omega;
   goal_threshold_ = CONFIG_reach_goal_threshold;
-  control_topic_ = CONFIG_control_topic;
+  control_topic_ = "/human" + std::to_string(index) + CONFIG_control_topic;
 
   // just a cylinder for now
   const float r = CONFIG_radius;
