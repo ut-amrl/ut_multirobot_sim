@@ -17,7 +17,7 @@ IF(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
     "${ESCAPE}[0m")
 ENDIF()
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -g")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -Werror -g")
 
 IF(${CXX} MATCHES "g++")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -rdynamic")
