@@ -8,7 +8,7 @@
 1. [gflags](https://github.com/gflags/gflags)
 1. [Lua5.1](http://www.lua.org/)
 1. [Robot Operating System](http://wiki.ros.org/ROS/Installation)
-1. [Pedsim Ros](https://github.com/simon-andrews/pedsim_ros/tree/utmrs-integration) - Using the specific fork and branch provided here.
+1. [Pedsim ROS](https://github.com/ut-amrl/pedsim_ros/tree/utmrs-integration) - Using the specific fork and branch provided here.
 
 You can install some of these dependencies on *buntu using:
 ```
