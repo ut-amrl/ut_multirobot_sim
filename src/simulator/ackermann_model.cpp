@@ -23,11 +23,12 @@ CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
 CONFIG_STRING(drive_topic, "ak_drive_callback_topic");
 
 AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandle* n) :
-    RobotModel(),
+    RobotModel(ACKERMANN_MODEL),
     last_cmd_(),
     t_last_cmd_(0),
     angular_error_(0, 1),
-    config_reader_(config_file){
+    config_reader_(config_file)
+    {
   // Use the config reader to initialize the subscriber
   last_cmd_.velocity = 0;
   last_cmd_.curvature = 0;

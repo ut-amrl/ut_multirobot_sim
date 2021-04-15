@@ -31,6 +31,17 @@
 
 using pose_2d::Pose2Df;
 
+enum EntityType {
+   ACKERMANN_MODEL,
+   DIFF_DRIVE_MODEL,
+   DOOR,
+   ENTITY_BASE,
+   HUMAN_OBJECT,
+   OMNIDIRECTIONAL_MODEL,
+   ROBOT_MODEL,
+   SHORT_TERM_OBJECT,
+};
+
 class EntityBase{
  protected:
     Pose2Df pose_;
@@ -38,6 +49,11 @@ class EntityBase{
     std::vector<geometry::Line2f> template_lines_;
     // actual line position given current pose pose_
     std::vector<geometry::Line2f> pose_lines_;
+    // What sort of "thing" is this entity?
+    EntityType type_;
+    // Special constructor used by other constructors to set entity types.
+    EntityBase(EntityType type);
+
  public:
     EntityBase();
     virtual ~EntityBase() = default;
@@ -51,6 +67,8 @@ class EntityBase{
     virtual std::vector<geometry::Line2f> GetLines();
     // get template shape
     virtual std::vector<geometry::Line2f> GetTemplateLines();
+    // get entity type
+    EntityType GetType();
 };
 
 #endif  // SRC_SIMULATOR_ENTITY_BASE_H_

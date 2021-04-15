@@ -30,6 +30,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "nav_msgs/Odometry.h"
+#include "pedsim_msgs/AgentStates.h"
 #include "ros/package.h"
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
@@ -39,6 +40,7 @@
 
 #include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
+#include "ut_multirobot_sim/DoorControlMsg.h"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -58,7 +60,6 @@ using pose_2d::Pose2Df;
 
 class Simulator {
   config_reader::ConfigReader reader_;
-  config_reader::ConfigReader init_config_reader_;
 
   std::vector<std::unique_ptr<EntityBase>> objects;
 
@@ -77,13 +78,17 @@ class Simulator {
 
     visualization_msgs::Marker robotPosMarker;
   };
+  ros::Subscriber initSubscriber;
+  ros::Subscriber doorSubscriber;
 
   ros::Publisher mapLinesPublisher;
   ros::Publisher objectLinesPublisher;
+  ros::Publisher humanStateArrayPublisher;
+  ros::Publisher doorStatePublisher;
+  tf::TransformBroadcaster *br;
 
   std::vector<RobotPubSub> robot_pub_subs_;
 
-  tf::TransformBroadcaster *br;
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
   ut_multirobot_sim::Localization2DMsg localizationMsg;
@@ -101,32 +106,37 @@ class Simulator {
 
   uint64_t sim_step_count;
   double sim_time;
+  std::unique_ptr<robot_model::RobotModel> motion_model_;
 
  private:
-  void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
+  void InitVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
                      string type, geometry_msgs::PoseStamped p,
                      geometry_msgs::Point32 scale, double duration,
                      std::vector<float> color);
-  void initSimulatorVizMarkers();
-  void drawMap();
-  void drawObjects();
+  void InitSimulatorVizMarkers();
+  void DrawMap();
+  void DrawObjects();
+  void DoorCallback(const ut_multirobot_sim::DoorControlMsg& msg);
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
-  void publishOdometry();
-  void publishLaser();
-  void publishVisualizationMarkers();
-  void publishTransform();
-  void publishLocalization();
-  void update();
-  void loadObject();
+  void PublishOdometry();
+  void PublishLaser();
+  void PublishVisualizationMarkers();
+  void PublishTransform();
+  void PublishLocalization();
+  void PublishHumanStates();
+  void PublishDoorStates();
+  void Update();
+  void LoadObject(ros::NodeHandle &n);
 
  public:
   Simulator() = delete;
   explicit Simulator(const std::string& sim_config);
   ~Simulator();
-  bool init(ros::NodeHandle &n);
+  bool Init(ros::NodeHandle &n);
   void Run();
+  void UpdateHumans(const pedsim_msgs::AgentStates& humans);
   double GetSimTime() const { return sim_time; }
   uint64_t GetSimStepCount() const { return sim_step_count; }
   double GetStepSize() const;

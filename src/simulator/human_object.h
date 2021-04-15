@@ -20,6 +20,7 @@
 */
 //========================================================================
 
+#include "ut_multirobot_sim/HumanControlCommand.h"
 #include "simulator/entity_base.h"
 #include "config_reader/config_reader.h"
 #include "ros/publisher.h"
@@ -30,20 +31,23 @@
 
 using pose_2d::Pose2Df;
 
-namespace human{
+namespace human {
 
-enum HumanMode{
+enum HumanMode {
      Singleshot,
-     Repeat
+     Repeat,
+     Controlled,
+     Cycle
 };
 
-class HumanObject: public EntityBase{
+class HumanObject: public EntityBase {
  protected:
-  Pose2Df start_pose_;
-  // TODO(yifeng): Change to a sequence of intermediate goals
   Pose2Df goal_pose_;
- 
-  // (vx, vy, vtheta)  
+  std::vector<Eigen::Vector3f> waypoints_;
+  size_t waypoint_index_;
+  bool going_forwards_;
+
+  // (vx, vy, vtheta)
   Eigen::Vector2f trans_vel_;
   double rot_vel_;
   double max_speed_;
@@ -51,7 +55,10 @@ class HumanObject: public EntityBase{
   double max_omega_;
   double avg_omega_;
   HumanMode mode_;
-  double reach_goal_threshold_;
+  double goal_threshold_;
+
+  std::string control_topic_;
+  ros::Subscriber control_subscriber_;
 
   config_reader::ConfigReader config_reader_;
   // (future) predefined trajectory if needed
@@ -62,8 +69,10 @@ class HumanObject: public EntityBase{
   // Initialize a default object, probably a simple cylinder?
   HumanObject() = delete;
   // Intialize a default object reading from a file
-  HumanObject(const std::vector<std::string>& config_file);
+  HumanObject(const std::string& config_file, const int& index);
   ~HumanObject() = default;
+  void InitializeManualControl(ros::NodeHandle& nh);
+  void ManualControlCb(const ut_multirobot_sim::HumanControlCommand& hc);
 
   void SetGoalPose(const Pose2Df& goal_pose);
   // define step function for human object
@@ -74,12 +83,18 @@ class HumanObject: public EntityBase{
   // check if human reaches the current goal
   bool CheckReachGoal();
   // set the maximum speed for human
-  void SetSpeed(const double& max_speed, const double& avg_speed, const double& max_omega = 0.4, const double& avg_omega = 0.2);
+  void SetSpeed(const double& max_speed,
+                const double& avg_speed,
+                const double& max_omega = 0.4,
+                const double& avg_omega = 0.2);
   void SetPose(const Pose2Df& pose);
   void SetVel(const Eigen::Vector2f& trans_vel, const double& rot_vel);
   void SetMode(const HumanMode& mode);
   double GetMaxSpeed();
   double GetAvgSpeed();
+  Eigen::Vector2f GetTransVel() const;
+  double GetRotVel();
+  HumanMode GetMode() const;
 };
 
 }  // namespace human

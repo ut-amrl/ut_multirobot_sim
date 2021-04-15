@@ -54,10 +54,10 @@ CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
 CONFIG_STRING(drive_topic, "drive_callback_topic");
 CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
 
-DiffDriveModel::DiffDriveModel(const vector<string>& config_files, 
-                               ros::NodeHandle* n, 
-                               const std::string topic_prefix) :
-    RobotModel(),
+DiffDriveModel::DiffDriveModel(const vector<string>& config_files,
+                               ros::NodeHandle* n,
+                               const string topic_prefix) :
+    RobotModel(DIFF_DRIVE_MODEL),
     last_cmd_(),
     t_last_cmd_(0),
     angular_error_(0, 1),
@@ -67,7 +67,7 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files,
       1,
       &DiffDriveModel::DriveCallback,
       this);
-    odom_publisher_ = 
+    odom_publisher_ =
         n->advertise<nav_msgs::Odometry>(topic_prefix + CONFIG_odom_topic, 1);
     linear_vel_ = 0.0;
     angular_vel_ = 0.0;

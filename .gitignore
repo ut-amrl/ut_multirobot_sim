@@ -6,3 +6,5 @@ msg_gen
 src/ut_multirobot_sim/
 profile_results
 .vscode
+compile_commands.json
+.clangd

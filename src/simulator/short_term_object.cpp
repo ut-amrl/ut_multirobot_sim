@@ -22,7 +22,7 @@
 
 #include "simulator/short_term_object.h"
 
-ShortTermObject::ShortTermObject() {
+ShortTermObject::ShortTermObject() : EntityBase(SHORT_TERM_OBJECT) {
   // angle, (x, y)
   pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
 
@@ -36,7 +36,7 @@ ShortTermObject::ShortTermObject() {
   pose_lines_ = template_lines_;
 }
 
-ShortTermObject::ShortTermObject(const std::string& config_file) {
+ShortTermObject::ShortTermObject(const std::string& config_file) : EntityBase(SHORT_TERM_OBJECT) {
   pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
   // TODO(yifeng) replace manually defined in the code with loading initial locations
 
@@ -65,8 +65,6 @@ ShortTermObject::ShortTermObject(const std::string& config_file) {
     pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
   }  
 }
-
-
 
 ShortTermObject::~ShortTermObject() {
 }
