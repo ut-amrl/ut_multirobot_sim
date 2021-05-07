@@ -75,4 +75,4 @@ robot_types = {
 robot_config = "config/pedsim_example/jackal_config.lua"
 
 laser_topic = "/Cobot/Laser"
-laser_frame = "base_laser"
+laser_frame = "/base_laser"

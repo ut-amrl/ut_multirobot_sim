@@ -1,0 +1,18 @@
+int32 action
+---
+ut_multirobot_sim/Pose2Df[] robot_poses
+ut_multirobot_sim/Pose2Df[] robot_vels
+ut_multirobot_sim/Pose2Df[] human_poses
+ut_multirobot_sim/Pose2Df[] human_vels
+ut_multirobot_sim/Pose2Df goal_pose
+ut_multirobot_sim/Pose2Df door_pose
+uint8 door_state
+# 0 = GoAlone
+# 1 = Halt
+# 2 = Follow
+# 3 = Pass
+uint8 robot_state
+# -1 is no target, otherwise index of target
+int32 follow_target
+float32 reward
+bool done

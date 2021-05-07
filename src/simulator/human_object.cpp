@@ -111,8 +111,8 @@ HumanObject::HumanObject(const string& config_file,
 
 void HumanObject::InitializeManualControl(ros::NodeHandle& nh) {
   SetMode(HumanMode::Controlled);
-  control_subscriber_ =
-      nh.subscribe(control_topic_, 1, &HumanObject::ManualControlCb, this);
+  // control_subscriber_ =
+      // nh.subscribe(control_topic_, 1, &HumanObject::ManualControlCb, this);
 }
 
 void HumanObject::ManualControlCb(const ut_multirobot_sim::HumanControlCommand& hcc) {
@@ -163,7 +163,6 @@ void HumanObject::Step(const double& dt) {
         (goal_pose_.translation - pose_.translation).normalized() * avg_speed_;
     pose_.translation += dt * trans_vel_;
   }
-
   this->Transform();
   this->CheckReachGoal();
 }

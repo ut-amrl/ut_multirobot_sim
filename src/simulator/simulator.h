@@ -42,6 +42,7 @@
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "ut_multirobot_sim/DoorControlMsg.h"
 
+#include "std_msgs/Bool.h"
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
 #include "simulator/vector_map.h"
@@ -85,6 +86,10 @@ class Simulator {
   ros::Publisher objectLinesPublisher;
   ros::Publisher humanStateArrayPublisher;
   ros::Publisher doorStatePublisher;
+  ros::Publisher halt_pub_;
+  ros::Publisher go_alone_pub_;
+  ros::Publisher follow_pub_;
+  ros::Publisher config_pub_;
   tf::TransformBroadcaster *br;
 
   std::vector<RobotPubSub> robot_pub_subs_;
@@ -107,6 +112,18 @@ class Simulator {
   uint64_t sim_step_count;
   double sim_time;
   std::unique_ptr<robot_model::RobotModel> motion_model_;
+  // TODO(jaholtz) Initialize these, possibly all need to be arrays
+  // (one per robot)
+  bool complete_;
+  Pose2Df goal_pose_;
+  // TODO(jaholtz) Open question, what's the best way to handle their not being
+  // a next door?
+  Pose2Df next_door_pose_;
+  int next_door_state_;
+  ros::NodeHandle nh_;
+  int action_;
+  int current_step_;
+  int follow_target_;
 
  private:
   void InitVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
@@ -129,6 +146,14 @@ class Simulator {
   void PublishDoorStates();
   void Update();
   void LoadObject(ros::NodeHandle &n);
+  void GoAlone();
+  void Follow();
+  void Halt();
+  void Pass();
+  void RunAction();
+  void HaltPub(std_msgs::Bool halt_message);
+  vector<human::HumanObject*> GetHumans();
+  human::HumanObject* FindFollowTarget(const int& robot_index, bool* found);
 
  public:
   Simulator() = delete;
@@ -136,9 +161,23 @@ class Simulator {
   ~Simulator();
   bool Init(ros::NodeHandle &n);
   void Run();
+  bool Reset();
   void UpdateHumans(const pedsim_msgs::AgentStates& humans);
   double GetSimTime() const { return sim_time; }
   uint64_t GetSimStepCount() const { return sim_step_count; }
   double GetStepSize() const;
+  std::vector<Pose2Df> GetRobotPoses() const;
+  std::vector<Pose2Df> GetRobotVels() const;
+  std::vector<Pose2Df> GetHumanPoses() const;
+  std::vector<Pose2Df> GetVisibleHumanPoses(const int& robot_id) const;
+  std::vector<Pose2Df> GetHumanVels() const;
+  std::vector<Pose2Df> GetVisibleHumanVels(const int& robot_id) const;
+  Pose2Df GetGoalPose() const;
+  Pose2Df GetNextDoorPose() const;
+  int GetNextDoorState() const;
+  int GetRobotState() const;
+  int GetFollowTarget() const;
+  bool IsComplete() const;
+  void SetAction(const int& action);
 };
 #endif  // SIMULATOR_H

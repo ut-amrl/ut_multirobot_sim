@@ -27,12 +27,15 @@
 #include <random>
 #include <string>
 
+#include "config_reader/macros.h"
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
 #include "geometry_msgs/Pose2D.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "gflags/gflags.h"
 
+#include "amrl_msgs/NavigationConfigMsg.h"
+#include "amrl_msgs/Pose2Df.h"
 #include "ros/time.h"
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
@@ -49,11 +52,14 @@
 #include "ut_multirobot_sim/DoorArrayMsg.h"
 #include "ut_multirobot_sim/DoorStateMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
-#include "ut_multirobot_sim/DoorControlMsg.h"
+#include "ut_multirobot_sim/HumanStateArrayMsg.h"
+// #include "ut_multirobot_sim/human_object.h"
 #include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
 
+using amrl_msgs::NavigationConfigMsg;
+// using amrl_msgs::Pose2Df;
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
 using geometry::Heading;
@@ -64,6 +70,7 @@ using math_util::DegToRad;
 using math_util::RadToDeg;
 using ackermann::AckermannModel;
 using std::atan2;
+using std_msgs::Bool;
 using omnidrive::OmnidirectionalModel;
 using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
@@ -71,6 +78,8 @@ using human::HumanObject;
 using door::Door;
 using door::DoorState;
 using ut_multirobot_sim::DoorControlMsg;
+using ut_multirobot_sim::HumanStateMsg;
+using ut_multirobot_sim::HumanStateArrayMsg;
 
 // CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
@@ -104,9 +113,12 @@ CONFIG_FLOAT(laser_angle_increment, "laser_angle_increment");
 CONFIG_FLOAT(laser_min_range, "laser_min_range");
 CONFIG_FLOAT(laser_max_range, "laser_max_range");
 
+CONFIG_INT(max_steps, "max_steps");
+
 CONFIG_STRING(map_name, "map_name");
 // Initial location
 CONFIG_VECTOR3FLIST(start_poses, "start_poses");
+CONFIG_VECTOR3FLIST(goal_poses, "goal_poses");
 CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
 CONFIG_STRING(human_config, "human_config");
 CONFIG_STRINGLIST(door_config_list, "door_config");
@@ -115,7 +127,14 @@ Simulator::Simulator(const std::string& sim_config) :
     reader_({sim_config}),
     laser_noise_(0, 1),
     sim_step_count(0),
-    sim_time(0.0) {
+    sim_time(0.0),
+    complete_(false),
+    goal_pose_(0.0, {43.0,  4.5}),
+    next_door_pose_(0.0, {0.0, 0.0}),
+    //  TODO(jaholtz) set this to the open state (whatever that is)
+    next_door_state_(0),
+    action_(0),
+    current_step_(0) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   if (CONFIG_map_name == "") {
@@ -151,6 +170,10 @@ std::string IndexToPrefix(const size_t index) {
 }
 
 bool Simulator::Init(ros::NodeHandle& n) {
+  halt_pub_ = n.advertise<Bool>("/halt_robot", 1);
+  go_alone_pub_ = n.advertise<amrl_msgs::Pose2Df>("/move_base_simple/goal", 1);
+  follow_pub_ = n.advertise<amrl_msgs::Pose2Df>("/nav_override", 1);
+  config_pub_ = n.advertise<NavigationConfigMsg>("/nav_config", 1);
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
   scanDataMsg.angle_min = CONFIG_laser_angle_min;
@@ -201,7 +224,7 @@ bool Simulator::Init(ros::NodeHandle& n) {
     rps.vizLaserPublisher =
         n.advertise<sensor_msgs::LaserScan>(pf + "/scan", 1);
     rps.posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
-        pf + "/simulator_visualization", 6);
+        pf + "/simulator_visualization", 1);
     rps.truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
         pf + "/simulator_true_pose", 1);
 
@@ -213,6 +236,7 @@ bool Simulator::Init(ros::NodeHandle& n) {
         localizationMsg.header.seq = 0;
       }
   }
+  goal_pose_ = {0, {CONFIG_goal_poses[0][0], CONFIG_goal_poses[0][1]}};
 
   InitSimulatorVizMarkers();
   DrawMap();
@@ -231,14 +255,57 @@ bool Simulator::Init(ros::NodeHandle& n) {
   br = new tf::TransformBroadcaster();
 
   this->LoadObject(n);
+  GoAlone();
+  return true;
+}
+
+bool Simulator::Reset() {
+  current_step_ = 0;
+  scanDataMsg.header.seq = 0;
+  scanDataMsg.header.frame_id = CONFIG_laser_frame;
+  scanDataMsg.angle_min = CONFIG_laser_angle_min;
+  scanDataMsg.angle_max = CONFIG_laser_angle_max;
+  scanDataMsg.angle_increment = CONFIG_laser_angle_increment;
+  scanDataMsg.range_min = CONFIG_laser_min_range;
+  scanDataMsg.range_max = CONFIG_laser_max_range;
+  scanDataMsg.intensities.clear();
+  scanDataMsg.time_increment = 0.0;
+  scanDataMsg.scan_time = 0.05;
+
+  odometryTwistMsg.header.seq = 0;
+  odometryTwistMsg.header.frame_id = "odom";
+  odometryTwistMsg.child_frame_id = "base_footprint";
+
+  if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
+    std::cerr << "Robot type and robot start pose lists are"
+                 "not the same size!" << std::endl;
+    return false;
+  }
+
+  // Update motion model based
+  for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
+    const auto& start_pose = CONFIG_start_poses.at(i);
+    const auto pf = IndexToPrefix(i);
+    RobotPubSub* robot = &robot_pub_subs_[i];
+    robot->motion_model->SetPose(Pose2Df(start_pose.z(),
+                                       {start_pose.x(), start_pose.y()}));
+
+      if (FLAGS_localize) {
+        localizationMsg.header.frame_id = "map";
+        localizationMsg.header.seq = 0;
+      }
+  }
+  goal_pose_ = {0, {CONFIG_goal_poses[0][0], CONFIG_goal_poses[0][1]}};
+
+  this->LoadObject(nh_);
+  action_ = 0;
+  Run();
   return true;
 }
 
 // TODO(yifeng): Change this into a general way
 void Simulator::LoadObject(ros::NodeHandle& nh) {
-  // TODO (yifeng): load short term objects from list
-  objects.push_back(std::unique_ptr<ShortTermObject>(
-        new ShortTermObject("short_term_config.lua")));
+  objects.clear();
 
   // human
   for (size_t i = 0; i < CONFIG_num_humans; i++) {
@@ -255,15 +322,15 @@ void Simulator::LoadObject(ros::NodeHandle& nh) {
 
   // TODO(jaholtz) why is this a separate block and not handled when the
   // human objects are created.
-  for (const std::unique_ptr<EntityBase>& e : objects) {
-    if (e->GetType() == HUMAN_OBJECT) {
-      EntityBase* e_raw = e.get();
-      HumanObject* human = static_cast<HumanObject*>(e_raw);
-      if (human->GetMode() == human::HumanMode::Controlled) {
-        human->InitializeManualControl(nh);
-      }
-    }
-  }
+  // for (const std::unique_ptr<EntityBase>& e : objects) {
+    // if (e->GetType() == HUMAN_OBJECT) {
+      // EntityBase* e_raw = e.get();
+      // HumanObject* human = static_cast<HumanObject*>(e_raw);
+      // if (human->GetMode() == human::HumanMode::Controlled) {
+        // human->InitializeManualControl(nh);
+      // }
+    // }
+  // }
 }
 
 void Simulator::DoorCallback(const DoorControlMsg& msg) {
@@ -513,6 +580,17 @@ void Simulator::PublishTransform() {
                                                ros::Time::now(), "/map",
                                                pf + "/odom"));
     }
+
+    // Use the first robot to handle the "default" no prefix case.
+    // Useful for making this place nicer with single robot cases (and
+    // third-party software that assumes the single robot case.)
+    if (i == 0) {
+        transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
+        transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
+        br->sendTransform(tf::StampedTransform(transform,
+                                               ros::Time::now(), pf + "/odom",
+                                               "/odom"));
+    }
     transform.setOrigin(tf::Vector3(rps.cur_loc.translation.x(),
           rps.cur_loc.translation.y(), 0.0));
     q.setRPY(0.0, 0.0, rps.cur_loc.angle);
@@ -596,6 +674,11 @@ void Simulator::PublishDoorStates() {
       } else {
         door_state_msg.doorStatus = 2;
       }
+      // Updating next door with the first door in the list, only works
+      // in single door environments.
+      // TODO(jaholtz) Identify the next door on each robot's path.
+      next_door_pose_ = door->GetPose();
+      next_door_state_ = door_state_msg.doorStatus;
 
       door_array_msg.door_states.push_back(door_state_msg);
     }
@@ -667,19 +750,15 @@ void Simulator::PublishLocalization() {
 
 void Simulator::UpdateHumans(const pedsim_msgs::AgentStates& humans) {
   const vector<pedsim_msgs::AgentState> human_list = humans.agent_states;
-  cout << human_list.size() << endl;
   int human_id = 0;
   // Iterate throught the objects and find the humans
   for (size_t i = 0; i < objects.size(); ++i) {
     if (objects[i]->GetType() == HUMAN_OBJECT) {
-      cout << "Human ID: " << human_id << endl;
       // Cast the object as a human
       EntityBase* e_raw = objects[i].get();
       HumanObject* human = static_cast<HumanObject*>(e_raw);
-      cout << "UTMRS Human Get" << endl;
       // Get the corresponding agent state from pedsim
       pedsim_msgs::AgentState agent_state = human_list[human_id];
-      cout << "Pedsim Human Get" << endl;
       ut_multirobot_sim::HumanControlCommand command;
       command.header.frame_id = agent_state.header.frame_id;
       command.header.stamp = ros::Time::now();
@@ -687,29 +766,361 @@ void Simulator::UpdateHumans(const pedsim_msgs::AgentStates& humans) {
       command.rotational_velocity = 0.0;
       command.pose = agent_state.pose.position;
 
-      // Subtracting one to get this to place nice with arrays and
-      // basically every other step
       human->ManualControlCb(command);
-      cout << " Human Updated " << endl;
       human_id++;
     }
   }
 }
 
+vector<Pose2Df> Simulator::GetRobotPoses() const {
+  vector<Pose2Df> output;
+  for (auto& rps : robot_pub_subs_) {
+    output.push_back(rps.cur_loc);
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetRobotVels() const {
+  vector<Pose2Df> output;
+  for (auto& rps : robot_pub_subs_) {
+    output.push_back(rps.vel);
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
+  vector<Pose2Df> output;
+  const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
+  const Pose2Df zero_pose(0, {0, 0});
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+      const Pose2Df human_pose = human->GetPose();
+      if (map_.Intersects(robot_pose, human_pose.translation)) {
+          output.push_back(zero_pose);
+      } else {
+        output.push_back(human_pose);
+      }
+    }
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetHumanPoses() const {
+  vector<Pose2Df> output;
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+      output.push_back(human->GetPose());
+    }
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetVisibleHumanVels(const int& robot_id) const {
+  vector<Pose2Df> output;
+  const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
+  const Pose2Df zero_pose(0, {0, 0});
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+      const Pose2Df human_pose = human->GetPose();
+      if (map_.Intersects(robot_pose, human_pose.translation)) {
+          output.push_back(zero_pose);
+      } else {
+        output.push_back({human->GetRotVel(), human->GetTransVel()});
+      }
+    }
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetHumanVels() const {
+  vector<Pose2Df> output;
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+      output.push_back({human->GetRotVel(), human->GetTransVel()});
+    }
+  }
+  return output;
+}
+
+Pose2Df Simulator::GetGoalPose() const {
+  return goal_pose_;
+}
+
+Pose2Df Simulator::GetNextDoorPose() const {
+  return next_door_pose_;
+}
+
+int Simulator::GetNextDoorState() const {
+  return next_door_state_;
+}
+
+bool Simulator::IsComplete() const {
+  // TODO(jaholtz) this is currently assuming a single robot.
+  const int robot_index = 0;
+  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+  const float distance =
+      (robot->cur_loc.translation - goal_pose_.translation).norm();
+  const float goal_threshold_ = 0.5;
+  const bool timeout = current_step_ > CONFIG_max_steps;
+  return distance < goal_threshold_ || timeout;
+}
+
+CumulativeFunctionTimer pub_timer("Publishing Halt");
+void Simulator::HaltPub(Bool halt_message) {
+  CumulativeFunctionTimer::Invocation invoke(&pub_timer);
+  halt_pub_.publish(halt_message);
+}
+
+CumulativeFunctionTimer halt_timer("Halt");
+void Simulator::Halt() {
+  CumulativeFunctionTimer::Invocation invoke(&halt_timer);
+  Bool halt_message;
+  halt_message.data = true;
+  HaltPub(halt_message);
+}
+
+CumulativeFunctionTimer ga_timer("GoAlone");
+void Simulator::GoAlone() {
+  CumulativeFunctionTimer::Invocation invoke(&ga_timer);
+  NavigationConfigMsg conf_msg;
+  conf_msg.max_vel = 1.5;
+  conf_msg.margin = 0.05;
+  conf_msg.clearance_weight = -0.5;
+  conf_msg.ang_accel = -1;
+  conf_msg.max_accel = -1;
+  conf_msg.carrot_dist = -1;
+  conf_msg.max_decel = -1;
+  config_pub_.publish(conf_msg);
+  amrl_msgs::Pose2Df target_message;
+  target_message.x = goal_pose_.translation.x();
+  target_message.y = goal_pose_.translation.y();
+  target_message.theta = goal_pose_.angle;
+  go_alone_pub_.publish(target_message);
+}
+
+vector<HumanObject*> Simulator::GetHumans() {
+  vector<HumanObject*> output;
+  for (size_t i = 0; i < objects.size(); ++i) {
+    if (objects[i]->GetType() == HUMAN_OBJECT) {
+      EntityBase* base = objects[i].get();
+      HumanObject* human = static_cast<HumanObject*>(base);
+      output.push_back(human);
+    }
+  }
+  return output;
+}
+
+HumanObject* GetClosest(const vector<HumanObject*> humans,
+                        const Vector2f pose,
+                        const vector<int> indices,
+                        int* index) {
+  float best_dist = 9999;
+  HumanObject* best_human;
+  int best_index = 0;
+  int count = 0;
+  for (HumanObject* human : humans) {
+    const Vector2f h_pose = human->GetPose().translation;
+    const Vector2f diff = h_pose - pose;
+    const float dist = diff.norm();
+    if (dist < best_dist) {
+      best_dist = dist;
+      best_human = human;
+      best_index = count;
+    }
+    count++;
+  }
+  *index = best_index;
+  return best_human;
+}
+
+HumanObject* Simulator::FindFollowTarget(const int& robot_index,
+                                         bool* found) {
+  // Order is front_left, front, front_right
+  vector<HumanObject*> left;
+  vector<HumanObject*> front_left;
+  vector<HumanObject*> front;
+  vector<HumanObject*> front_right;
+  vector<HumanObject*> right;
+  vector<int> indices;
+  // todo(jaholtz) Consider if we need to shrink or grow this margin.
+  const float kRobotLength = 0.5;
+  const float kLowerLeft = DegToRad(90.0);
+  const float kUpperLeft = DegToRad(15.0);
+  const float kLowerRight = DegToRad(270.0);
+  const float kUpperRight = DegToRad(345.0);
+
+  const vector<HumanObject*> humans = GetHumans();
+  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+  const Vector2f pose = robot->cur_loc.translation;
+  const float theta = robot->cur_loc.angle;
+
+  for (size_t i = 0; i < humans.size(); i++) {
+    HumanObject* human = humans[i];
+    const Vector2f h_pose(human->GetPose().translation.x(),
+                          human->GetPose().translation.y());
+    const bool intersects = map_.Intersects(pose, h_pose);
+    if (intersects) {
+      break;
+    }
+    // Transform the pose to robot reference frame
+    const Vector2f diff = h_pose - pose;
+    Eigen::Rotation2Df rot(-theta);
+    const Vector2f transformed = rot * diff;
+    const float angle = math_util::AngleMod(geometry::Angle(diff) - theta);
+    if (transformed.x() > kRobotLength) {
+      if (angle < kLowerLeft && angle > kUpperLeft) {
+        front_left.push_back(human);
+      } else if (angle > kLowerRight && angle < kUpperRight) {
+        front_right.push_back(human);
+      } else if (angle < kUpperLeft || angle > kUpperRight) {
+        front.push_back(human);
+        indices.push_back(i);
+      }
+    } else if (transformed.x() > 0) {
+      if (angle < kLowerLeft && angle > kUpperLeft) {
+        left.push_back(human);
+      } else if (angle > kLowerRight && angle < kUpperRight) {
+        right.push_back(human);
+      }
+    }
+  }
+  *found = true;
+  if (front.size() < 1) {
+    *found = false;
+  }
+  return GetClosest(front, pose, indices, &follow_target_);
+}
+
+CumulativeFunctionTimer follow_timer("Follow");
+void Simulator::Follow() {
+  CumulativeFunctionTimer::Invocation invoke(&follow_timer);
+  const float kFollowDist = 1.5;
+  // TODO(jaholtz) Currently assumes only one robot.
+  const int robot_index = 0;
+  bool found = true;
+  HumanObject* target = FindFollowTarget(robot_index, &found);
+  if (!found) {
+    Halt();
+    return;
+  }
+  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+  const Vector2f pose = robot->cur_loc.translation;
+  const Vector2f h_pose = target->GetPose().translation;
+  const Vector2f towards_bot = pose - h_pose;
+  const Vector2f target_pose = h_pose + kFollowDist * towards_bot.normalized();
+  const Vector2f target_vel = target->GetTransVel();
+  NavigationConfigMsg conf_msg;
+  conf_msg.max_vel = target_vel.norm() - .001;
+  conf_msg.margin = 0.0;
+  conf_msg.clearance_weight = 0.5;
+  conf_msg.ang_accel = -1;
+  conf_msg.max_accel = -1;
+  conf_msg.carrot_dist = -1;
+  conf_msg.max_decel = -1;
+  config_pub_.publish(conf_msg);
+  amrl_msgs::Pose2Df follow_msg;
+  follow_msg.x = target_pose.x();
+  follow_msg.y = target_pose.y();
+  follow_pub_.publish(follow_msg);
+}
+
+CumulativeFunctionTimer pass_timer("Pass");
+void Simulator::Pass() {
+  CumulativeFunctionTimer::Invocation invoke(&pass_timer);
+  const float kLeadDist = 1.5;
+  const int robot_index = 0;
+  bool found = true;
+  HumanObject* target = FindFollowTarget(robot_index, &found);
+  if (!found) {
+    Halt();
+    return;
+  }
+  const Vector2f h_pose = target->GetPose().translation;
+  const Vector2f target_vel = target->GetTransVel();
+  const Vector2f target_pose = h_pose + kLeadDist * target_vel.normalized();
+  NavigationConfigMsg conf_msg;
+  conf_msg.max_vel = target_vel.norm() + .5;
+  conf_msg.margin = 0.0;
+  conf_msg.clearance_weight = 0.0;
+  conf_msg.ang_accel = -1;
+  conf_msg.max_accel = -1;
+  conf_msg.carrot_dist = -1;
+  conf_msg.max_decel = -1;
+  config_pub_.publish(conf_msg);
+  amrl_msgs::Pose2Df follow_msg;
+  follow_msg.x = target_pose.x();
+  follow_msg.y = target_pose.y();
+  follow_pub_.publish(follow_msg);
+}
+
+void Simulator::SetAction(const int& action) {
+  action_ = action;
+}
+
+int Simulator::GetFollowTarget() const {
+  if (action_ == 2 || action_ == 3) {
+    return follow_target_;
+  }
+  return -1;
+}
+
+int Simulator::GetRobotState() const {
+  return action_;
+}
+
+void Simulator::RunAction() {
+  cout << "Action: " << action_ << endl;
+  switch(action_) {
+    case 0:
+      GoAlone();
+      break;
+    case 1:
+      // GoAlone();
+      Halt();
+      break;
+    case 2:
+      // GoAlone();
+      Follow();
+      break;
+    case 3:
+      // GoAlone();
+      Pass();
+      break;
+    default:
+      GoAlone();
+  }
+}
+
 void Simulator::Run() {
+  // Run Action
+  // TODO(jaholtz) Make this a service call instead
+  current_step_++;
+  RunAction();
   // Simulate time-step.
   Update();
-  //publish odometry and status
+  // //publish odometry and status
   PublishOdometry();
-  //publish laser rangefinder messages
+  // //publish laser rangefinder messages
   PublishLaser();
-  // publish visualization marker messages
+  // // publish visualization marker messages
   PublishVisualizationMarkers();
-  //publish tf
+  // //publish tf
   PublishTransform();
-  //publish array of human states
+  // //publish array of human states
   PublishHumanStates();
-  //publish array of door states
+  // //publish array of door states
   PublishDoorStates();
 
   if (FLAGS_localize) {

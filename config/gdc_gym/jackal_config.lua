@@ -28,8 +28,8 @@ min_turn_radius = 0.0
 
 -- laser_topic = "velodyne_2dscan"
 laser_loc = Vector3(0.07, 0, 0.5)
-car_width = 0.43
-car_length = 0.5
+car_width = 0.86
+car_length = 1.0
 car_height = 0.65;
 
 laser_angle_min = DegToRad(-180.0);

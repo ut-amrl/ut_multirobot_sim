@@ -3,15 +3,15 @@
 
     <node pkg="ut_multirobot_sim" type="simulator_link"
         output='screen' name="simulator" cwd="node"
-        args="-sim_config config/pedsim_example/sim_config.lua --localize --use_pedsim" />
+        args="-sim_config config/gdc_gym/sim_config.lua --localize --use_pedsim" />
 
     <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" /> -->
 
     <node pkg="graph_navigation" type="navigation" name="graph_navigation"
-        args="-map $(find ut_multirobot_sim)/maps/SimHallway/SimHallway.navigation.txt" />
+        args="-map /home/jaholtz/code/amrl_maps/GDC1/GDC1.navigation.txt" />
 
-    <include file="$(find ut_multirobot_sim)/config/pedsim_example/pedsim_launch.launch" />
-    <node pkg="pedestrian_simulation" type="pedsim_utmrs_proxy.py" name="pedsim_utmrs_proxy" args="6" output="screen" />
+    <include file="$(find ut_multirobot_sim)/config/gdc_gym/pedsim_launch.launch" />
+    <!-- <node pkg="pedestrian_simulation" type="pedsim_utmrs_proxy.py" name="pedsim_utmrs_proxy" args="6" output="screen" /> -->
 
     <param name="enable_statistics" value="true" />
 </launch>

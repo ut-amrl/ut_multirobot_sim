@@ -17,7 +17,7 @@ IF(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
     "${ESCAPE}[0m")
 ENDIF()
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -Werror -g")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -fopenmp -Wall -Werror -g")
 
 IF(${CXX} MATCHES "g++")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -rdynamic")
@@ -25,7 +25,7 @@ ENDIF()
 
 IF(${CMAKE_BUILD_TYPE} MATCHES "Release")
   MESSAGE(STATUS "Additional Flags for Release mode")
-  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fopenmp -O3 -DNDEBUG")
+  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 ELSEIF(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   MESSAGE(STATUS "Additional Flags for Debug mode")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g")
@@ -53,6 +53,7 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader/include)
 
 ROSBUILD_GENMSG()
+ROSBUILD_GENSRV()
 
 ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/submodules/shared)
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/shared)
