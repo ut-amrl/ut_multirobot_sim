@@ -19,9 +19,9 @@
     <arg name="max_robot_speed" value="1.5"/>
     <arg name="robot_mode" value="1"/>
     <arg name="enable_groups" value="false"/>
-    <arg name="pose_initial_x" value="36.124"/>
-    <arg name="pose_initial_y" value="15.972"/>
-    <arg name="pose_initial_theta" value="3.14"/>
+    <arg name="pose_initial_x" value="-36.1"/>
+    <arg name="pose_initial_y" value="20.65"/>
+    <arg name="pose_initial_theta" value="0"/>
   </include>
 
   <!-- <include file="$(find pedsim_visualizer)/launch/visualizer.launch"/> -->

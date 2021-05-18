@@ -7,7 +7,7 @@
     <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" /> -->
 
     <node pkg="graph_navigation" type="navigation" name="graph_navigation"
-        args="-map /home/jaholtz/code/amrl_maps/GDC1/GDC1.navigation.txt" />
+        args="-map /root/amrl_maps/GDC1/GDC1.navigation.txt" />
 
     <include file="$(find ut_multirobot_sim)/config/gdc_gym_gen/pedsim_launch.launch" />
 

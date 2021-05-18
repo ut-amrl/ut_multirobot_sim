@@ -10,25 +10,25 @@ function Vector2(x, y)
     return math.pi * d / 180
   end
 
-  map_name =  "/home/jaholtz/code/amrl_maps/GDC1/GDC1.vectormap.txt"
+  map_name =  "/root/amrl_maps/GDC1/GDC1.vectormap.txt"
   -- Simulator starting location.
   start_poses = {
     {
-      36.124,
-      15.972,
-      3.14
+      -36.1,
+      20.65,
+      0
     }
   }
 
   goal_poses = {
     {
-      2.03,
-      6.68,
+      34.3,
+      7.04,
       1.5708
     }
   }
 
-  num_humans = 18
+  num_humans = 9
   human_config = "config/gdc_gym_gen/humans.lua"
 
   door_config_list = {
@@ -38,7 +38,7 @@ function Vector2(x, y)
   -- Time-step for simulation.
   delta_t = 0.025
   -- max_steps = 12000
-  max_steps = 1200
+  max_steps = 2200
 
   -- Simulator TF publications
   publish_tfs = true;
