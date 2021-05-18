@@ -38,12 +38,13 @@ class DiffDriveModel : public robot_model::RobotModel {
  public:
   DiffDriveModel() = delete;
   // Intialize a default object reading from a file
-  DiffDriveModel(const std::vector<std::string>& config_files, 
-                 ros::NodeHandle* n, 
+  DiffDriveModel(const std::vector<std::string>& config_files,
+                 ros::NodeHandle* n,
                  const std::string topic_prefix);
   ~DiffDriveModel() = default;
   // define Step function for updating
   void Step(const double& dt);
+  virtual void SetVel(const pose_2d::Pose2Df& vel);
   void PublishOdom(const float dt);
 };
 

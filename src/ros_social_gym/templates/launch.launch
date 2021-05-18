@@ -1,10 +1,10 @@
 <launch>
-    <arg name="outfile" default="screen" />
+    <arg name="outfile" default="/dev/null" />
 
-    <node pkg="ut_multirobot_sim" type="simulator_link" name="simulator" cwd="node" output="screen"
-        args="-sim_config config/gdc_gym_gen/sim_config.lua -speedup_factor 0.05 --localize --use_pedsim" />
+    <node pkg="ut_multirobot_sim" type="simulator_link" name="simulator" cwd="node"
+        args="-sim_config config/gdc_gym_gen/sim_config.lua -speedup_factor 1.0 --localize --use_pedsim" />
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" />
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" /> -->
 
     <node pkg="graph_navigation" type="navigation" name="graph_navigation"
         args="-map /home/jaholtz/code/amrl_maps/GDC1/GDC1.navigation.txt" />

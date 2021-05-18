@@ -134,7 +134,8 @@ Simulator::Simulator(const std::string& sim_config) :
     //  TODO(jaholtz) set this to the open state (whatever that is)
     next_door_state_(0),
     action_(0),
-    current_step_(0) {
+    current_step_(0),
+    target_locked_(false) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   if (CONFIG_map_name == "") {
@@ -889,6 +890,7 @@ void Simulator::Halt() {
   Bool halt_message;
   halt_message.data = true;
   HaltPub(halt_message);
+  robot_pub_subs_[0].motion_model->SetVel({0, {0, 0}});
 }
 
 CumulativeFunctionTimer ga_timer("GoAlone");
@@ -897,7 +899,7 @@ void Simulator::GoAlone() {
   NavigationConfigMsg conf_msg;
   conf_msg.max_vel = 1.5;
   conf_msg.margin = 0.05;
-  conf_msg.clearance_weight = -0.5;
+  conf_msg.clearance_weight = 0.05;
   conf_msg.ang_accel = -1;
   conf_msg.max_accel = -1;
   conf_msg.carrot_dist = -1;
@@ -1009,22 +1011,25 @@ void Simulator::Follow() {
   const float kFollowDist = 1.5;
   // TODO(jaholtz) Currently assumes only one robot.
   const int robot_index = 0;
-  bool found = true;
-  HumanObject* target = FindFollowTarget(robot_index, &found);
-  if (!found) {
-    Halt();
-    return;
+  if (!target_locked_) {
+    bool found = true;
+    target_ = FindFollowTarget(robot_index, &found);
+    if (!found) {
+      Halt();
+      return;
+    }
+    target_locked_ = true;
   }
   const RobotPubSub* robot = &robot_pub_subs_[robot_index];
   const Vector2f pose = robot->cur_loc.translation;
-  const Vector2f h_pose = target->GetPose().translation;
+  const Vector2f h_pose = target_->GetPose().translation;
   const Vector2f towards_bot = pose - h_pose;
   const Vector2f target_pose = h_pose + kFollowDist * towards_bot.normalized();
-  const Vector2f target_vel = target->GetTransVel();
+  const Vector2f target_vel = target_->GetTransVel();
   NavigationConfigMsg conf_msg;
-  conf_msg.max_vel = target_vel.norm() - .001;
+  conf_msg.max_vel = target_vel.norm() - .01;
   conf_msg.margin = 0.0;
-  conf_msg.clearance_weight = 0.5;
+  conf_msg.clearance_weight = 0.05;
   conf_msg.ang_accel = -1;
   conf_msg.max_accel = -1;
   conf_msg.carrot_dist = -1;
@@ -1053,7 +1058,7 @@ void Simulator::Pass() {
   NavigationConfigMsg conf_msg;
   conf_msg.max_vel = target_vel.norm() + .5;
   conf_msg.margin = 0.0;
-  conf_msg.clearance_weight = 0.0;
+  conf_msg.clearance_weight = 0.5;
   conf_msg.ang_accel = -1;
   conf_msg.max_accel = -1;
   conf_msg.carrot_dist = -1;
@@ -1066,6 +1071,9 @@ void Simulator::Pass() {
 }
 
 void Simulator::SetAction(const int& action) {
+  if (action_ != action) {
+    target_locked_ = false;
+  }
   action_ = action;
 }
 
@@ -1081,7 +1089,6 @@ int Simulator::GetRobotState() const {
 }
 
 void Simulator::RunAction() {
-  cout << "Action: " << action_ << endl;
   switch(action_) {
     case 0:
       GoAlone();

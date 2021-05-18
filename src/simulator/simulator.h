@@ -124,6 +124,8 @@ class Simulator {
   int action_;
   int current_step_;
   int follow_target_;
+  bool target_locked_;
+  human::HumanObject* target_;
 
  private:
   void InitVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,

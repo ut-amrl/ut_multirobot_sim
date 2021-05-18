@@ -176,7 +176,7 @@ def MakeScenario(config):
         f.write(sim_config_lua_template.render(config))
 
 def GenerateScenario():
-    num_humans = randint(5, 40)
+    num_humans = randint(1, 25)
     robot_start = randint(0, len(robot_positions) - 1)
     robot_end = robot_start
     while (robot_start == robot_end):

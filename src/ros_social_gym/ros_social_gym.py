@@ -14,6 +14,7 @@ import roslaunch
 import sys
 import gym
 from gym import spaces
+import json
 import numpy as np
 import os
 import time
@@ -42,7 +43,6 @@ def ClosestHuman(robot_pose, poses):
 
 # TODO(jaholtz, special handling for follow)
 def Force(response):
-    #  robot_state = response.
     robot_pose = response.robot_poses[0]
     robot_pose = np.array([robot_pose.x, robot_pose.y])
     human_poses = response.human_poses
@@ -91,13 +91,18 @@ def DistanceFromGoal(response):
 class RosSocialEnv(gym.Env):
     """A ros-based social navigation environment for OpenAI gym"""
 
-    def __init__(self):
+    def __init__(self, reward):
         super(RosSocialEnv, self).__init__()
         seed(1)
         # Halt, GoAlone, Follow, Pass
         self.action_space = spaces.Discrete(4)
         self.action = 0
         self.stepList = []
+        self.scores = [0, 0, 0, 0]
+        self.startDist = 1.0
+        self.lastDist = 1.0
+        self.rewardType = reward
+        print("Reward Type: " + str(self.rewardType))
         # TODO(Make this parameterized by the number of humans and robots)
         # goal_x, goal_y, robot_1x, robot_1y, ... ,
         # robot_nx, robot_ny, robot_1vx, robot_1vy, ...,
@@ -125,47 +130,91 @@ class RosSocialEnv(gym.Env):
         self.simReset = rospy.ServiceProxy('utmrsReset', utmrsReset)
         self.resetCount = 0
         self.stepCount = 0
+        self.dataList = []
+        self.data = {
+                'Iteration': 0,
+                'NumHumans': 0,
+                'Success': 0,
+                'Steps': 0,
+                'Data': []
+        }
 
     def __del__(self):
         # Do this on shutdown
         print("Steps: " + str(self.stepCount))
         print("Resets: " + str(self.resetCount))
+        string = json.dumps(self.data, indent=2)
+        #  fh = open("social_gym.json", 'w', encoding="latin-1")
+                #  outputJson.write(string)
         self.launch.shutdown()
 
     def MakeObservation(self, res):
         obs = MakeNpArray(res.robot_poses)
         obs = np.append(obs, MakeNpArray(res.robot_vels))
+        fill_num = ((self.max_humans) - (len(res.human_poses)))
+        self.data["NumHumans"] = len(res.human_poses)
+        fill_num = 2 * fill_num
         obs = np.append(obs, MakeNpArray(res.human_poses))
-        obs = np.append(obs, MakeNpArray(res.human_vels))
-        # Pad with zeroes to reach correct number of variables
-        print(self.feat_length)
-        print(len(obs))
-        fill_num = self.feat_length - len(obs)
         obs = np.append(obs, np.zeros(fill_num))
+        obs = np.append(obs, MakeNpArray(res.human_vels))
+        obs = np.append(obs, np.zeros(fill_num))
+        # Pad with zeroes to reach correct number of variables
         obs = np.append(obs, MakeNpArray([res.goal_pose]))
         obs = np.append(obs, MakeNpArray([res.door_pose]))
         obs = np.append(obs, res.door_state)
         obs = np.append(obs, self.action)
         return obs
 
-    def CalculateReward(self, res):
-        w1 = 1.0
-        w2 = 1.0
-        w3 = 1.0
-        cost = w1 * Blame(res) + w2 * Force(res) +  w3 * DistanceFromGoal(res)
-        #  print('Reward' + str(-DistanceFromGoal(res)))
-        return -DistanceFromGoal(res)
+    def CalculateReward(self, res, dataMap):
+        distance = DistanceFromGoal(res)
+        score = (self.lastDist - distance)
+        self.lastDist = distance
+        force = Force(res)
+        blame = Blame(res)
+        dataMap['DistScore'] = score
+        dataMap['Force'] = force
+        dataMap['Blame'] = blame
+        bonus = 1.0 if res.done else 0.0
+        if (self.rewardType == '0'): # No Social
+                return score + bonus
+        elif (self.rewardType == '1'): # Nicer
+                w1 = 3.0
+                w2 = -0.1
+                w3 = -0.1
+                cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
+                return cost + bonus
+        elif (self.rewardType == '2'): # Greedier
+                w1 = 10.0
+                w2 = -0.1
+                w3 = -0.1
+                cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
+                return cost + bonus
+        return score + bonus
 
     def reset(self):
         # Reset the state of the environment to an initial state
         # Call the "reset" of the simulator
         self.resetCount += 1
+        self.dataList.append(self.data)
+        print(json.dumps(self.dataList, indent=2))
+        self.data = {'Iteration': self.resetCount,
+                     'NumHumans': 0,
+                     'Success': 0,
+                     'Steps': 0,
+                     'Data': []
+                     }
         GenerateScenario()
         response = self.simReset()
-        return self.step(0)[0]
+        stepResponse = self.simStep(0)
+        self.startDist = DistanceFromGoal(stepResponse)
+        self.lastDist = self.startDist
+        with open('data/SocialGym.json', 'w') as outputJson:
+                json.dump(self.dataList, outputJson, indent=2)
+        return self.MakeObservation(stepResponse)
 
     def step(self, action):
         self.stepCount += 1
+        self.data["Steps"] = self.stepCount
         tic = time.perf_counter()
         # Execute one time step within the environment
         # Call the associated simulator service (with the input action)
@@ -175,15 +224,23 @@ class RosSocialEnv(gym.Env):
         self.stepList.append(toc - tic)
         #  print(f"Average Step Time: {mean(self.stepList)}")
         #  print(f"Step Time: {toc - tic}")
+        dataMap = {}
         obs = self.MakeObservation(response)
         obs = [0 if math.isnan(x) else x for x in obs]
+        dataMap["Obs"] = obs
         # Calculate Reward in the Python Script
         # Reason, different gyms may have different reward functions,
         # and we don't want to have them need C++.
         # Can be an option later even.
-        reward = self.CalculateReward(response)
+        print("Action: " + str(action))
+        reward = self.CalculateReward(response, dataMap)
+        print("Reward: " + str(reward))
+        self.scores[action] += reward
+        print(self.scores)
         done = response.done
-
+        if (done):
+                self.data["Success"] = 1
+        self.data["Data"].append(dataMap)
         return obs, reward, done, {}
 
     def render(self):
