@@ -164,7 +164,7 @@ bool ResetService(utmrsReset::Request &req,
     pedsim_srvs::ResetPedsim::Response res;
     // TODO(jaholtz) Get this from elsewhere (scenario generator?)
     req.filename =
-        "/home/jaholtz/code/ut_multirobot_sim/config/gdc_gym_gen/scene.xml";
+        "/root/code/ut_multirobot_sim/config/gdc_gym_gen/scene.xml";
     ros::service::call("/pedsim_simulator/ResetPedsim", req, res);
   }
   return true;
