@@ -122,7 +122,7 @@ class RosSocialEnv(gym.Env):
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
         #  self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["/home/jaholtz/code/ut_multirobot_sim/config/pedsim_example/pedsim_example.launch"])
-        self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["/home/jaholtz/code/ut_multirobot_sim/config/gdc_gym_gen/launch.launch"])
+        self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["/root/ut_multirobot_sim/config/gdc_gym_gen/launch.launch"])
         self.launch.start()
         rospy.wait_for_service('utmrsStepper')
         rospy.wait_for_service('utmrsReset')
