@@ -835,7 +835,7 @@ vector<Pose2Df> Simulator::GetVisibleHumanVels(const int& robot_id) const {
       if (map_.Intersects(robot_pose, human_pose.translation)) {
           output.push_back(zero_pose);
       } else {
-        output.push_back({human->GetRotVel(), human->GetTransVel()});
+        output.push_back({static_cast<float>(human->GetRotVel()), human->GetTransVel()});
       }
     }
   }
@@ -849,7 +849,7 @@ vector<Pose2Df> Simulator::GetHumanVels() const {
     if (objects[i]->GetType() == HUMAN_OBJECT) {
       EntityBase* base = objects[i].get();
       HumanObject* human = static_cast<HumanObject*>(base);
-      output.push_back({human->GetRotVel(), human->GetTransVel()});
+      output.push_back({static_cast<float>(human->GetRotVel()), human->GetTransVel()});
     }
   }
   return output;
@@ -929,7 +929,7 @@ HumanObject* GetClosest(const vector<HumanObject*> humans,
                         const vector<int> indices,
                         int* index) {
   float best_dist = 9999;
-  HumanObject* best_human;
+  HumanObject* best_human = nullptr;
   int best_index = 0;
   int count = 0;
   for (HumanObject* human : humans) {
