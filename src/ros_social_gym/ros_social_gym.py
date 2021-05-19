@@ -121,8 +121,7 @@ class RosSocialEnv(gym.Env):
         # Launch the simulator launch file
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
-        #  self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["/home/jaholtz/code/ut_multirobot_sim/config/pedsim_example/pedsim_example.launch"])
-        self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["/root/ut_multirobot_sim/config/gdc_gym_gen/launch.launch"])
+        self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["config/gdc_gym_gen/launch.launch"])
         self.launch.start()
         rospy.wait_for_service('utmrsStepper')
         rospy.wait_for_service('utmrsReset')
@@ -227,7 +226,8 @@ class RosSocialEnv(gym.Env):
         dataMap = {}
         obs = self.MakeObservation(response)
         obs = [0 if math.isnan(x) else x for x in obs]
-        dataMap["Obs"] = obs
+        # temporarily removing observation from output file for space
+        dataMap["Obs"] = ""
         # Calculate Reward in the Python Script
         # Reason, different gyms may have different reward functions,
         # and we don't want to have them need C++.

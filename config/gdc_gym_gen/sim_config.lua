@@ -10,7 +10,7 @@ function Vector2(x, y)
     return math.pi * d / 180
   end
 
-  map_name =  "/root/amrl_maps/GDC1/GDC1.vectormap.txt"
+  map_name =  "maps/GDC1/GDC1.vectormap.txt"
   -- Simulator starting location.
   start_poses = {
     {

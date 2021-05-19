@@ -50,6 +50,7 @@ Simulator* simulator_;
 bool sim_step_ = false;
 
 DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
+DEFINE_string(scene_config, "config/gdc_gym_gen/scene.xml", "Path to pedsim scene config.");
 DEFINE_bool(use_pedsim, false, "Interface with Pedsim for human sim.");
 DEFINE_double(speedup_factor, 1.0, "Speedup Simulation");
 
@@ -163,8 +164,7 @@ bool ResetService(utmrsReset::Request &req,
     pedsim_srvs::ResetPedsim::Request req;
     pedsim_srvs::ResetPedsim::Response res;
     // TODO(jaholtz) Get this from elsewhere (scenario generator?)
-    req.filename =
-        "/root/ut_multirobot_sim/config/gdc_gym_gen/scene.xml";
+    req.filename = FLAGS_scene_config;
     ros::service::call("/pedsim_simulator/ResetPedsim", req, res);
   }
   return true;
