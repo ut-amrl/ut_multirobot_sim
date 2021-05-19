@@ -47,7 +47,8 @@ def Force(response):
     robot_pose = np.array([robot_pose.x, robot_pose.y])
     human_poses = response.human_poses
     if (response.robot_state == 2):
-            del human_poses[response.follow_target]
+            if (response.follow_target < len(human_poses)):
+                    del human_poses[response.follow_target]
     # Find the closest human to the robot
     closest_distance = ClosestHuman(robot_pose, response.human_poses)[1]
     force = np.exp(-closest_distance**2 / 5)
