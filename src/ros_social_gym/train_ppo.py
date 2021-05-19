@@ -18,7 +18,7 @@ seed(1)
 env.reset()
 #  model = PPO("MlpPolicy", env, verbose=0)
 count = 0
-upper = 1
+upper = 1000
 model = PPO.load("first_model", env)
 while(count < upper):
         model.learn(total_timesteps=20000)
