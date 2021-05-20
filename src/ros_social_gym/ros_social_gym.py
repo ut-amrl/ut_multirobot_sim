@@ -208,8 +208,9 @@ class RosSocialEnv(gym.Env):
         stepResponse = self.simStep(0)
         self.startDist = DistanceFromGoal(stepResponse)
         self.lastDist = self.startDist
-        with open('data/SocialGym.json', 'w') as outputJson:
+        with open('data/SocialGym' + str(iteration) + '.json', 'w') as outputJson:
                 json.dump(self.dataList, outputJson, indent=2)
+        self.dataList.clear()
         return self.MakeObservation(stepResponse)
 
     def step(self, action):
