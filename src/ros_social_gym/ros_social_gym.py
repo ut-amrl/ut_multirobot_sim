@@ -217,7 +217,7 @@ class RosSocialEnv(gym.Env):
         obs = self.MakeObservation(response)
         obs = [0 if math.isnan(x) else x for x in obs]
         # temporarily removing observation from output file for space
-        #  dataMap = {}
+        dataMap = {}
         #  dataMap["Obs"] = obs
         # Calculate Reward in the Python Script
         # Reason, different gyms may have different reward functions,
@@ -231,7 +231,7 @@ class RosSocialEnv(gym.Env):
         done = response.done
         if (done):
                 self.data["Success"] = 1
-        #  self.data["Data"].append(dataMap)
+        self.data["Data"].append(dataMap)
         return obs, reward, done, {}
 
     def render(self):
