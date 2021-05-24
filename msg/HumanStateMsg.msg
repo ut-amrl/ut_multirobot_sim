@@ -1,3 +1,4 @@
 geometry_msgs/Pose2D pose
 geometry_msgs/Vector3 translational_velocity
 float64 rotational_velocity
+int64 id

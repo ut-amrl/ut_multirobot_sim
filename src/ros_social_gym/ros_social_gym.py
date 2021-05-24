@@ -98,7 +98,6 @@ class RosSocialEnv(gym.Env):
         # Halt, GoAlone, Follow, Pass
         self.action_space = spaces.Discrete(4)
         self.action = 0
-        self.stepList = []
         self.scores = [0, 0, 0, 0]
         self.startDist = 1.0
         self.lastDist = 1.0
@@ -130,7 +129,6 @@ class RosSocialEnv(gym.Env):
         self.simReset = rospy.ServiceProxy('utmrsReset', utmrsReset)
         self.resetCount = 0
         self.stepCount = 0
-        self.dataList = []
         self.data = {
                 'Iteration': 0,
                 'NumHumans': 0,
@@ -143,9 +141,6 @@ class RosSocialEnv(gym.Env):
         # Do this on shutdown
         print("Steps: " + str(self.stepCount))
         print("Resets: " + str(self.resetCount))
-        string = json.dumps(self.data, indent=2)
-        #  fh = open("social_gym.json", 'w', encoding="latin-1")
-                #  outputJson.write(string)
         self.launch.shutdown()
 
     def MakeObservation(self, res):
@@ -195,22 +190,19 @@ class RosSocialEnv(gym.Env):
         # Reset the state of the environment to an initial state
         # Call the "reset" of the simulator
         self.resetCount += 1
-        self.dataList.append(self.data)
-        print(json.dumps(self.dataList, indent=2))
+        GenerateScenario()
+        response = self.simReset()
+        stepResponse = self.simStep(0)
+        self.startDist = DistanceFromGoal(stepResponse)
+        self.lastDist = self.startDist
+        with open('data/SocialGym' + str(self.resetCount) + '.json', 'w') as outputJson:
+                json.dump(self.data, outputJson, indent=2)
         self.data = {'Iteration': self.resetCount,
                      'NumHumans': 0,
                      'Success': 0,
                      'Steps': 0,
                      'Data': []
                      }
-        GenerateScenario()
-        response = self.simReset()
-        stepResponse = self.simStep(0)
-        self.startDist = DistanceFromGoal(stepResponse)
-        self.lastDist = self.startDist
-        with open('data/SocialGym' + str(iteration) + '.json', 'w') as outputJson:
-                json.dump(self.dataList, outputJson, indent=2)
-        self.dataList.clear()
         return self.MakeObservation(stepResponse)
 
     def step(self, action):
@@ -222,14 +214,11 @@ class RosSocialEnv(gym.Env):
         self.action = action
         response = self.simStep(action)
         toc = time.perf_counter()
-        self.stepList.append(toc - tic)
-        #  print(f"Average Step Time: {mean(self.stepList)}")
-        #  print(f"Step Time: {toc - tic}")
-        dataMap = {}
         obs = self.MakeObservation(response)
         obs = [0 if math.isnan(x) else x for x in obs]
         # temporarily removing observation from output file for space
-        dataMap["Obs"] = ""
+        #  dataMap = {}
+        #  dataMap["Obs"] = obs
         # Calculate Reward in the Python Script
         # Reason, different gyms may have different reward functions,
         # and we don't want to have them need C++.
@@ -242,7 +231,7 @@ class RosSocialEnv(gym.Env):
         done = response.done
         if (done):
                 self.data["Success"] = 1
-        self.data["Data"].append(dataMap)
+        #  self.data["Data"].append(dataMap)
         return obs, reward, done, {}
 
     def render(self):
