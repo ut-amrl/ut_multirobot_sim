@@ -180,6 +180,7 @@ class Simulator {
   int GetRobotState() const;
   int GetFollowTarget() const;
   bool IsComplete() const;
+  bool GoalReached() const;
   void SetAction(const int& action);
 };
 #endif  // SIMULATOR_H

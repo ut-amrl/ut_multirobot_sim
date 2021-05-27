@@ -129,6 +129,7 @@ class RosSocialEnv(gym.Env):
         self.simReset = rospy.ServiceProxy('utmrsReset', utmrsReset)
         self.resetCount = 0
         self.stepCount = 0
+        self.totalSteps = 0
         self.data = {
                 'Iteration': 0,
                 'NumHumans': 0,
@@ -136,6 +137,7 @@ class RosSocialEnv(gym.Env):
                 'Steps': 0,
                 'Data': []
         }
+        print("Environment Initialized")
 
     def __del__(self):
         # Do this on shutdown
@@ -190,6 +192,9 @@ class RosSocialEnv(gym.Env):
         # Reset the state of the environment to an initial state
         # Call the "reset" of the simulator
         self.resetCount += 1
+        self.totalSteps += self.stepCount
+        self.stepCount = 0
+        print("Reset")
         GenerateScenario()
         response = self.simReset()
         stepResponse = self.simStep(0)
@@ -223,13 +228,11 @@ class RosSocialEnv(gym.Env):
         # Reason, different gyms may have different reward functions,
         # and we don't want to have them need C++.
         # Can be an option later even.
-        print("Action: " + str(action))
         reward = self.CalculateReward(response, dataMap)
-        print("Reward: " + str(reward))
         self.scores[action] += reward
         print(self.scores)
         done = response.done
-        if (done):
+        if (response.success):
                 self.data["Success"] = 1
         self.data["Data"].append(dataMap)
         return obs, reward, done, {}

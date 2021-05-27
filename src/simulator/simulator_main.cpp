@@ -152,6 +152,7 @@ bool StepService(utmrsStepper::Request &req,
   res.door_pose = door_msg;
   res.door_state = simulator_->GetNextDoorState();
   res.done = simulator_->IsComplete();
+  res.success = simulator_->GoalReached();
   return true;
 }
 

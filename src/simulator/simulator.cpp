@@ -878,6 +878,16 @@ bool Simulator::IsComplete() const {
   return distance < goal_threshold_ || timeout;
 }
 
+bool Simulator::GoalReached() const {
+  // TODO(jaholtz) this is currently assuming a single robot.
+  const int robot_index = 0;
+  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+  const float distance =
+      (robot->cur_loc.translation - goal_pose_.translation).norm();
+  const float goal_threshold_ = 0.5;
+  return distance < goal_threshold_;
+}
+
 CumulativeFunctionTimer pub_timer("Publishing Halt");
 void Simulator::HaltPub(Bool halt_message) {
   CumulativeFunctionTimer::Invocation invoke(&pub_timer);

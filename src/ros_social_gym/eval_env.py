@@ -14,12 +14,16 @@ from make_scenarios import GenerateScenario
 env = DummyVecEnv([lambda: RosSocialEnv(0)])
 seed(1123)
 modelPath = sys.argv[1]
-model = PPO.load(modelPath)
+model = None
+if (modelPath != 'ga'):
+    model = PPO.load(modelPath)
 obs = env.reset()
 
 count = 0
 max_steps = 2200
 max_iters = 500
 while count < (max_iters * max_steps):
-    action, _states = model.predict(obs)
+    action = [0]
+    if (modelPath != 'ga'):
+        action, _states = model.predict(obs)
     obs, rewards, dones, info = env.step(action)
