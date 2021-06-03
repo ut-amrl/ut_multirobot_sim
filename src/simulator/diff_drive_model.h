@@ -46,6 +46,7 @@ class DiffDriveModel : public robot_model::RobotModel {
   void Step(const double& dt);
   virtual void SetVel(const pose_2d::Pose2Df& vel);
   void PublishOdom(const float dt);
+  virtual void SetCmd(const float& cmd_vel, const float& cmd_curve);
 };
 
 } // namespace diffdrive

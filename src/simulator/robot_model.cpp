@@ -42,4 +42,9 @@ Pose2Df RobotModel::GetVel() {
   return vel_;
 }
 
+void RobotModel::SetCmd(const float& cmd_vel, const float& cmd_curve) {
+  cout << "Set Cmd not implemented for this motion model" << endl;
+  return;
+}
+
 }

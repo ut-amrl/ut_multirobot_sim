@@ -36,7 +36,9 @@
 
 #include "amrl_msgs/NavigationConfigMsg.h"
 #include "amrl_msgs/Pose2Df.h"
+#include "nav_msgs/Odometry.h"
 #include "ros/time.h"
+#include "sensor_msgs/LaserScan.h"
 #include "simulator.h"
 #include "simulator/ackermann_model.h"
 #include "simulator/door.h"
@@ -53,6 +55,7 @@
 #include "ut_multirobot_sim/DoorStateMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
+#include "graph_navigation/socialNavSrv.h"
 // #include "ut_multirobot_sim/human_object.h"
 #include "vector_map.h"
 
@@ -80,6 +83,7 @@ using door::DoorState;
 using ut_multirobot_sim::DoorControlMsg;
 using ut_multirobot_sim::HumanStateMsg;
 using ut_multirobot_sim::HumanStateArrayMsg;
+using graph_navigation::socialNavSrv;
 
 // CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
@@ -485,6 +489,27 @@ void Simulator::DrawObjects() {
   }
 }
 
+nav_msgs::Odometry Simulator::GetOdom(const int& robot_id) {
+  auto& rps = robot_pub_subs_[robot_id];
+  tf::Quaternion robotQ = tf::createQuaternionFromYaw(rps.cur_loc.angle);
+
+  odometryTwistMsg.header.stamp = ros::Time::now();
+  odometryTwistMsg.pose.pose.position.x = rps.cur_loc.translation.x();
+  odometryTwistMsg.pose.pose.position.y = rps.cur_loc.translation.y();
+  odometryTwistMsg.pose.pose.position.z = 0.0;
+  odometryTwistMsg.pose.pose.orientation.x = robotQ.x();
+  odometryTwistMsg.pose.pose.orientation.y = robotQ.y();
+  odometryTwistMsg.pose.pose.orientation.z = robotQ.z();
+  odometryTwistMsg.pose.pose.orientation.w = robotQ.w();
+  odometryTwistMsg.twist.twist.angular.x = 0.0;
+  odometryTwistMsg.twist.twist.angular.y = 0.0;
+  odometryTwistMsg.twist.twist.angular.z = rps.vel.angle;
+  odometryTwistMsg.twist.twist.linear.x = rps.vel.translation.x();
+  odometryTwistMsg.twist.twist.linear.y = rps.vel.translation.y();
+  odometryTwistMsg.twist.twist.linear.z = 0.0;
+  return odometryTwistMsg;
+}
+
 void Simulator::PublishOdometry() {
   for (auto& rps : robot_pub_subs_) {
     tf::Quaternion robotQ = tf::createQuaternionFromYaw(rps.cur_loc.angle);
@@ -506,8 +531,6 @@ void Simulator::PublishOdometry() {
 
     rps.odometryTwistPublisher.publish(odometryTwistMsg);
 
-    // TODO(jaholtz) visualization should not always be based on car
-    // parameters
     rps.robotPosMarker.pose.position.x =
         rps.cur_loc.translation.x() -
         cos(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
@@ -521,6 +544,41 @@ void Simulator::PublishOdometry() {
     rps.robotPosMarker.pose.orientation.z = robotQ.z();
     rps.robotPosMarker.pose.orientation.w = robotQ.w();
   }
+}
+
+sensor_msgs::LaserScan Simulator::GetLaser(const int& robot_id) {
+  auto& rps = robot_pub_subs_[robot_id];
+  if (map_.file_name != CONFIG_map_name) {
+    map_.Load(CONFIG_map_name);
+    DrawMap();
+  }
+
+  scanDataMsg.header.stamp = ros::Time::now();
+  scanDataMsg.header.frame_id = IndexToPrefix(robot_id) + CONFIG_laser_frame;
+  const Vector2f laserRobotLoc(CONFIG_laser_x, CONFIG_laser_y);
+  const Vector2f laserLoc =
+    rps.cur_loc.translation +
+    Rotation2Df(rps.cur_loc.angle) * laserRobotLoc;
+
+  const int num_rays = static_cast<int>(
+      1.0 + (scanDataMsg.angle_max - scanDataMsg.angle_min) /
+      scanDataMsg.angle_increment);
+  map_.GetPredictedScan(laserLoc,
+      scanDataMsg.range_min,
+      scanDataMsg.range_max,
+      scanDataMsg.angle_min + rps.cur_loc.angle,
+      scanDataMsg.angle_max + rps.cur_loc.angle,
+      num_rays,
+      &scanDataMsg.ranges);
+  for (float& r : scanDataMsg.ranges) {
+    if (r > scanDataMsg.range_max - 0.1) {
+      r = 0;
+      continue;
+    }
+    r = max<float>(0.0, r + CONFIG_laser_stdev * laser_noise_(rng_));
+  }
+
+  return scanDataMsg;
 }
 
 void Simulator::PublishLaser() {
@@ -1098,25 +1156,41 @@ int Simulator::GetRobotState() const {
   return action_;
 }
 
+vector<geometry_msgs::Pose2D> PoseVecToGeomMessage(
+    const vector<Pose2Df>& poses) {
+  vector<geometry_msgs::Pose2D> output;
+  for (Pose2Df pose : poses) {
+    geometry_msgs::Pose2D pose_msg;
+    pose_msg.x = pose.translation.x();
+    pose_msg.y = pose.translation.y();
+    pose_msg.theta = pose.angle;
+    output.push_back(pose_msg);
+  }
+  return output;
+}
+
 void Simulator::RunAction() {
-  switch(action_) {
-    case 0:
-      GoAlone();
-      break;
-    case 1:
-      // GoAlone();
-      Halt();
-      break;
-    case 2:
-      // GoAlone();
-      Follow();
-      break;
-    case 3:
-      // GoAlone();
-      Pass();
-      break;
-    default:
-      GoAlone();
+  socialNavSrv::Request req;
+  socialNavSrv::Response res;
+  // Assuming we're working with the first robot
+  RobotPubSub* robot = &robot_pub_subs_[0];
+  req.action = action_;
+  req.loc.x = robot->cur_loc.translation.x();
+  req.loc.y = robot->cur_loc.translation.y();
+  req.loc.theta = robot->cur_loc.angle;
+  req.odom = GetOdom(0);
+  req.laser = GetLaser(0);
+  req.goal_pose.x = goal_pose_.translation.x();
+  req.goal_pose.y = goal_pose_.translation.y();
+  req.goal_pose.theta = goal_pose_.angle;
+  double time = sim_time;
+  req.time = time;
+  req.human_poses = PoseVecToGeomMessage(GetVisibleHumanPoses(0));
+  req.human_vels = PoseVecToGeomMessage(GetVisibleHumanVels(0));
+  if (ros::service::call("socialNavSrv", req, res)) {
+    // Update the simulator with navigation result
+    robot->motion_model->SetCmd(res.cmd_vel, res.cmd_curve);
+    local_target_ = {res.local_target.x, res.local_target.y};
   }
 }
 

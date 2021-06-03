@@ -99,7 +99,6 @@ void Step() {
   CumulativeFunctionTimer::Invocation invoke(&step_timer);
   StepPedsim();
   StepSimulator();
-
 }
 
 void SimStep(const std_msgs::Bool& msg) {

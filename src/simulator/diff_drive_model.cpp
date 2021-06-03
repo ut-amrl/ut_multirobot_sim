@@ -201,4 +201,21 @@ void DiffDriveModel::SetVel(const pose_2d::Pose2Df& vel) {
   target_angular_vel_ = 0;
 }
 
+geometry_msgs::Twist AckermannToTwist(const float& cmd_vel,
+                                      const float& cmd_curve) {
+  geometry_msgs::Twist  twist_msg;
+  twist_msg.linear.x = cmd_vel;
+  twist_msg.linear.y = 0;
+  twist_msg.linear.z = 0;
+  twist_msg.angular.x = 0;
+  twist_msg.angular.y = 0;
+  twist_msg.angular.z = cmd_vel * cmd_curve;
+  return twist_msg;
+}
+
+void DiffDriveModel::SetCmd(const float& cmd_vel, const float& cmd_curve) {
+  const auto cmd = AckermannToTwist(cmd_vel, cmd_curve);
+  DriveCallback(cmd);
+}
+
 };

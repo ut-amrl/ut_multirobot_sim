@@ -36,6 +36,7 @@ class RobotModel : public EntityBase {
   virtual ~RobotModel() = default;
   virtual void SetVel(const pose_2d::Pose2Df& vel);
   virtual pose_2d::Pose2Df GetVel();
+  virtual void SetCmd(const float& cmd_vel, const float& cmd_curve);
 };
 }  // namespace robot_model
 

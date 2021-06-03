@@ -116,6 +116,7 @@ class Simulator {
   // (one per robot)
   bool complete_;
   Pose2Df goal_pose_;
+  Eigen::Vector2f local_target_;
   // TODO(jaholtz) Open question, what's the best way to handle their not being
   // a next door?
   Pose2Df next_door_pose_;
@@ -174,6 +175,9 @@ class Simulator {
   std::vector<Pose2Df> GetVisibleHumanPoses(const int& robot_id) const;
   std::vector<Pose2Df> GetHumanVels() const;
   std::vector<Pose2Df> GetVisibleHumanVels(const int& robot_id) const;
+
+  nav_msgs::Odometry GetOdom(const int& robot_id);
+  sensor_msgs::LaserScan GetLaser(const int& robot_id);
   Pose2Df GetGoalPose() const;
   Pose2Df GetNextDoorPose() const;
   int GetNextDoorState() const;
