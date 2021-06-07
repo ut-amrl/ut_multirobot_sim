@@ -24,13 +24,12 @@ import math
 from statistics import mean
 from random import seed
 
-
 def MakeNpArray(poseList):
   coordList = []
   for pose in poseList:
     coordList.append(pose.x)
     coordList.append(pose.y)
-    return np.array(coordList)
+  return np.array(coordList)
 
 def ClosestHuman(robot_pose, poses):
   best_dist = 9999
@@ -41,7 +40,7 @@ def ClosestHuman(robot_pose, poses):
     if (distance < best_dist):
       best_dist = distance
       best_pose = pose_array
-      return best_pose, best_dist
+  return best_pose, best_dist
 
 # TODO(jaholtz, special handling for follow)
 def Force(response):
@@ -52,9 +51,9 @@ def Force(response):
     if (response.follow_target < len(human_poses)):
       del human_poses[response.follow_target]
       # Find the closest human to the robot
-      closest_distance = ClosestHuman(robot_pose, response.human_poses)[1]
-      force = np.exp(-closest_distance**2 / 5)
-      return force
+  closest_distance = ClosestHuman(robot_pose, response.human_poses)[1]
+  force = np.exp(-closest_distance**2 / 5)
+  return force
 
 def sigmoid(x):
   return 1 - math.erf(x)
@@ -110,8 +109,10 @@ class RosSocialEnv(gym.Env):
     # next_door_x, next_door_y, next_door_state
     self.num_robots = 1
     self.max_humans = 40
-    self.length = 6 + (self.num_robots*4) + (self.max_humans * 4)
-    self.feat_length = (self.num_robots*4) + (self.max_humans * 4)
+    self.noPose = True
+    self.length = (self.num_robots*4) + (self.max_humans * 4)
+    if self.noPose:
+      self.length = 6 + (self.num_robots*2) + (self.max_humans * 4)
     self.observation_space = spaces.Box(low=-9999,
                                         high=9999,
                                         shape=(self.length,))
@@ -143,13 +144,15 @@ class RosSocialEnv(gym.Env):
 
   # Do this on shutdown
   def __del__(self):
-    print("Steps: " + str(self.totalSteps))
-    print("Resets: " + str(self.resetCount))
     self.launch.shutdown()
 
   def MakeObservation(self, res):
-    obs = MakeNpArray(res.robot_poses)
-    obs = np.append(obs, MakeNpArray(res.robot_vels))
+    obs = []
+    if (self.noPose):
+      obs = MakeNpArray(res.robot_vels)
+    else:
+      obs = MakeNpArray(res.robot_poses)
+      obs = np.append(obs, MakeNpArray(res.robot_vels))
     fill_num = ((self.max_humans) - (len(res.human_poses)))
     self.data["NumHumans"] = len(res.human_poses)
     fill_num = 2 * fill_num
@@ -190,97 +193,97 @@ class RosSocialEnv(gym.Env):
       return cost + bonus
     return score + bonus
 
-def reset(self):
-  # Reset the state of the environment to an initial state
-  # Call the "reset" of the simulator
-  self.resetCount += 1
-  self.totalSteps += self.stepCount
-  self.stepCount = 0
-  GenerateScenario()
-  response = self.simReset()
-  stepResponse = self.simStep(0)
-  self.startDist = DistanceFromGoal(stepResponse)
-  self.lastDist = self.startDist
-  with open('data/SocialGym' + str(self.resetCount) + '.json', 'w') as outputJson:
-    json.dump(self.data, outputJson, indent=2)
-    self.data = {'Iteration': self.resetCount,
-                 'NumHumans': 0,
-                 'Success': 0,
-                 'Steps': 0,
-                 'Data': []
-                 }
-    self.lastObs = stepResponse
-    return self.MakeObservation(stepResponse)
+  def reset(self):
+    # Reset the state of the environment to an initial state
+    # Call the "reset" of the simulator
+    self.resetCount += 1
+    self.totalSteps += self.stepCount
+    self.stepCount = 0
+    GenerateScenario()
+    response = self.simReset()
+    stepResponse = self.simStep(0)
+    self.startDist = DistanceFromGoal(stepResponse)
+    self.lastDist = self.startDist
+    with open('data/SocialGym' + str(self.resetCount) + '.json', 'w') as outputJson:
+      json.dump(self.data, outputJson, indent=2)
+      self.data = {'Iteration': self.resetCount,
+                   'NumHumans': 0,
+                   'Success': 0,
+                   'Steps': 0,
+                   'Data': []
+                   }
+      self.lastObs = stepResponse
+      return self.MakeObservation(stepResponse)
 
-def step(self, action):
-  self.stepCount += 1
-  self.data["Steps"] = self.stepCount
-  tic = time.perf_counter()
-  # Execute one time step within the environment
-  # Call the associated simulator service (with the input action)
-  self.action = action
-  response = self.simStep(action)
-  self.lastObs = response
-  toc = time.perf_counter()
-  obs = self.MakeObservation(response)
-  obs = [0 if math.isnan(x) else x for x in obs]
-  # temporarily removing observation from output file for space
-  dataMap = {}
-  #  dataMap["Obs"] = obs
-  # Calculate Reward in the Python Script
-  # Reason, different gyms may have different reward functions,
-  # and we don't want to have them need C++ edits.
-  # Can be an option later even.
-  reward = self.CalculateReward(response, dataMap)
-  self.data["Reward"] = reward
-  done = response.done
-  if (response.success):
-    self.data["Success"] = 1
-    self.data["Data"].append(dataMap)
+  def step(self, action):
+    self.stepCount += 1
+    self.data["Steps"] = self.stepCount
+    tic = time.perf_counter()
+    # Execute one time step within the environment
+    # Call the associated simulator service (with the input action)
+    self.action = action
+    response = self.simStep(action)
+    self.lastObs = response
+    toc = time.perf_counter()
+    obs = self.MakeObservation(response)
+    obs = [0 if math.isnan(x) else x for x in obs]
+    # temporarily removing observation from output file for space
+    dataMap = {}
+    #  dataMap["Obs"] = obs
+    # Calculate Reward in the Python Script
+    # Reason, different gyms may have different reward functions,
+    # and we don't want to have them need C++ edits.
+    # Can be an option later even.
+    reward = self.CalculateReward(response, dataMap)
+    self.data["Reward"] = reward
+    done = response.done
+    if (response.success):
+      self.data["Success"] = 1
+      self.data["Data"].append(dataMap)
     return obs, reward, done, {}
 
-def PipsStep(self):
-  self.stepCount += 1
-  self.data["Steps"] = self.stepCount
-  tic = time.perf_counter()
-  # Get the Action to run from the pip service
-  # Execute one time step within the environment
-  # Call the associated simulator service (with the input action)
-  lastObs = self.lastObs
-  pipsRes = self.pipsSrv(lastObs.robot_poses,
-                         lastObs.robot_vels,
-                         lastObs.human_poses,
-                         lastObs.human_vels,
-                         lastObs.goal_pose,
-                         lastObs.local_target,
-                         lastObs.door_pose,
-                         lastObs.door_state,
-                         lastObs.robot_state,
-                         lastObs.follow_target)
-  self.action = pipsRes.action;
-  response = self.simStep(self.action)
-  self.lastObs = response
-  toc = time.perf_counter()
-  obs = self.MakeObservation(response)
-  obs = [0 if math.isnan(x) else x for x in obs]
-  # temporarily removing observation from output file for space
-  dataMap = {}
-  #  dataMap["Obs"] = obs
-  # Calculate Reward in the Python Script
-  # Reason, different gyms may have different reward functions,
-  # and we don't want to have them need C++.
-  # Can be an option later even.
-  reward = self.CalculateReward(response, dataMap)
-  self.data["Reward"] = reward
-  done = response.done
-  if (response.success):
-    self.data["Success"] = 1
-    self.data["Data"].append(dataMap)
-    return obs, reward, done, {}
+  def PipsStep(self):
+    self.stepCount += 1
+    self.data["Steps"] = self.stepCount
+    tic = time.perf_counter()
+    # Get the Action to run from the pip service
+    # Execute one time step within the environment
+    # Call the associated simulator service (with the input action)
+    lastObs = self.lastObs
+    pipsRes = self.pipsSrv(lastObs.robot_poses,
+                           lastObs.robot_vels,
+                           lastObs.human_poses,
+                           lastObs.human_vels,
+                           lastObs.goal_pose,
+                           lastObs.local_target,
+                           lastObs.door_pose,
+                           lastObs.door_state,
+                           lastObs.robot_state,
+                           lastObs.follow_target)
+    self.action = pipsRes.action;
+    response = self.simStep(self.action)
+    self.lastObs = response
+    toc = time.perf_counter()
+    obs = self.MakeObservation(response)
+    obs = [0 if math.isnan(x) else x for x in obs]
+    # temporarily removing observation from output file for space
+    dataMap = {}
+    #  dataMap["Obs"] = obs
+    # Calculate Reward in the Python Script
+    # Reason, different gyms may have different reward functions,
+    # and we don't want to have them need C++.
+    # Can be an option later even.
+    reward = self.CalculateReward(response, dataMap)
+    self.data["Reward"] = reward
+    done = response.done
+    if (response.success):
+      self.data["Success"] = 1
+      self.data["Data"].append(dataMap)
+      return obs, reward, done, {}
 
-# Depends on RVIZ for visualization, no render method
-def render(self):
-  print(f'Render')
+  # Depends on RVIZ for visualization, no render method
+  def render(self):
+    print(f'Render')
 
 if __name__ == "__main__":
   env = RosSocialEnv()

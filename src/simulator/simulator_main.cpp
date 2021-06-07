@@ -28,6 +28,7 @@
 #include "gflags/gflags.h"
 #include "pedsim_srvs/StepPedsim.h"
 #include "pedsim_srvs/ResetPedsim.h"
+#include "ros/init.h"
 #include "ut_multirobot_sim/utmrsStepper.h"
 #include "ut_multirobot_sim/utmrsReset.h"
 #include "pedsim_msgs/AgentStates.h"
@@ -50,8 +51,11 @@ Simulator* simulator_;
 bool sim_step_ = false;
 
 DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
-DEFINE_string(scene_config, "config/gdc_gym_gen/scene.xml", "Path to pedsim scene config.");
+DEFINE_string(scene_config,
+    "config/gdc_gym_gen/scene.xml", "Path to pedsim scene config.");
 DEFINE_bool(use_pedsim, false, "Interface with Pedsim for human sim.");
+DEFINE_bool(service_mode, true,
+    "Use services instead of message for communication.");
 DEFINE_double(speedup_factor, 1.0, "Speedup Simulation");
 
 void SimStartStop(const std_msgs::Bool& msg) {
@@ -204,30 +208,35 @@ int main(int argc, char **argv) {
   }
   // main loop
 
-  RateLoop rate(1.0 / simulator_->GetStepSize());
-  while (ros::ok()) {
-    ros::spinOnce();
-    switch (sim_state_.sim_state) {
-      case SimulatorStateMsg::SIM_RUNNING : {
-        simulator_->Run();
-      } break;
-      case SimulatorStateMsg::SIM_STOPPED : {
-        // Do nothing unless stepping.
-        if (sim_step_) {
-          Step();
+  if (FLAGS_service_mode) {
+    ros::spin();
+  } else {
+    RateLoop rate(1.0 / simulator_->GetStepSize());
+    while (ros::ok()) {
+      cout << "Simulator Spin Once" << endl;
+      ros::spinOnce();
+      switch (sim_state_.sim_state) {
+        case SimulatorStateMsg::SIM_RUNNING : {
+          simulator_->Run();
+        } break;
+        case SimulatorStateMsg::SIM_STOPPED : {
+          // Do nothing unless stepping.
+          if (sim_step_) {
+            Step();
+          }
+        } break;
+        default: {
+          LOG(FATAL) << "Unexpected simulator state: " << sim_state_.sim_state;
         }
-      } break;
-      default: {
-        LOG(FATAL) << "Unexpected simulator state: " << sim_state_.sim_state;
       }
-    }
 
-    // Publish simulator state.
-    sim_state_.sim_step_count = simulator_->GetSimStepCount();
-    sim_state_.sim_time = simulator_->GetSimTime();
-    sim_state_pub.publish(sim_state_);
-    if (sim_state_.sim_state == SimulatorStateMsg::SIM_RUNNING) {
-      rate.Sleep();
+      // Publish simulator state.
+      sim_state_.sim_step_count = simulator_->GetSimStepCount();
+      sim_state_.sim_time = simulator_->GetSimTime();
+      sim_state_pub.publish(sim_state_);
+      if (sim_state_.sim_state == SimulatorStateMsg::SIM_RUNNING) {
+        rate.Sleep();
+      }
     }
   }
 

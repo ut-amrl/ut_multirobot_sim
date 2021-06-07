@@ -16,10 +16,10 @@ env = DummyVecEnv([lambda: RosSocialEnv(reward)])
 seed(1)
 #  GenerateScenario()
 env.reset()
-#  model = PPO("MlpPolicy", env, verbose=0)
+model = PPO("MlpPolicy", env, verbose=0)
 count = 0
 upper = 1000
-model = PPO.load("first_model", env)
+#  model = PPO.load("first_model", env)
 while(count < upper):
         model.learn(total_timesteps=20000)
         # Save the agent

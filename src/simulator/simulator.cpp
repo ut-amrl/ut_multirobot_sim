@@ -850,6 +850,7 @@ vector<Pose2Df> Simulator::GetRobotVels() const {
 vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
   vector<Pose2Df> output;
   const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
+  const float robot_angle = robot_pub_subs_[robot_id].cur_loc.angle;
   const Pose2Df zero_pose(0, {0, 0});
   ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
   for (size_t i = 0; i < objects.size(); ++i) {
@@ -860,7 +861,10 @@ vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
       if (map_.Intersects(robot_pose, human_pose.translation)) {
           output.push_back(zero_pose);
       } else {
-        output.push_back(human_pose);
+        Eigen::Rotation2Df rotation(-robot_angle);
+        const Vector2f local_human = rotation * (human_pose.translation - robot_pose);
+        const Pose2Df local_pose(human_pose.angle, local_human);
+        output.push_back(local_pose);
       }
     }
   }
