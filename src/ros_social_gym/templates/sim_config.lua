@@ -38,7 +38,7 @@ function Vector2(x, y)
   -- Time-step for simulation.
   delta_t = 0.025
   -- max_steps = 12000
-  max_steps = 2200
+  max_steps = 3200
 
   -- Simulator TF publications
   publish_tfs = true;
