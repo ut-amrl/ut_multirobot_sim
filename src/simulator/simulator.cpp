@@ -1156,6 +1156,10 @@ int Simulator::GetFollowTarget() const {
   return -1;
 }
 
+Vector2f Simulator::GetLocalTarget() const {
+  return local_target_;
+}
+
 int Simulator::GetRobotState() const {
   return action_;
 }

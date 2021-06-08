@@ -183,6 +183,7 @@ class Simulator {
   int GetNextDoorState() const;
   int GetRobotState() const;
   int GetFollowTarget() const;
+  Eigen::Vector2f GetLocalTarget() const;
   bool IsComplete() const;
   bool GoalReached() const;
   void SetAction(const int& action);

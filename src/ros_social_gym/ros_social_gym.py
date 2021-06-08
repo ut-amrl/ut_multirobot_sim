@@ -279,7 +279,7 @@ class RosSocialEnv(gym.Env):
     if (response.success):
       self.data["Success"] = 1
       self.data["Data"].append(dataMap)
-      return obs, reward, done, {}
+    return obs, reward, done, {}
 
   # Depends on RVIZ for visualization, no render method
   def render(self):

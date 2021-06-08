@@ -145,6 +145,12 @@ bool StepService(utmrsStepper::Request &req,
   goal_msg.y = goal_pose.translation.y();
   goal_msg.theta = goal_pose.angle;
   res.goal_pose = goal_msg;
+  ut_multirobot_sim::Pose2Df local_msg;
+  Eigen::Vector2f local_target = simulator_->GetLocalTarget();
+  local_msg.x = local_target.x();
+  local_msg.y = local_target.y();
+  local_msg.theta = 0.0;
+  res.local_target = local_msg;
   res.robot_state = simulator_->GetRobotState();
   res.follow_target = simulator_->GetFollowTarget();
   ut_multirobot_sim::Pose2Df door_msg;
