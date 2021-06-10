@@ -13,8 +13,8 @@
         Go alone.
     </description>
   </class>
-  <class name="state_switcher_rviz_plugin/Stop"
-         type="state_switcher_rviz_plugin::Stop"
+  <class name="state_switcher_rviz_plugin/Halt"
+         type="state_switcher_rviz_plugin::Halt"
          base_class_type="rviz::Tool">
     <description>
         Stop.

@@ -31,10 +31,10 @@ public:
   virtual void deactivate();
 };
 
-class Stop : public rviz::Tool {
+class Halt : public rviz::Tool {
 Q_OBJECT
 public:
-  Stop();
+  Halt();
   ros::NodeHandle nh_;
   ros::Publisher state_publisher_;
 

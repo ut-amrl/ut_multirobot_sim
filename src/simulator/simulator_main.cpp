@@ -65,11 +65,7 @@ void SimStartStop(const std_msgs::Bool& msg) {
     ros::service::call("/pedsim_simulator/pause_simulation", empty);
   } else if (FLAGS_use_pedsim) {
     ros::service::call("/pedsim_simulator/unpause_simulation", empty);
-  } // if (msg.data) {
-    // sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
-  // } else {
-    // sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
-  // }
+  }
 }
 
 CumulativeFunctionTimer ped_timer("StepPedsim");
@@ -215,6 +211,9 @@ int main(int argc, char **argv) {
   // main loop
 
   if (FLAGS_service_mode) {
+    ut_multirobot_sim::utmrsResetRequest req;
+    ut_multirobot_sim::utmrsResetResponse res;
+    ResetService(req, res);
     ros::spin();
   } else {
     RateLoop rate(1.0 / simulator_->GetStepSize());

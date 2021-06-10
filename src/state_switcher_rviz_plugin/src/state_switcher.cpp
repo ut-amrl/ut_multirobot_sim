@@ -34,18 +34,18 @@ void GoAlone::activate() {
 void GoAlone::deactivate() {
 }
 
-Stop::Stop() {
+Halt::Halt() {
   shortcut_key_ = '3';
   state_publisher_ = nh_.advertise<std_msgs::String>("robot_state", 1);
 }
 
-void Stop::activate() {
+void Halt::activate() {
   std_msgs::String msg;
   msg.data = "Halt";
   state_publisher_.publish(msg);
 }
 
-void Stop::deactivate() {
+void Halt::deactivate() {
 }
 
 Pass::Pass() {
@@ -97,7 +97,7 @@ void Step::deactivate() {
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::Follow, rviz::Tool);
 PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::GoAlone, rviz::Tool);
-PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::Stop, rviz::Tool);
+PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::Halt, rviz::Tool);
 PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::Pass, rviz::Tool);
 PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::Pause, rviz::Tool);
 PLUGINLIB_EXPORT_CLASS(state_switcher_rviz_plugin::Step, rviz::Tool);
