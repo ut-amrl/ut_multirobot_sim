@@ -1204,7 +1204,6 @@ void Simulator::RunAction() {
 
 void Simulator::Run() {
   // Run Action
-  // TODO(jaholtz) Make this a service call instead
   current_step_++;
   RunAction();
   // Simulate time-step.

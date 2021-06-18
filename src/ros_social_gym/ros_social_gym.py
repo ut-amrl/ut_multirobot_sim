@@ -240,7 +240,7 @@ class RosSocialEnv(gym.Env):
     if (response.success):
       self.data["Success"] = 1
     self.data["Data"].append(dataMap)
-    return obs, reward, done, {}
+    return obs, reward, done, {"resetCount" : self.resetCount}
 
   def PipsStep(self):
     self.stepCount += 1
@@ -279,7 +279,7 @@ class RosSocialEnv(gym.Env):
     if (response.success):
       self.data["Success"] = 1
     self.data["Data"].append(dataMap)
-    return obs, reward, done, {}
+    return obs, reward, done, {"resetCount" : self.resetCount}
 
   # Depends on RVIZ for visualization, no render method
   def render(self):

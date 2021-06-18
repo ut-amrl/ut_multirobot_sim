@@ -18,12 +18,14 @@ model = None
 if (modelPath != 'ga'):
     model = PPO.load(modelPath)
 obs = env.reset()
+#obs = env.reset()
+#obs = env.reset()
 
-count = 0
-max_steps = 2200
-max_iters = 500
-while count < (max_iters * max_steps):
+numScenarios = 100
+resetCount = 0
+while resetCount < numScenarios:
     action = [0]
     if (modelPath != 'ga'):
         action, _states = model.predict(obs)
     obs, rewards, dones, info = env.step(action)
+    resetCount = int(info[0]["resetCount"])
