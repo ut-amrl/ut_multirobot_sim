@@ -16,10 +16,10 @@ seed(1123)
 model = None
 obs = env.reset()
 
-count = 0
-max_steps = 2200
-max_iters = 500
-while count < (max_iters * max_steps):
+numScenarios = 11
+resetCount = 0
+while resetCount < numScenarios:
     obs, rewards, dones, info = env.PipsStep()
+    resetCount = int(info["resetCount"])
     if (dones):
         env.reset()
