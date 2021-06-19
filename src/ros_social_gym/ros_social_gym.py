@@ -92,7 +92,7 @@ def DistanceFromGoal(response):
 class RosSocialEnv(gym.Env):
   """A ros-based social navigation environment for OpenAI gym"""
 
-  def __init__(self, reward):
+  def __init__(self, reward, launch):
     super(RosSocialEnv, self).__init__()
     seed(1)
     # Halt, GoAlone, Follow, Pass
@@ -122,7 +122,7 @@ class RosSocialEnv(gym.Env):
     # Launch the simulator launch file
     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
     roslaunch.configure_logging(uuid)
-    self.launch = roslaunch.parent.ROSLaunchParent(uuid, ["config/gdc_gym_gen/launch.launch"])
+    self.launch = roslaunch.parent.ROSLaunchParent(uuid, [launch])
     self.launch.start()
     rospy.wait_for_service('utmrsStepper')
     rospy.wait_for_service('utmrsReset')
@@ -180,7 +180,7 @@ class RosSocialEnv(gym.Env):
     if (self.rewardType == '0'): # No Social
       return score + bonus
     elif (self.rewardType == '1'): # Nicer
-      w1 = 3.0
+      w1 = 2.0
       w2 = -0.1
       w3 = -0.1
       cost = w1 * score + w2 * Blame(res) + w3 * Force(res)

@@ -11,7 +11,8 @@ from ros_social_gym import RosSocialEnv
 from make_scenarios import GenerateScenario
 
 # The algorithms require a vectorized environment to run
-env = RosSocialEnv(0)
+launch = sys.argv[1]
+env = RosSocialEnv(0, launch)
 seed(1123)
 model = None
 obs = env.reset()

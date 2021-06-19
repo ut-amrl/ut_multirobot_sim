@@ -7,8 +7,10 @@
 
     <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find ut_multirobot_sim)/visualization.rviz" /> -->
 
+    <node pkg="pips" type="social_ref" name="social_ref" output="screen" />
+
     <node pkg="graph_navigation" type="social_nav" name="graph_navigation" output="screen"
-        args="-map $(find ut_multirobot_sim)/maps/GDC1/GDC1.navigation.txt -service_mode=true" />
+        args="-map $(find ut_multirobot_sim)/maps/GDC1/GDC1.navigation.txt -service_mode=true -social_mode=true" />
 
     <include file="$(find ut_multirobot_sim)/config/gdc_gym_gen/pedsim_launch.launch" />
 

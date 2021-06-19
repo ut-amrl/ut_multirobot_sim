@@ -12,7 +12,7 @@ import sys
 
 # The algorithms require a vectorized environment to run
 reward = sys.argv[1]
-env = DummyVecEnv([lambda: RosSocialEnv(reward)])
+env = DummyVecEnv([lambda: RosSocialEnv(reward, "config/gdc_gym_gen/launch.launch")])
 seed(1)
 #  GenerateScenario()
 env.reset()
