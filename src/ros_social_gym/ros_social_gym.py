@@ -29,6 +29,7 @@ def MakeNpArray(poseList):
   for pose in poseList:
     coordList.append(pose.x)
     coordList.append(pose.y)
+    coordList.append(pose.theta)
   return np.array(coordList)
 
 def ClosestHuman(robot_pose, poses):
@@ -36,6 +37,8 @@ def ClosestHuman(robot_pose, poses):
   best_pose = robot_pose
   for pose in poses:
     pose_array = np.array([pose.x, pose.y])
+    if (np.linalg.norm(pose_array) == 0):
+      continue
     distance = np.linalg.norm(robot_pose - pose_array)**2
     if (distance < best_dist):
       best_dist = distance
@@ -45,7 +48,7 @@ def ClosestHuman(robot_pose, poses):
 # TODO(jaholtz, special handling for follow)
 def Force(response):
   robot_pose = response.robot_poses[0]
-  robot_pose = np.array([robot_pose.x, robot_pose.y])
+  robot_pose = np.array([0, 0])
   human_poses = response.human_poses
   if (response.robot_state == 2):
     if (response.follow_target < len(human_poses)):
@@ -69,7 +72,7 @@ def closest_point_on_line_segment_to_point(end1, end2, point):
 def Blame(response):
   # Find the closest human
   robot_pose = response.robot_poses[0]
-  robot_pose = np.array([robot_pose.x, robot_pose.y])
+  robot_pose = np.array([0, 0])
   human, closest_distance = ClosestHuman(robot_pose, response.human_poses)
 
   # forward predicted robot position
@@ -110,9 +113,9 @@ class RosSocialEnv(gym.Env):
     self.num_robots = 1
     self.max_humans = 40
     self.noPose = True
-    self.length = (self.num_robots*4) + (self.max_humans * 4)
+    self.length = 8 + (self.num_robots*6) + (self.max_humans * 6)
     if self.noPose:
-      self.length = 6 + (self.num_robots*2) + (self.max_humans * 4)
+      self.length = 8 + (self.num_robots*3) + (self.max_humans * 6)
     self.observation_space = spaces.Box(low=-9999,
                                         high=9999,
                                         shape=(self.length,))
@@ -155,7 +158,7 @@ class RosSocialEnv(gym.Env):
       obs = np.append(obs, MakeNpArray(res.robot_vels))
     fill_num = ((self.max_humans) - (len(res.human_poses)))
     self.data["NumHumans"] = len(res.human_poses)
-    fill_num = 2 * fill_num
+    fill_num = 3 * fill_num
     obs = np.append(obs, MakeNpArray(res.human_poses))
     obs = np.append(obs, np.zeros(fill_num))
     obs = np.append(obs, MakeNpArray(res.human_vels))
@@ -178,7 +181,7 @@ class RosSocialEnv(gym.Env):
     dataMap['Blame'] = blame
     bonus = 1.0 if res.done else 0.0
     if (self.rewardType == '0'): # No Social
-      return score + bonus
+      return 10 * score + 100* bonus
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
       w2 = -0.1
