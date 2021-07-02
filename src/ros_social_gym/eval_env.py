@@ -21,7 +21,7 @@ obs = env.reset()
 #obs = env.reset()
 #obs = env.reset()
 
-numScenarios = 1000
+numScenarios = 2000
 resetCount = 0
 while resetCount < numScenarios:
     action = [0]
