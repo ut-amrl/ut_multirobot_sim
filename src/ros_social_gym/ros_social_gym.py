@@ -50,12 +50,14 @@ def Force(response):
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
   human_poses = response.human_poses
+  # Check if this is firing
   if (response.robot_state == 2):
     if (response.follow_target < len(human_poses)):
       del human_poses[response.follow_target]
       # Find the closest human to the robot
   closest_distance = ClosestHuman(robot_pose, response.human_poses)[1]
   force = np.exp(-closest_distance**2 / 5)
+  print("Force: " + str(force))
   return force
 
 def sigmoid(x):
@@ -73,18 +75,29 @@ def Blame(response):
   # Find the closest human
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
+  # Add a follow requirement to this.
+  # Also if state is halt, blame = 0 (we have no velocity anymore)
   human, closest_distance = ClosestHuman(robot_pose, response.human_poses)
+  if (closest_distance == 9999):
+      return 0.0
+  print("Human: " + str(human))
+  print("Closest Distance: " + str(closest_distance))
 
   # forward predicted robot position
   robot_vel = response.robot_vels[0]
   robot_vel = [robot_vel.x, robot_vel.y]
+  if (np.linalg.norm(robot_vel)) < 1e-6:
+    return 0
   end2 = robot_pose + (np.array(robot_vel) * 0.5)
 
   # closest point to human
+  # The Relatives of this is still broken I think
   closest_point = closest_point_on_line_segment_to_point(robot_pose, end2, human)
+  print("Closest Point " + str(closest_point))
 
   # blame
   blame = sigmoid(np.linalg.norm(closest_point - human))
+  print("Blame: " + str(blame))
   return blame
 
 def DistanceFromGoal(response):
@@ -99,6 +112,8 @@ class RosSocialEnv(gym.Env):
     super(RosSocialEnv, self).__init__()
     seed(1)
     # Halt, GoAlone, Follow, Pass
+    self.demos = []
+    self.last_observation = []
     self.action_space = spaces.Discrete(4)
     self.action = 0
     self.startDist = 1.0
@@ -179,13 +194,13 @@ class RosSocialEnv(gym.Env):
     dataMap['DistScore'] = score
     dataMap['Force'] = force
     dataMap['Blame'] = blame
-    bonus = 1.0 if res.done else 0.0
+    bonus = 1000.0 if res.done else 0.0
     if (self.rewardType == '0'): # No Social
-      return 10 * score + 100* bonus
+      return 10 * score + bonus
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
-      w2 = -0.1
-      w3 = -0.1
+      w2 = -0.5
+      w3 = -0.5
       cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
       return cost + bonus
     elif (self.rewardType == '2'): # Greedier
@@ -207,6 +222,11 @@ class RosSocialEnv(gym.Env):
     stepResponse = self.simStep(0)
     self.startDist = DistanceFromGoal(stepResponse)
     self.lastDist = self.startDist
+
+    # TODO(jaholtz) append to this file instead of rewriting each time
+    #  with open('GymDemos.json', 'w') as outputJson:
+      #  json.dump(self.demos, outputJson, indent=2)
+
     with open('data/SocialGym' + str(self.resetCount) + '.json', 'w') as outputJson:
       json.dump(self.data, outputJson, indent=2)
       self.data = {'Iteration': self.resetCount,
@@ -225,14 +245,27 @@ class RosSocialEnv(gym.Env):
     # Execute one time step within the environment
     # Call the associated simulator service (with the input action)
     self.action = action
+
+    # Update Demonstrations
+    demo = {}
+    demo["action"] = self.action
+    demo["observation"] = self.last_observation
+
+    # Step the simulator and make observation
     response = self.simStep(action)
     self.lastObs = response
     toc = time.perf_counter()
     obs = self.MakeObservation(response)
     obs = [0 if math.isnan(x) else x for x in obs]
+
+    # Update Demonstrations
+    demo["next_observation"] = obs
+    self.last_observation = obs
+    #  self.demos.append(demo)
+
     # temporarily removing observation from output file for space
     dataMap = {}
-    #  dataMap["Obs"] = obs
+
     # Calculate Reward in the Python Script
     # Reason, different gyms may have different reward functions,
     # and we don't want to have them need C++ edits.
@@ -264,14 +297,27 @@ class RosSocialEnv(gym.Env):
                            lastObs.robot_state,
                            lastObs.follow_target)
     self.action = pipsRes.action;
+
+    # Update Demonstrations
+    demo = {}
+    demo["acts"] = self.action
+    demo["obs"] = self.last_observation
+
+    # Step the simulator and make observation
     response = self.simStep(self.action)
     self.lastObs = response
     toc = time.perf_counter()
     obs = self.MakeObservation(response)
     obs = [0 if math.isnan(x) else x for x in obs]
+
+    # Update Demonstrations
+    demo["next_obs"] = obs
+    self.last_observation = obs
+    self.demos.append(demo)
+
     # temporarily removing observation from output file for space
     dataMap = {}
-    #  dataMap["Obs"] = obs
+
     # Calculate Reward in the Python Script
     # Reason, different gyms may have different reward functions,
     # and we don't want to have them need C++.
