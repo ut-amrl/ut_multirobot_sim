@@ -77,8 +77,7 @@ def Blame(response):
   robot_pose = np.array([0, 0])
   # if state is halt, blame = 0 (we have no velocity anymore)
   if (response.robot_state == 1):
-    if (response.follow_target < len(human_poses)):
-      return 0.0
+    return 0.0
   # If following don't count blame on follow target.
   human_poses = response.human_poses
   if (response.robot_state == 2):
