@@ -54,8 +54,8 @@ def Force(response):
   if (response.robot_state == 2):
     if (response.follow_target < len(human_poses)):
       del human_poses[response.follow_target]
-      # Find the closest human to the robot
-  closest_distance = ClosestHuman(robot_pose, response.human_poses)[1]
+  # Find the closest human to the robot
+  closest_distance = ClosestHuman(robot_pose, human_poses)[1]
   force = np.exp(-closest_distance**2 / 5)
   print("Force: " + str(force))
   return force
@@ -75,9 +75,16 @@ def Blame(response):
   # Find the closest human
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
-  # Add a follow requirement to this.
-  # Also if state is halt, blame = 0 (we have no velocity anymore)
-  human, closest_distance = ClosestHuman(robot_pose, response.human_poses)
+  # if state is halt, blame = 0 (we have no velocity anymore)
+  if (response.robot_state == 1):
+    if (response.follow_target < len(human_poses)):
+      return 0.0
+  # If following don't count blame on follow target.
+  human_poses = response.human_poses
+  if (response.robot_state == 2):
+    if (response.follow_target < len(human_poses)):
+      del human_poses[response.follow_target]
+  human, closest_distance = ClosestHuman(robot_pose, human_poses)
   if (closest_distance == 9999):
       return 0.0
   print("Human: " + str(human))
