@@ -53,11 +53,11 @@ def Force(response):
   # Check if this is firing
   if (response.robot_state == 2):
     if (response.follow_target < len(human_poses)):
-      del human_poses[response.follow_target]
+      closest_pose = ClosestHuman(robot_pose, human_poses)[0]
+      human_poses.remove(closest_pose)
   # Find the closest human to the robot
   closest_distance = ClosestHuman(robot_pose, human_poses)[1]
   force = np.exp(-closest_distance**2 / 5)
-  print("Force: " + str(force))
   return force
 
 def sigmoid(x):
@@ -86,8 +86,6 @@ def Blame(response):
   human, closest_distance = ClosestHuman(robot_pose, human_poses)
   if (closest_distance == 9999):
       return 0.0
-  print("Human: " + str(human))
-  print("Closest Distance: " + str(closest_distance))
 
   # forward predicted robot position
   robot_vel = response.robot_vels[0]
@@ -99,11 +97,9 @@ def Blame(response):
   # closest point to human
   # The Relatives of this is still broken I think
   closest_point = closest_point_on_line_segment_to_point(robot_pose, end2, human)
-  print("Closest Point " + str(closest_point))
 
   # blame
   blame = sigmoid(np.linalg.norm(closest_point - human))
-  print("Blame: " + str(blame))
   return blame
 
 def DistanceFromGoal(response):
@@ -122,11 +118,11 @@ class RosSocialEnv(gym.Env):
     self.last_observation = []
     self.action_space = spaces.Discrete(4)
     self.action = 0
+    self.action_scores = [0, 0, 0, 0]
     self.startDist = 1.0
     self.lastDist = 1.0
     self.rewardType = reward
     print("Reward Type: " + str(self.rewardType))
-    # TODO(Make the humans in robot frame, make robot an optional feature)
     # goal_x, goal_y, robot_1x, robot_1y, ... ,
     # robot_nx, robot_ny, robot_1vx, robot_1vy, ...,
     # human_1x, human_1y, ..., human_1vx, human_1vy ...
@@ -200,9 +196,13 @@ class RosSocialEnv(gym.Env):
     dataMap['DistScore'] = score
     dataMap['Force'] = force
     dataMap['Blame'] = blame
-    bonus = 1000.0 if res.done else 0.0
+    bonus = 1000.0 if res.success else 0.0
     if (self.rewardType == '0'): # No Social
-      return 10 * score + bonus
+      return 100 * score + bonus
+      #  if (self.action != self.lastObs.robot_state):
+        #  score += -0.1
+      #  if (math.fabs(score) <= 0.00001):
+        #  score += -0.1
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
       w2 = -0.5
@@ -251,6 +251,8 @@ class RosSocialEnv(gym.Env):
     # Execute one time step within the environment
     # Call the associated simulator service (with the input action)
     self.action = action
+    if (self.action != self.lastObs.robot_state):
+      print(self.action)
 
     # Update Demonstrations
     demo = {}
@@ -282,6 +284,8 @@ class RosSocialEnv(gym.Env):
     if (response.success):
       self.data["Success"] = 1
     self.data["Data"].append(dataMap)
+    self.action_scores[action] += reward
+    print(self.action_scores)
     return obs, reward, done, {"resetCount" : self.resetCount}
 
   def PipsStep(self):
@@ -303,6 +307,8 @@ class RosSocialEnv(gym.Env):
                            lastObs.robot_state,
                            lastObs.follow_target)
     self.action = pipsRes.action;
+    if (self.action != self.lastObs.robot_state):
+      print(self.action)
 
     # Update Demonstrations
     demo = {}
