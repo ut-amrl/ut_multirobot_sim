@@ -16,13 +16,14 @@ env = DummyVecEnv([lambda: RosSocialEnv(reward, "config/gdc_gym_gen/launch.launc
 seed(1)
 #  GenerateScenario()
 env.reset()
-model = PPO("MlpPolicy", env, verbose=0)
+#  model = PPO("MlpPolicy", env, verbose=0)
+#  model.learn(total_timesteps=20000)
+#  model.save("data/ppo_base")
+model = PPO.load("base_ppo", env)
 count = 0
 upper = 1000
-#  model = PPO.load("first_model", env)
 while(count < upper):
-        model.learn(total_timesteps=20000)
-        # Save the agent
-        model.save("data/ppo_" + str(count))
-        count += 1
-env.reset()
+  model.learn(total_timesteps=20000)
+  # Save the agent
+  model.save("data/ppo_" + str(count))
+  count += 1

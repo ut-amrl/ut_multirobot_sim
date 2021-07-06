@@ -35,29 +35,33 @@ def MakeNpArray(poseList):
 def ClosestHuman(robot_pose, poses):
   best_dist = 9999
   best_pose = robot_pose
+  best_index = 0
+  index = 0
   for pose in poses:
     pose_array = np.array([pose.x, pose.y])
     if (np.linalg.norm(pose_array) == 0):
       continue
     distance = np.linalg.norm(robot_pose - pose_array)**2
     if (distance < best_dist):
+      best_index = index
       best_dist = distance
       best_pose = pose_array
-  return best_pose, best_dist
+    index += 1
+  return best_pose, best_dist, best_index
 
-# TODO(jaholtz, special handling for follow)
 def Force(response):
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
   human_poses = response.human_poses
   # Check if this is firing
   if (response.robot_state == 2):
-    if (response.follow_target < len(human_poses)):
-      closest_pose = ClosestHuman(robot_pose, human_poses)[0]
-      human_poses.remove(closest_pose)
+      closest_index = ClosestHuman(robot_pose, human_poses)[2]
+      del human_poses[closest_index]
   # Find the closest human to the robot
   closest_distance = ClosestHuman(robot_pose, human_poses)[1]
-  force = np.exp(-closest_distance**2 / 5)
+  if (closest_distance == 9999):
+    return 0
+  force = np.exp(-closest_distance**2)
   return force
 
 def sigmoid(x):
@@ -83,7 +87,7 @@ def Blame(response):
   if (response.robot_state == 2):
     if (response.follow_target < len(human_poses)):
       del human_poses[response.follow_target]
-  human, closest_distance = ClosestHuman(robot_pose, human_poses)
+  human, closest_distance, index = ClosestHuman(robot_pose, human_poses)
   if (closest_distance == 9999):
       return 0.0
 
@@ -122,6 +126,7 @@ class RosSocialEnv(gym.Env):
     self.startDist = 1.0
     self.lastDist = 1.0
     self.rewardType = reward
+    self.totalForce = 0
     print("Reward Type: " + str(self.rewardType))
     # goal_x, goal_y, robot_1x, robot_1y, ... ,
     # robot_nx, robot_ny, robot_1vx, robot_1vy, ...,
@@ -196,6 +201,8 @@ class RosSocialEnv(gym.Env):
     dataMap['DistScore'] = score
     dataMap['Force'] = force
     dataMap['Blame'] = blame
+    self.totalForce += force
+    print("Force: " + str(self.totalForce))
     bonus = 1000.0 if res.success else 0.0
     if (self.rewardType == '0'): # No Social
       return 100 * score + bonus

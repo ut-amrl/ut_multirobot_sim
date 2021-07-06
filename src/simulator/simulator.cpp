@@ -1201,9 +1201,14 @@ void Simulator::RunAction() {
   req.time = time;
   req.human_poses = PoseVecToGeomMessage(GetVisibleHumanPoses(0));
   req.human_vels = PoseVecToGeomMessage(GetVisibleHumanVels(0));
-  if (ros::service::call("socialNavSrv", req, res)) {
+  if (action_ == 1) {
+    robot->motion_model->SetVel({0, {0, 0}});
+  } else if (ros::service::call("socialNavSrv", req, res)) {
     // Update the simulator with navigation result
     robot->motion_model->SetCmd(res.cmd_vel, res.cmd_curve);
+    if (res.cmd_vel == 0.0) {
+      robot->motion_model->SetVel({0, {0, 0}});
+    }
     local_target_ = {res.local_target.x, res.local_target.y};
   }
 }

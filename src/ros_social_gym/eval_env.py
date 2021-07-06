@@ -17,9 +17,6 @@ modelPath = sys.argv[1]
 model = None
 if (modelPath != 'ga'):
     model = PPO.load(modelPath)
-obs = env.reset()
-#obs = env.reset()
-#obs = env.reset()
 
 numScenarios = 2000
 resetCount = 0

@@ -191,14 +191,15 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
         z = (z > 0) ? CONFIG_max_angular_vel : -CONFIG_max_angular_vel;
       }
     }
+    vel_ = {z, {x, 0}};
     target_linear_vel_ = x;
     target_angular_vel_ = z;
 }
 
 void DiffDriveModel::SetVel(const pose_2d::Pose2Df& vel) {
   vel_ = vel;
-  target_linear_vel_ = 0;
-  target_angular_vel_ = 0;
+  target_linear_vel_ = vel.translation.x();
+  target_angular_vel_ = vel.angle;
 }
 
 geometry_msgs::Twist AckermannToTwist(const float& cmd_vel,
