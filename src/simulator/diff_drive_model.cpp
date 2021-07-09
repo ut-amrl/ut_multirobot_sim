@@ -191,7 +191,7 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::Twist& msg) {
         z = (z > 0) ? CONFIG_max_angular_vel : -CONFIG_max_angular_vel;
       }
     }
-    vel_ = {z, {x, 0}};
+    vel_ = {static_cast<float>(z), {static_cast<float>(x), 0}};
     target_linear_vel_ = x;
     target_angular_vel_ = z;
 }
