@@ -18,3 +18,4 @@ int32 follow_target
 float32 reward
 bool done
 bool success
+bool collision

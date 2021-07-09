@@ -13,6 +13,7 @@ import rospy
 import roslaunch
 
 # Other Imports
+import copy
 import sys
 import gym
 from gym import spaces
@@ -52,7 +53,7 @@ def ClosestHuman(robot_pose, poses):
 def Force(response):
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
-  human_poses = response.human_poses
+  human_poses = copy.deepcopy(response.human_poses)
   # Check if this is firing
   if (response.robot_state == 2):
       closest_index = ClosestHuman(robot_pose, human_poses)[2]
@@ -83,7 +84,7 @@ def Blame(response):
   if (response.robot_state == 1):
     return 0.0
   # If following don't count blame on follow target.
-  human_poses = response.human_poses
+  human_poses = copy.deepcopy(response.human_poses)
   if (response.robot_state == 2):
     if (response.follow_target < len(human_poses)):
       del human_poses[response.follow_target]
@@ -162,6 +163,7 @@ class RosSocialEnv(gym.Env):
       'Iteration': 0,
       'NumHumans': 0,
       'Success': 0,
+      'Collision': 0,
       'Steps': 0,
       'Data': []
     }
@@ -194,7 +196,9 @@ class RosSocialEnv(gym.Env):
 
   def CalculateReward(self, res, dataMap):
     distance = DistanceFromGoal(res)
-    score = (self.lastDist - distance)
+    # Out of 1, but always going to be way lower than 1
+    # Should sum to 1 over the course of the trial
+    score = (self.lastDist - distance) / self.startDist
     self.lastDist = distance
     force = Force(res)
     blame = Blame(res)
@@ -202,27 +206,23 @@ class RosSocialEnv(gym.Env):
     dataMap['Force'] = force
     dataMap['Blame'] = blame
     self.totalForce += force
-    print("Force: " + str(self.totalForce))
-    bonus = 1000.0 if res.success else 0.0
+    bonus = 1.0 if res.success else 0.0
+    penalty = -1.0 if res.collision else 0.0
     if (self.rewardType == '0'): # No Social
-      return 100 * score + bonus
-      #  if (self.action != self.lastObs.robot_state):
-        #  score += -0.1
-      #  if (math.fabs(score) <= 0.00001):
-        #  score += -0.1
+      return score + bonus + penalty
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
-      w2 = -0.5
-      w3 = -0.5
+      w2 = -1.0
+      w3 = -1.0
       cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
-      return cost + bonus
+      return cost + bonus + penalty
     elif (self.rewardType == '2'): # Greedier
-      w1 = 10.0
+      w1 = 100.0
       w2 = -0.1
       w3 = -0.1
       cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
-      return cost + bonus
-    return score + bonus
+      return cost + bonus + penalty
+    return score + bonus + penalty
 
   def reset(self):
     # Reset the state of the environment to an initial state
@@ -245,6 +245,7 @@ class RosSocialEnv(gym.Env):
       self.data = {'Iteration': self.resetCount,
                    'NumHumans': 0,
                    'Success': 0,
+                   'Collision': 0,
                    'Steps': 0,
                    'Data': []
                    }
@@ -258,8 +259,6 @@ class RosSocialEnv(gym.Env):
     # Execute one time step within the environment
     # Call the associated simulator service (with the input action)
     self.action = action
-    if (self.action != self.lastObs.robot_state):
-      print(self.action)
 
     # Update Demonstrations
     demo = {}
@@ -290,6 +289,8 @@ class RosSocialEnv(gym.Env):
     done = response.done
     if (response.success):
       self.data["Success"] = 1
+    if (response.collision):
+      self.data["Collision"] += 1
     self.data["Data"].append(dataMap)
     self.action_scores[action] += reward
     print(self.action_scores)
@@ -314,8 +315,8 @@ class RosSocialEnv(gym.Env):
                            lastObs.robot_state,
                            lastObs.follow_target)
     self.action = pipsRes.action;
-    if (self.action != self.lastObs.robot_state):
-      print(self.action)
+    #  if (self.action != self.lastObs.robot_state):
+      #  print(self.action)
 
     # Update Demonstrations
     demo = {}
@@ -346,6 +347,8 @@ class RosSocialEnv(gym.Env):
     done = response.done
     if (response.success):
       self.data["Success"] = 1
+    if (response.collision):
+      self.data["Collision"] += 1
     self.data["Data"].append(dataMap)
     return obs, reward, done, {"resetCount" : self.resetCount}
 

@@ -946,6 +946,41 @@ bool Simulator::IsComplete() const {
   return distance < goal_threshold_ || timeout;
 }
 
+bool Simulator::CheckHumanCollision() const {
+  const RobotPubSub* robot = &robot_pub_subs_[0];
+
+  // Check for collision with a human
+  const vector<HumanObject*> humans = GetHumans();
+  const Vector2f robot_pose = robot->cur_loc.translation;
+
+  for (size_t i = 0; i < humans.size(); i++) {
+    const auto human = humans[i];
+    const Vector2f h_pose(human->GetPose().translation.x(),
+                          human->GetPose().translation.y());
+    //
+    const float kCollisionDist = 0.4;
+    const Vector2f diff = robot_pose - h_pose;
+    if (diff.norm() < kCollisionDist) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool Simulator::CheckMapCollision() const {
+  const RobotPubSub* robot = &robot_pub_subs_[0];
+  // Check for collision with the map
+  const Vector2f robot_length({0.4, 0.0});
+  const Eigen::Rotation2Df rot(robot->cur_loc.angle);
+  if (map_.Intersects(robot->cur_loc.translation,
+                      robot->cur_loc.translation + rot * robot_length)) {
+    return true;
+  }
+
+  return false;
+}
+
 bool Simulator::GoalReached() const {
   // TODO(jaholtz) this is currently assuming a single robot.
   const int robot_index = 0;
@@ -990,7 +1025,7 @@ void Simulator::GoAlone() {
   go_alone_pub_.publish(target_message);
 }
 
-vector<HumanObject*> Simulator::GetHumans() {
+vector<HumanObject*> Simulator::GetHumans() const {
   vector<HumanObject*> output;
   for (size_t i = 0; i < objects.size(); ++i) {
     if (objects[i]->GetType() == HUMAN_OBJECT) {

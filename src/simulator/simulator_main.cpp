@@ -156,8 +156,11 @@ bool StepService(utmrsStepper::Request &req,
   door_msg.theta = door_pose.angle;
   res.door_pose = door_msg;
   res.door_state = simulator_->GetNextDoorState();
-  res.done = simulator_->IsComplete();
+  res.done = simulator_->IsComplete() || simulator_->CheckMapCollision();
   res.success = simulator_->GoalReached();
+  res.collision =
+      simulator_->CheckHumanCollision() || simulator_->CheckMapCollision();
+  cout << "Simulator Main Human Poses: " << res.human_poses.size() << endl;
   return true;
 }
 

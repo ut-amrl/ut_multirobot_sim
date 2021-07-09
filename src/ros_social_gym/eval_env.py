@@ -20,6 +20,8 @@ if (modelPath != 'ga'):
 
 numScenarios = 2000
 resetCount = 0
+action = [0]
+obs, rewards, dones, info = env.step(action)
 while resetCount < numScenarios:
     action = [0]
     if (modelPath != 'ga'):

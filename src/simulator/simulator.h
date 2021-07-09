@@ -155,7 +155,7 @@ class Simulator {
   void Pass();
   void RunAction();
   void HaltPub(std_msgs::Bool halt_message);
-  vector<human::HumanObject*> GetHumans();
+  vector<human::HumanObject*> GetHumans() const;
   human::HumanObject* FindFollowTarget(const int& robot_index, bool* found);
 
  public:
@@ -186,6 +186,8 @@ class Simulator {
   Eigen::Vector2f GetLocalTarget() const;
   bool IsComplete() const;
   bool GoalReached() const;
+  bool CheckMapCollision() const;
+  bool CheckHumanCollision() const;
   void SetAction(const int& action);
 };
 #endif  // SIMULATOR_H
