@@ -198,7 +198,9 @@ class RosSocialEnv(gym.Env):
     distance = DistanceFromGoal(res)
     # Out of 1, but always going to be way lower than 1
     # Should sum to 1 over the course of the trial
-    score = (self.lastDist - distance) / self.startDist
+    score = (self.lastDist - distance)
+    if (self.startDist > 0):
+      score = score / self.startDist
     self.lastDist = distance
     force = Force(res)
     blame = Blame(res)
@@ -206,23 +208,23 @@ class RosSocialEnv(gym.Env):
     dataMap['Force'] = force
     dataMap['Blame'] = blame
     self.totalForce += force
-    bonus = 1.0 if res.success else 0.0
+    bonus = 10.0 if res.success else 0.0
     penalty = -1.0 if res.collision else 0.0
     if (self.rewardType == '0'): # No Social
-      return score + bonus + penalty
+      return (10 * score) + bonus
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
       w2 = -1.0
       w3 = -1.0
       cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
-      return cost + bonus + penalty
+      return cost + bonus
     elif (self.rewardType == '2'): # Greedier
-      w1 = 100.0
+      w1 = 10.0
       w2 = -0.1
       w3 = -0.1
       cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
-      return cost + bonus + penalty
-    return score + bonus + penalty
+      return cost + bonus
+    return score + bonus
 
   def reset(self):
     # Reset the state of the environment to an initial state
@@ -293,7 +295,7 @@ class RosSocialEnv(gym.Env):
       self.data["Collision"] += 1
     self.data["Data"].append(dataMap)
     self.action_scores[action] += reward
-    print(self.action_scores)
+    #  print(self.action_scores)
     return obs, reward, done, {"resetCount" : self.resetCount}
 
   def PipsStep(self):

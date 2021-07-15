@@ -160,7 +160,6 @@ bool StepService(utmrsStepper::Request &req,
   res.success = simulator_->GoalReached();
   res.collision =
       simulator_->CheckHumanCollision() || simulator_->CheckMapCollision();
-  cout << "Simulator Main Human Poses: " << res.human_poses.size() << endl;
   return true;
 }
 
@@ -221,7 +220,6 @@ int main(int argc, char **argv) {
   } else {
     RateLoop rate(1.0 / simulator_->GetStepSize());
     while (ros::ok()) {
-      cout << "Simulator Spin Once" << endl;
       ros::spinOnce();
       switch (sim_state_.sim_state) {
         case SimulatorStateMsg::SIM_RUNNING : {
