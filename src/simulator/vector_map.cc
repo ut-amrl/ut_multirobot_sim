@@ -27,6 +27,7 @@
 
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
+#include "gflags/gflags.h"
 
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
@@ -34,9 +35,9 @@
 #include "shared/util/timer.h"
 #include "vector_map.h"
 
+using math_util::AngleDist;
 using math_util::AngleMod;
 using math_util::RadToDeg;
-using math_util::AngleDist;
 using geometry::Cross;
 using geometry::Line;
 using geometry::Line2f;
@@ -50,6 +51,10 @@ using std::swap;
     (LINE).p1.x(), (LINE).p1.y()
 
 #define PRINT_VEC2(V) (V).x(), (V).y()
+
+DEFINE_double(min_line_length,
+              0.05,
+              "Minimum line length to consider for Analytic ray casting");
 
 namespace vector_map {
 
@@ -189,6 +194,7 @@ void TrimOcclusion(const Vector2f& loc,
   }
 }
 
+
 void VectorMap::GetSceneLines(const Vector2f& loc,
                               float max_range,
                               vector<Line2f>* lines_list) const {
@@ -204,14 +210,6 @@ void VectorMap::GetSceneLines(const Vector2f& loc,
     if (l.p0.y() > y_max && l.p1.y() > y_max) continue;
     lines_list->push_back(l);
   }
-  // Add object lines
-  for (const Line2f& l : object_lines){
-    if (l.p0.x() < x_min && l.p1.x() < x_min) continue;
-    if (l.p0.y() < y_min && l.p1.y() < y_min) continue;
-    if (l.p0.x() > x_max && l.p1.x() > x_max) continue;
-    if (l.p0.y() > y_max && l.p1.y() > y_max) continue;
-    lines_list->push_back(l);
-  }
 }
 
 void VectorMap::SceneRender(const Vector2f& loc,
@@ -220,8 +218,7 @@ void VectorMap::SceneRender(const Vector2f& loc,
                             float angle_max,
                             vector<Line2f>* render) const {
   static const unsigned int MaxLines = 2000;
-  const float kMinLineLength = 0.05;
-  const float eps = Sq(kMinLineLength);
+  const float eps = Sq(FLAGS_min_line_length);
   vector<Line2f> scene;
   vector<Line2f> lines_list;
   GetSceneLines(loc, max_range, &lines_list);
@@ -331,6 +328,7 @@ void VectorMap::RayCast(const Vector2f& loc,
   }
 }
 
+
 void ShrinkLine(float distance, Line2f* line) {
   const float len = line->Length();
   const Vector2f dir = line->Dir();
@@ -370,6 +368,7 @@ void VectorMap::Cleanup() {
 }
 
 void VectorMap::Load(const string& file) {
+  if (file == file_name) return;
   FILE* fid = fopen(file.c_str(), "r");
   if (fid == NULL) {
     fprintf(stderr, "ERROR: Unable to load map %s\n", file.c_str());
@@ -382,6 +381,7 @@ void VectorMap::Load(const string& file) {
   }
   fclose(fid);
   Cleanup();
+  printf("Loaded vector map %s with %d lines\n", file.c_str(), int(lines.size()));
   file_name = file;
 }
 

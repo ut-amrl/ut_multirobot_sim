@@ -54,7 +54,6 @@ def Force(response):
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
   human_poses = copy.deepcopy(response.human_poses)
-  # Check if this is firing
   if (response.robot_state == 2):
       closest_index = ClosestHuman(robot_pose, human_poses)[2]
       del human_poses[closest_index]
@@ -81,13 +80,14 @@ def Blame(response):
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
   # if state is halt, blame = 0 (we have no velocity anymore)
+  print("Response Robot State: " + str(response.robot_state))
   if (response.robot_state == 1):
     return 0.0
   # If following don't count blame on follow target.
   human_poses = copy.deepcopy(response.human_poses)
   if (response.robot_state == 2):
-    if (response.follow_target < len(human_poses)):
-      del human_poses[response.follow_target]
+      closest_index = ClosestHuman(robot_pose, human_poses)[2]
+      del human_poses[closest_index]
   human, closest_distance, index = ClosestHuman(robot_pose, human_poses)
   if (closest_distance == 9999):
       return 0.0
@@ -100,12 +100,33 @@ def Blame(response):
   end2 = robot_pose + (np.array(robot_vel) * 0.5)
 
   # closest point to human
-  # The Relatives of this is still broken I think
   closest_point = closest_point_on_line_segment_to_point(robot_pose, end2, human)
 
   # blame
   blame = sigmoid(np.linalg.norm(closest_point - human))
   return blame
+
+def CarrotScore(response):
+  robot_pose = MakeNpArray(response.robot_poses)[0]
+  angle = robot_pose[2]
+  robot_pose = np.array([robot_pose[0], robot_pose[1]])
+  rot = np.array([[cos(-self.theta), -sin(-self.theta)],
+                  [sin(-self.theta), cos(-self.theta)] ])
+  # Distance Moved = difference between poses (that's a vector)
+  moved = robot_pose - self.last_pose
+
+  # Transform this to local coordinates (by rotating it)
+  moved = np.dot(rot, moved)
+
+  # Then norm(last_local) - norm(last_local - moved) = Score
+  score = np.norm(self.last_local) - norm(self.last_local - moved)
+
+  # Update lasts
+  self.theta = angle
+  self.last_pose = robot_pose
+  self.last_local = MakeNpArray(response.local_target)
+
+  return score
 
 def DistanceFromGoal(response):
   robot_pose = MakeNpArray(response.robot_poses)
@@ -124,10 +145,12 @@ class RosSocialEnv(gym.Env):
     self.action_space = spaces.Discrete(4)
     self.action = 0
     self.action_scores = [0, 0, 0, 0]
+    self.totalForce = 0
+    self.totalBlame = 0
+    self.totalSteps = 0
     self.startDist = 1.0
     self.lastDist = 1.0
     self.rewardType = reward
-    self.totalForce = 0
     print("Reward Type: " + str(self.rewardType))
     # goal_x, goal_y, robot_1x, robot_1y, ... ,
     # robot_nx, robot_ny, robot_1vx, robot_1vy, ...,
@@ -136,9 +159,10 @@ class RosSocialEnv(gym.Env):
     self.num_robots = 1
     self.max_humans = 40
     self.noPose = True
-    self.length = 8 + (self.num_robots*6) + (self.max_humans * 6)
+    self.length = 1 + (self.num_robots*6) + (self.max_humans * 6)
     if self.noPose:
-      self.length = 8 + (self.num_robots*3) + (self.max_humans * 6)
+      self.length = 4 + (self.max_humans * 6)
+      #  self.length = 1 + (self.num_robots*3) + (self.max_humans * 6)
     self.observation_space = spaces.Box(low=-9999,
                                         high=9999,
                                         shape=(self.length,))
@@ -176,7 +200,8 @@ class RosSocialEnv(gym.Env):
   def MakeObservation(self, res):
     obs = []
     if (self.noPose):
-      obs = MakeNpArray(res.robot_vels)
+      pass
+      #  obs = MakeNpArray(res.robot_vels)
     else:
       obs = MakeNpArray(res.robot_poses)
       obs = np.append(obs, MakeNpArray(res.robot_vels))
@@ -188,9 +213,9 @@ class RosSocialEnv(gym.Env):
     obs = np.append(obs, MakeNpArray(res.human_vels))
     obs = np.append(obs, np.zeros(fill_num))
     # Pad with zeroes to reach correct number of variables
-    obs = np.append(obs, MakeNpArray([res.goal_pose]))
-    obs = np.append(obs, MakeNpArray([res.door_pose]))
-    obs = np.append(obs, res.door_state)
+    obs = np.append(obs, MakeNpArray([res.local_target]))
+    #  obs = np.append(obs, MakeNpArray([res.door_pose]))
+    #  obs = np.append(obs, res.door_state)
     obs = np.append(obs, self.action)
     return obs
 
@@ -199,30 +224,44 @@ class RosSocialEnv(gym.Env):
     # Out of 1, but always going to be way lower than 1
     # Should sum to 1 over the course of the trial
     score = (self.lastDist - distance)
-    if (self.startDist > 0):
-      score = score / self.startDist
+    #  if (self.startDist > 0):
+      #  score = score / self.startDist
     self.lastDist = distance
     force = Force(res)
     blame = Blame(res)
+    self.totalForce += force
+    self.totalBlame += blame
+    self.totalSteps += 1
     dataMap['DistScore'] = score
     dataMap['Force'] = force
     dataMap['Blame'] = blame
+    #  print("Distance Score: " + str(score))
+    #  print("Force: " + str(self.totalForce))
+    #  print("Blame: " + str(self.totalBlame))
+    #  print("Steps: " + str(self.totalSteps))
     self.totalForce += force
     bonus = 10.0 if res.success else 0.0
     penalty = -1.0 if res.collision else 0.0
+    print(self.rewardType)
     if (self.rewardType == '0'): # No Social
       return (10 * score) + bonus
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
-      w2 = -1.0
-      w3 = -1.0
-      cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
+      w2 = -0.1
+      w3 = -0.1
+      print("Distance Score: " + str(w1 * score))
+      print("Force: " + str(w3 * force))
+      print("Blame: " + str(w2 * blame))
+      cost = w1 * score + w2 * blame + w3 * force
       return cost + bonus
     elif (self.rewardType == '2'): # Greedier
       w1 = 10.0
       w2 = -0.1
       w3 = -0.1
-      cost = w1 * score + w2 * Blame(res) + w3 * Force(res)
+      print("Distance Score: " + str(w1 * score))
+      print("Force: " + str(w3 * force))
+      print("Blame: " + str(w2 * blame))
+      cost = w1 * score + w2 * blame + w3 * force
       return cost + bonus
     return score + bonus
 
@@ -232,7 +271,9 @@ class RosSocialEnv(gym.Env):
     self.resetCount += 1
     self.totalSteps += self.stepCount
     self.stepCount = 0
-    GenerateScenario()
+    kNumRepeats = 20
+    if (self.resetCount % kNumRepeats == 0):
+      GenerateScenario()
     response = self.simReset()
     stepResponse = self.simStep(0)
     self.startDist = DistanceFromGoal(stepResponse)
@@ -261,6 +302,8 @@ class RosSocialEnv(gym.Env):
     # Execute one time step within the environment
     # Call the associated simulator service (with the input action)
     self.action = action
+    if (self.action != self.lastObs.robot_state):
+      print(self.action)
 
     # Update Demonstrations
     demo = {}
@@ -317,8 +360,8 @@ class RosSocialEnv(gym.Env):
                            lastObs.robot_state,
                            lastObs.follow_target)
     self.action = pipsRes.action;
-    #  if (self.action != self.lastObs.robot_state):
-      #  print(self.action)
+    if (self.action != self.lastObs.robot_state):
+      print(self.action)
 
     # Update Demonstrations
     demo = {}

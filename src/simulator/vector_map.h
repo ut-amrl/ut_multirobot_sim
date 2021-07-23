@@ -70,6 +70,14 @@ struct VectorMap {
                         float angle_max,
                         int num_rays,
                         std::vector<float>* scan);
+ void GetRayToLineCorrespondences(
+      const Eigen::Vector2f& sensor_loc,
+      const float angle,
+      const std::vector<Eigen::Vector2f>& rays,
+      const float min_range,
+      const float max_range,
+      std::vector<geometry::Line2f>* lines_ptr,
+      std::vector<int>* line_correspondences) const;
   void Cleanup();
 
   void Load(const std::string& file);
