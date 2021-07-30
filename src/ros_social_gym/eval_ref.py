@@ -11,13 +11,13 @@ from ros_social_gym import RosSocialEnv
 from make_scenarios import GenerateScenario
 
 # The algorithms require a vectorized environment to run
-env = RosSocialEnv(0, 'config/gdc_gym_gen/ref_launch.launch')
+env = RosSocialEnv('1', 'config/gdc_gym_gen/ref_launch.launch')
 seed(1123)
 model = None
 obs = env.reset()
 #  obs = env.reset()
 
-numScenarios = 11
+numScenarios = 500
 resetCount = 0
 while resetCount < numScenarios:
     obs, rewards, dones, info = env.PipsStep()

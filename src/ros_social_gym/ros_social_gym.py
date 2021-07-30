@@ -80,7 +80,6 @@ def Blame(response):
   robot_pose = response.robot_poses[0]
   robot_pose = np.array([0, 0])
   # if state is halt, blame = 0 (we have no velocity anymore)
-  print("Response Robot State: " + str(response.robot_state))
   if (response.robot_state == 1):
     return 0.0
   # If following don't count blame on follow target.
@@ -192,6 +191,7 @@ class RosSocialEnv(gym.Env):
       'Data': []
     }
     print("Environment Initialized")
+    print("Transition TO 0")
 
   # Do this on shutdown
   def __del__(self):
@@ -242,13 +242,14 @@ class RosSocialEnv(gym.Env):
     self.totalForce += force
     bonus = 10.0 if res.success else 0.0
     penalty = -1.0 if res.collision else 0.0
-    print(self.rewardType)
     if (self.rewardType == '0'): # No Social
       return (10 * score) + bonus
     elif (self.rewardType == '1'): # Nicer
       w1 = 2.0
       w2 = -0.1
       w3 = -0.1
+      if (score < 0.0):
+        w1 *= 2.0
       print("Distance Score: " + str(w1 * score))
       print("Force: " + str(w3 * force))
       print("Blame: " + str(w2 * blame))
@@ -271,7 +272,7 @@ class RosSocialEnv(gym.Env):
     self.resetCount += 1
     self.totalSteps += self.stepCount
     self.stepCount = 0
-    kNumRepeats = 20
+    kNumRepeats = 1
     if (self.resetCount % kNumRepeats == 0):
       GenerateScenario()
     response = self.simReset()
@@ -279,7 +280,7 @@ class RosSocialEnv(gym.Env):
     self.startDist = DistanceFromGoal(stepResponse)
     self.lastDist = self.startDist
 
-    # TODO(jaholtz) append to this file instead of rewriting each time
+    #  TODO(jaholtz) append to this file instead of rewriting each time
     #  with open('GymDemos.json', 'w') as outputJson:
       #  json.dump(self.demos, outputJson, indent=2)
 
@@ -303,7 +304,7 @@ class RosSocialEnv(gym.Env):
     # Call the associated simulator service (with the input action)
     self.action = action
     if (self.action != self.lastObs.robot_state):
-      print(self.action)
+      print("Transition TO: " + str(self.action))
 
     # Update Demonstrations
     demo = {}
@@ -361,7 +362,7 @@ class RosSocialEnv(gym.Env):
                            lastObs.follow_target)
     self.action = pipsRes.action;
     if (self.action != self.lastObs.robot_state):
-      print(self.action)
+      print("Transition TO: " + str(self.action))
 
     # Update Demonstrations
     demo = {}

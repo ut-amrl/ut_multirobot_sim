@@ -217,6 +217,7 @@ void VectorMap::SceneRender(const Vector2f& loc,
                             float angle_min,
                             float angle_max,
                             vector<Line2f>* render) const {
+  const bool kDebug = false;
   static const unsigned int MaxLines = 2000;
   const float eps = Sq(FLAGS_min_line_length);
   vector<Line2f> scene;
@@ -244,11 +245,13 @@ void VectorMap::SceneRender(const Vector2f& loc,
   }
 
   if (lines_list.size() >= MaxLines) {
-    fprintf(stderr,
-            "Runaway Analytic Scene Render at %.30f,%.30f, %.3f : %.3f\u00b0\n",
-            loc.x(), loc.y(),
-            RadToDeg(angle_min),
-            RadToDeg(angle_max));
+    if (kDebug) {
+      fprintf(stderr,
+          "Runaway Analytic Scene Render at %.30f,%.30f, %.3f : %.3f\u00b0\n",
+          loc.x(), loc.y(),
+          RadToDeg(angle_min),
+          RadToDeg(angle_max));
+    }
   }
   for(const Line2f& l : scene) {
     if (l.SqLength() > eps) render->push_back(l);

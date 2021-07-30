@@ -15,9 +15,9 @@ launch = sys.argv[1]
 env = RosSocialEnv(0, launch)
 seed(1123)
 model = None
-obs = env.reset()
+#  obs = env.reset()
 
-numScenarios = 2000
+numScenarios = 500
 resetCount = 0
 while resetCount < numScenarios:
     obs, rewards, dones, info = env.PipsStep()
