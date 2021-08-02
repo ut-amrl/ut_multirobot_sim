@@ -250,18 +250,18 @@ class RosSocialEnv(gym.Env):
       w3 = -0.1
       if (score < 0.0):
         w1 *= 2.0
-      print("Distance Score: " + str(w1 * score))
-      print("Force: " + str(w3 * force))
-      print("Blame: " + str(w2 * blame))
+      #  print("Distance Score: " + str(w1 * score))
+      #  print("Force: " + str(w3 * force))
+      #  print("Blame: " + str(w2 * blame))
       cost = w1 * score + w2 * blame + w3 * force
       return cost + bonus
     elif (self.rewardType == '2'): # Greedier
       w1 = 10.0
       w2 = -0.1
       w3 = -0.1
-      print("Distance Score: " + str(w1 * score))
-      print("Force: " + str(w3 * force))
-      print("Blame: " + str(w2 * blame))
+      #  print("Distance Score: " + str(w1 * score))
+      #  print("Force: " + str(w3 * force))
+      #  print("Blame: " + str(w2 * blame))
       cost = w1 * score + w2 * blame + w3 * force
       return cost + bonus
     return score + bonus
@@ -272,13 +272,14 @@ class RosSocialEnv(gym.Env):
     self.resetCount += 1
     self.totalSteps += self.stepCount
     self.stepCount = 0
-    kNumRepeats = 1
+    kNumRepeats = 20
     if (self.resetCount % kNumRepeats == 0):
       GenerateScenario()
     response = self.simReset()
     stepResponse = self.simStep(0)
     self.startDist = DistanceFromGoal(stepResponse)
     self.lastDist = self.startDist
+    self.data['Demos'] = self.demos
 
     #  TODO(jaholtz) append to this file instead of rewriting each time
     #  with open('GymDemos.json', 'w') as outputJson:
@@ -291,8 +292,10 @@ class RosSocialEnv(gym.Env):
                    'Success': 0,
                    'Collision': 0,
                    'Steps': 0,
-                   'Data': []
+                   'Data': [],
+                   'Demos': []
                    }
+      self.demos.clear()
       self.lastObs = stepResponse
       return self.MakeObservation(stepResponse)
 
@@ -321,7 +324,7 @@ class RosSocialEnv(gym.Env):
     # Update Demonstrations
     demo["next_observation"] = obs
     self.last_observation = obs
-    #  self.demos.append(demo)
+    self.demos.append(demo)
 
     # temporarily removing observation from output file for space
     dataMap = {}
