@@ -132,6 +132,10 @@ def DistanceFromGoal(response):
   goal_pose = MakeNpArray([response.goal_pose])
   return np.linalg.norm(robot_pose[0] - goal_pose[0])
 
+def np_encoder(object):
+  if isinstance(object, np.generic):
+    return object.item()
+
 class RosSocialEnv(gym.Env):
   """A ros-based social navigation environment for OpenAI gym"""
 
@@ -240,12 +244,12 @@ class RosSocialEnv(gym.Env):
     #  print("Blame: " + str(self.totalBlame))
     #  print("Steps: " + str(self.totalSteps))
     self.totalForce += force
-    bonus = 10.0 if res.success else 0.0
+    bonus = 100.0 if res.success else 0.0
     penalty = -1.0 if res.collision else 0.0
     if (self.rewardType == '0'): # No Social
       return (10 * score) + bonus
     elif (self.rewardType == '1'): # Nicer
-      w1 = 2.0
+      w1 = 5.0
       w2 = -0.1
       w3 = -0.1
       if (score < 0.0):
@@ -272,7 +276,7 @@ class RosSocialEnv(gym.Env):
     self.resetCount += 1
     self.totalSteps += self.stepCount
     self.stepCount = 0
-    kNumRepeats = 20
+    kNumRepeats = 1
     if (self.resetCount % kNumRepeats == 0):
       GenerateScenario()
     response = self.simReset()
@@ -286,7 +290,7 @@ class RosSocialEnv(gym.Env):
       #  json.dump(self.demos, outputJson, indent=2)
 
     with open('data/SocialGym' + str(self.resetCount) + '.json', 'w') as outputJson:
-      json.dump(self.data, outputJson, indent=2)
+      json.dump(self.data, outputJson, indent=2, default=np_encoder)
       self.data = {'Iteration': self.resetCount,
                    'NumHumans': 0,
                    'Success': 0,
@@ -312,7 +316,7 @@ class RosSocialEnv(gym.Env):
     # Update Demonstrations
     demo = {}
     demo["action"] = self.action
-    demo["observation"] = self.last_observation
+    demo["obs"] = self.last_observation
 
     # Step the simulator and make observation
     response = self.simStep(action)
@@ -322,7 +326,7 @@ class RosSocialEnv(gym.Env):
     obs = [0 if math.isnan(x) else x for x in obs]
 
     # Update Demonstrations
-    demo["next_observation"] = obs
+    demo["next_obs"] = obs
     self.last_observation = obs
     self.demos.append(demo)
 
