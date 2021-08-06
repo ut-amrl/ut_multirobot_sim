@@ -18,8 +18,8 @@ angular_odom_scale = 1.0
 -- SIMULATOR PARAMETERS
 
 -- tf
-publish_map_to_odom = false
-publish_foot_to_base = false
+publish_map_to_odom = true
+publish_foot_to_base = true
 
 -- Kinematic
 rear_axle_offset = 0.0

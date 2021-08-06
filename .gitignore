@@ -4,5 +4,6 @@ build
 lib
 msg_gen
 src/ut_multirobot_sim/
+srv_gen
 profile_results
 .vscode

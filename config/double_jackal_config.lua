@@ -10,7 +10,7 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-init_config_file = "config/default_init_config.lua"
+init_config_file = "config/double_robot_init_config.lua"
 -- example of loading human crow scenario configs
 -- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
 
@@ -18,9 +18,12 @@ init_config_file = "config/default_init_config.lua"
 delta_t = 0.025
 
 -- Simulator TF publications
-publish_foot_to_base = true
-publish_tfs = true
-publish_map_to_odom = true
+publish_tfs = true;
+publish_foot_to_base = true;
+publish_map_to_odom = true;
+
+drive_callback_topic = "/navigation/cmd_vel"
+diff_drive_odom_topic = "/jackal_velocity_controller/odom"
 
 -- Car dimensions.
 car_width = 0.281
@@ -61,8 +64,8 @@ local RobotType = {
 -- robot_config = "config/bwibot_config.lua"
 -- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
 -- robot_config = "config/cobot_config.lua"
-robot_types = { RobotType.DIFF_DRIVE }
-robot_config = "config/ut_jackal_config.lua"
+robot_types = { RobotType.DIFF_DRIVE, RobotType.DIFF_DRIVE }
+robot_config = { "config/ut_jackal_config.lua", "config/ut_jackal_config.lua" }
 
 laser_topic = "/scan"
 laser_frame = "/base_laser"

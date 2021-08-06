@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+
+<!-- Make sure to have the following packages on the ROS path:
+     * graph_navigation -->
+
+<launch>
+
+  <arg name="output_loc" default="screen"/>
+
+  <!-- Navigation Arguments-->
+  <arg name="map_name" default="AHG2"/>
+  <arg name="maps_dir" default="$(find amrl_maps)"/>
+  <arg name="clearance_weight" default="-0.5"/>
+  <arg name="distance_weight" default="1"/>
+  <arg name="free_path_weight" default="-1"/>
+  <arg name="max_curvature" default="0.3"/>
+  <arg name="max_plan_deviation" default="10.0"/>
+  <arg name="no_joystick" default="true"/>
+  <arg name="sub_opt" default="10.5"/>
+
+  <arg name="twist_drive_topic" default="/robot0/navigation/cmd_vel" />
+  <arg name="robot_config" default="$(find ut_multirobot_sim)/util/jackal_nav_0.lua"/>
+
+
+  <!-- UT Multi-robot Sim -->
+  <node pkg="ut_multirobot_sim" type="simulator" name="simulator" args=" --localize=true --sim_config=/home/srabiee/Cloned_Repos/ut_multirobot_sim/config/sim_config.lua " >
+  </node>
+
+
+  <!-- Graph Navigation -->
+  <arg name="run_graph_nav" default="1"/>
+  <group if="$(eval arg('run_graph_nav') == 1)">
+    <node pkg="graph_navigation" type="navigation" name="navigation" output="$(arg output_loc)" respawn="false" respawn_delay="0" args="--map=$(arg map_name) --maps_dir=$(arg maps_dir) --cw=$(arg clearance_weight) --dw=$(arg distance_weight) --fw=$(arg free_path_weight) --max_curvature=$(arg max_curvature) --max_plan_deviation=$(arg max_plan_deviation) --no_joystick=$(arg no_joystick) --subopt=$(arg sub_opt)  --robot_config=$(arg robot_config) --twist_drive_topic=$(arg twist_drive_topic) ">
+
+    </node>
+  </group>
+  
+
+
+</launch>
