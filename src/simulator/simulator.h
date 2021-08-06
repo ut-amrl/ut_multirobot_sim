@@ -38,7 +38,7 @@
 #include "visualization_msgs/Marker.h"
 
 #include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
-#include "ut_multirobot_sim/Localization2DMsg.h"
+#include "amrl_msgs/Localization2DMsg.h"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -86,7 +86,7 @@ class Simulator {
   tf::TransformBroadcaster *br;
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
-  ut_multirobot_sim::Localization2DMsg localizationMsg;
+  amrl_msgs::Localization2DMsg localizationMsg;
 
   vector_map::VectorMap map_;
 

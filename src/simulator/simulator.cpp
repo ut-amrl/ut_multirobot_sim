@@ -41,7 +41,7 @@
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
-#include "ut_multirobot_sim/Localization2DMsg.h"
+#include "amrl_msgs/Localization2DMsg.h"
 #include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
@@ -183,8 +183,8 @@ bool Simulator::init(ros::NodeHandle& n) {
     auto& rps = robot_pub_subs_.back();
     rps.motion_model = std::unique_ptr<robot_model::RobotModel>(mm);
 
-    rps.initSubscriber = n.subscribe<ut_multirobot_sim::Localization2DMsg>(
-       pf + "/initialpose", 1, [&](const boost::shared_ptr<const ut_multirobot_sim::Localization2DMsg>& msg) {
+    rps.initSubscriber = n.subscribe<amrl_msgs::Localization2DMsg>(
+       pf + "/initialpose", 1, [&](const boost::shared_ptr<const amrl_msgs::Localization2DMsg>& msg) {
         const Vector2f loc(msg->pose.x, msg->pose.y);
         const float angle = msg->pose.theta;
         rps.motion_model->SetPose({angle, loc});
@@ -198,7 +198,7 @@ bool Simulator::init(ros::NodeHandle& n) {
         pf + "/simulator_true_pose", 1);
 
       if (FLAGS_localize) {
-        rps.localizationPublisher = n.advertise<ut_multirobot_sim::Localization2DMsg>(
+        rps.localizationPublisher = n.advertise<amrl_msgs::Localization2DMsg>(
             pf + "/localization", 1);
         localizationMsg.header.frame_id = "map";
         localizationMsg.header.seq = 0;

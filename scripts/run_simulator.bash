@@ -1,7 +1,8 @@
 #!/bin/bash
 
-CONFIG_FILE="double_jackal_config.lua"
+# CONFIG_FILE="double_jackal_config.lua"
 # CONFIG_FILE="sim_config.lua"
+CONFIG_FILE="sim_jackal_config.lua"
 
 ./bin/simulator \
  --localize="true" \

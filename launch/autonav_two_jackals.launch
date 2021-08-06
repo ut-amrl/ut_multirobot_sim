@@ -10,10 +10,10 @@
   <!-- Navigation Arguments-->
   <arg name="map_name" default="AHG2"/>
   <arg name="maps_dir" default="$(find amrl_maps)"/>
-  <arg name="clearance_weight" default="-0.5"/>
+  <arg name="clearance_weight" default="-0.25"/>
   <arg name="distance_weight" default="1"/>
   <arg name="free_path_weight" default="-1"/>
-  <arg name="max_curvature" default="0.3"/>
+  <arg name="max_curvature" default="3.0"/>
   <arg name="max_plan_deviation" default="10.0"/>
   <arg name="no_joystick" default="true"/>
   <arg name="sub_opt" default="10.5"/>
@@ -32,7 +32,7 @@
     <node pkg="graph_navigation" type="navigation" name="navigation_0" output="$(arg output_loc)" respawn="false" respawn_delay="0" args="--map=$(arg map_name) --maps_dir=$(arg maps_dir) --cw=$(arg clearance_weight) --dw=$(arg distance_weight) --fw=$(arg free_path_weight) --max_curvature=$(arg max_curvature) --max_plan_deviation=$(arg max_plan_deviation) --no_joystick=$(arg no_joystick) --subopt=$(arg sub_opt)  --robot_config=$(arg robot_config_0) --twist_drive_topic=$(arg twist_drive_topic_0) ">
 
       <remap from="/move_base_simple/goal" to="/robot0/move_base_simple/goal"/>
-      <remap from="/initialpose" to="/robot0/initialpose"/>
+      <!-- <remap from="/initialpose" to="/robot0/initialpose"/> -->
     </node>
   </group>
 
@@ -41,7 +41,7 @@
     <node pkg="graph_navigation" type="navigation" name="navigation_1" output="$(arg output_loc)" respawn="false" respawn_delay="0" args="--map=$(arg map_name) --maps_dir=$(arg maps_dir) --cw=$(arg clearance_weight) --dw=$(arg distance_weight) --fw=$(arg free_path_weight) --max_curvature=$(arg max_curvature) --max_plan_deviation=$(arg max_plan_deviation) --no_joystick=$(arg no_joystick) --subopt=$(arg sub_opt)  --robot_config=$(arg robot_config_1) --twist_drive_topic=$(arg twist_drive_topic_1) ">
 
       <remap from="/move_base_simple/goal" to="/robot1/move_base_simple/goal"/>
-      <remap from="/initialpose" to="/robot1/initialpose"/>
+      <!-- <remap from="/initialpose" to="/robot1/initialpose"/> -->
     </node>
 
   </group>
