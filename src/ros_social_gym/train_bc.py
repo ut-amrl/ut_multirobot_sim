@@ -21,9 +21,9 @@ venv = DummyVecEnv([lambda: RosSocialEnv(1, "config/gdc_gym_gen/launch.launch")]
 # Train BC on expert data.
 # BC also accepts as `expert_data` any PyTorch-style DataLoader that iterates over
 # dictionaries containing observations and actions.
-transitions = SocialDataset('big_bc_demos.json')
+transitions = SocialDataset('big_bc_demos.json', 0)
 # Generate 100 models to evaluate, yay...
-minSamples = len(transitions // 100)
+minSamples = len(transitions) // 100
 maxSamples = len(transitions)
 for i in range(minSamples, maxSamples, maxSamples // 100):
     transitions = SocialDataset('big_bc_demos.json', i)
