@@ -9,6 +9,7 @@ from ut_multirobot_sim.srv import utmrsReset
 from amrl_msgs.srv import SocialPipsSrv
 from ut_multirobot_sim.srv import utmrsStepperResponse
 from make_scenarios import GenerateScenario
+from shutil import copyfile
 import rospy
 import roslaunch
 
@@ -139,10 +140,11 @@ def np_encoder(object):
 class RosSocialEnv(gym.Env):
   """A ros-based social navigation environment for OpenAI gym"""
 
-  def __init__(self, reward, launch):
+  def __init__(self, reward, repeats, launch):
     super(RosSocialEnv, self).__init__()
     seed(1)
     # Halt, GoAlone, Follow, Pass
+    self.numRepeats = repeats
     self.demos = []
     self.last_observation = []
     self.action_space = spaces.Discrete(4)
@@ -182,6 +184,10 @@ class RosSocialEnv(gym.Env):
     self.simStep = rospy.ServiceProxy('utmrsStepper', utmrsStepper)
     self.simReset = rospy.ServiceProxy('utmrsReset', utmrsReset)
     self.pipsSrv = rospy.ServiceProxy('SocialPipsSrv', SocialPipsSrv)
+    GenerateScenario()
+    self.launch.shutdown()
+    self.launch = roslaunch.parent.ROSLaunchParent(uuid, [launch])
+    self.launch.start()
     self.lastObs = utmrsStepperResponse()
     self.resetCount = 0
     self.stepCount = 0
@@ -276,7 +282,7 @@ class RosSocialEnv(gym.Env):
     self.resetCount += 1
     self.totalSteps += self.stepCount
     self.stepCount = 0
-    kNumRepeats = 1
+    kNumRepeats = self.numRepeats
     if (self.resetCount % kNumRepeats == 0):
       GenerateScenario()
     response = self.simReset()

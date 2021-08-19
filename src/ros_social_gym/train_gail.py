@@ -34,14 +34,14 @@ def save(trainer, save_path):
     )
 
 # create Environtment
-venv = DummyVecEnv([lambda: RosSocialEnv(1, "config/gdc_gym_gen/launch.launch")])
+venv = DummyVecEnv([lambda: RosSocialEnv(1, 20, "config/gym_gen/launch.launch")])
 seed(1)
 
 # Train BC on expert data.
 # BC also accepts as `expert_data` any PyTorch-style DataLoader that iterates over
 # dictionaries containing observations and actions.
 transitions = SocialDataset('big_bc_demos.json')
-log_dir = "/home/jaholtz/code/ut_multirobot_sim/gail_training/"
+log_dir = "/root/gail_training/"
 logger.configure(log_dir)
 #  bc_trainer = bc.BC(venv.observation_space, venv.action_space, expert_data=transitions)
 #  bc_trainer.train(n_epochs=100)
@@ -54,11 +54,12 @@ logger.configure(log_dir)
 gail_trainer = adversarial.GAIL(
     venv,
     expert_data=transitions,
-    expert_batch_size=10,
-    gen_algo=sb3.PPO("MlpPolicy", venv, verbose=1, n_steps=10),
+    expert_batch_size=100,
+    gen_algo=sb3.PPO("MlpPolicy", venv, verbose=1, n_steps=100),
 )
 
-checkpoint_interval = len(transitions) // 100
+#  checkpoint_interval = len(transitions) // 100
+checkpoint_interval = 100
 print(len(transitions))
 print(checkpoint_interval)
 
@@ -67,7 +68,6 @@ def callback(round_num):
         save(gail_trainer, os.path.join(log_dir, "checkpoints", f"{round_num:05d}"))
 
 gail_trainer.train(len(transitions), callback)
-
 
 #  # Train AIRL on expert data.
 #  logger.configure(tempdir_path / "AIRL/")

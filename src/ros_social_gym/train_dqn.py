@@ -12,17 +12,17 @@ import sys
 
 # The algorithms require a vectorized environment to run
 reward = sys.argv[1]
-env = DummyVecEnv([lambda: RosSocialEnv(reward, "config/gdc_gym_gen/launch.launch")])
+env = DummyVecEnv([lambda: RosSocialEnv(reward, 20, "config/gym_gen/launch.launch")])
 seed(1)
 #  GenerateScenario()
 env.reset()
-model = DQN("MlpPolicy", env, verbose=0)
+#  model = DQN("MlpPolicy", env, verbose=0)
 #  model.save("data/ppo_base")
-#  model = PPO.load("base_ppo", env)
+model = DQN.load("dqn_training/dqn_99", env)
 count = 0
 upper = 1000
 while(count < upper):
-  model.learn(total_timesteps=2000, log_interval=4)
+  model.learn(total_timesteps=2000)
   # Save the agent
   model.save("data/dqn_" + str(count))
   count += 1

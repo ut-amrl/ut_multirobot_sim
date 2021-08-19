@@ -11,14 +11,14 @@ from ros_social_gym import RosSocialEnv
 from make_scenarios import GenerateScenario
 
 # The algorithms require a vectorized environment to run
-env = DummyVecEnv([lambda: RosSocialEnv('1', "config/gdc_gym_gen/launch.launch")])
+env = DummyVecEnv([lambda: RosSocialEnv('1', 1, "config/gym_gen/launch.launch")])
 seed(1123)
 modelPath = sys.argv[1]
 model = None
 if (modelPath != 'ga'):
     model = PPO.load(modelPath)
 
-numScenarios = 500
+numScenarios = 1000
 resetCount = 0
 action = [0]
 obs, rewards, dones, info = env.step(action)

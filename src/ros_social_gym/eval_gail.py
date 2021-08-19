@@ -20,7 +20,8 @@ seed(1123)
 modelPath = sys.argv[1]
 model = None
 if (modelPath != ''):
-    model = bc.reconstruct_policy(modelPath)
+    with open(modelPath, 'rb') as file:
+        model = pickle.load(file)
 
 numScenarios = 2000
 resetCount = 0

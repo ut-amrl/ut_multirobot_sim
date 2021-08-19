@@ -68,6 +68,7 @@ HumanObject::HumanObject(const string& config_file,
   config_reader::ConfigReader waypoint_reader({config_file});
   waypoints_ = CONFIG_waypoints;
   if (waypoints_.empty()) {
+    cout << "Human Index: " << "hu" + std::to_string(index) << endl;
     throw invalid_argument("Human must have at least one starting waypoint!");
   }
   mode_ = static_cast<HumanMode>(CONFIG_mode);

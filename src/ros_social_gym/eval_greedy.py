@@ -10,26 +10,17 @@ from stable_baselines3 import PPO
 from ros_social_gym import RosSocialEnv
 from make_scenarios import GenerateScenario
 
-from imitation.algorithms import adversarial, bc
-from imitation.data import rollout
-import pickle
-
 # The algorithms require a vectorized environment to run
-env = DummyVecEnv([lambda: RosSocialEnv('1', "config/gym_gen/launch.launch")])
-seed(1123)
-modelPath = sys.argv[1]
+env = RosSocialEnv('1', 1, 'config/gdc_gym_gen/greedy_launch.launch')
+seed(1)
 model = None
-if (modelPath != ''):
-    model = bc.reconstruct_policy(modelPath)
+#  obs = env.reset()
 
 numScenarios = 2000
 resetCount = 0
-action = [0]
-obs, rewards, dones, info = env.step(action)
 while resetCount < numScenarios:
     print("Reset Count: " + str(resetCount))
-    action = [0]
-    if (modelPath != 'ga'):
-        action, _states = model.predict(obs)
-    obs, rewards, dones, info = env.step(action)
-    resetCount = int(info[0]["resetCount"])
+    obs, rewards, dones, info = env.PipsStep()
+    resetCount = int(info["resetCount"])
+    if (dones):
+        env.reset()

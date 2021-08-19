@@ -12,10 +12,17 @@ import random
 import rospy
 import roslib
 import roslib
+import json
 NODE_NAME = 'ros_social_gym'
 roslib.load_manifest(NODE_NAME)
 from graph_navigation.srv import graphNavSrv
 from amrl_msgs.msg import Pose2Df
+from shutil import copyfile
+config_nav_path = 'GDC'
+config_scene_path = 'src/ros_social_gym/templates/gdc/'
+# CMU Scenario
+#  config_nav_path = 'maps/GHC3/GHC3.navigation.json'
+#  config_scene_path = 'src/ros_social_gym/templates/GHC3/'
 
 # Format: (x, y, theta)
 robot_positions = [
@@ -127,22 +134,32 @@ nav_map = [
     (13.955, 30.517)
 ]
 
-def MakeScenario(config):
-    dir_name = "config/gdc_gym_gen/"
+def LoadNavNodes(nav_path):
+    temp_nav = []
+    with open(nav_path, 'r') as input:
+        json_list = json.load(input)
+        for entry in json_list['nodes']:
+            point = (entry['loc']['x'], entry['loc']['y'], 0.0)
+            temp_nav.append(point)
+    return list(set(temp_nav))
 
-    with open('src/ros_social_gym/templates/humans.lua', 'r') as f:
+def MakeScenario(config):
+    print("Make Scene")
+    dir_name = "config/gym_gen/"
+
+    with open(config_scene_path + 'humans.lua', 'r') as f:
         human_lua_template = jinja2.Template(f.read())
 
-    with open('src/ros_social_gym/templates/sim_config.lua', 'r') as f:
+    with open(config_scene_path + 'sim_config.lua', 'r') as f:
         sim_config_lua_template = jinja2.Template(f.read())
 
-    with open('src/ros_social_gym/templates/launch.launch', 'r') as f:
+    with open(config_scene_path + 'launch.launch', 'r') as f:
         launch_template = jinja2.Template(f.read())
 
-    with open('src/ros_social_gym/templates/pedsim_launch.launch', 'r') as f:
+    with open(config_scene_path + 'pedsim_launch.launch', 'r') as f:
         pedsim_launch_template = jinja2.Template(f.read())
 
-    with open('src/ros_social_gym/templates/scene.xml', 'r') as f:
+    with open(config_scene_path + 'scene.xml', 'r') as f:
         scene_xml_template = jinja2.Template(f.read())
 
     # Create config directory
@@ -169,13 +186,26 @@ def MakeScenario(config):
     with open(dir_name + 'sim_config.lua', 'w') as f:
         f.write(sim_config_lua_template.render(config))
 
+    copyfile(config_scene_path + 'ref_launch.launch', dir_name + 'ref_launch.launch')
+    copyfile(config_scene_path + 'greedy_launch.launch', dir_name + 'greedy_launch.launch')
+    copyfile(config_scene_path + 'pips_launch.launch', dir_name + 'pips_launch.launch')
+    print("Scene Made")
+
 def GenerateScenario():
+    print("Gen Scene")
+    global robot_positions
+    global nav_map
+    if (config_nav_path != 'GDC'):
+        nav_map = LoadNavNodes(config_nav_path)
+        robot_positions = nav_map
+    print(len(robot_positions))
     num_humans = randint(5, 25)
     robot_start = randint(0, len(robot_positions) - 1)
     robot_end = robot_start
     while (robot_start == robot_end):
         robot_end = randint(0, len(robot_positions) - 1)
     human_positions = []
+    print(robot_end)
     for i in range(0, num_humans):
         human_start = randint(0, len(robot_positions) - 1)
         while (human_start == robot_start):
@@ -198,6 +228,7 @@ def GenerateScenario():
         human_list.extend(r_plan)
         human_list.extend(plan)
         human_positions.append(human_list)
+    print("Human Init")
     # Build the Config Dictionary
     human_dev =  1.0
     config = {
@@ -211,4 +242,5 @@ def GenerateScenario():
         'human_positions': human_positions,
         'nav_map': nav_map
     }
+    print("About to make a scene")
     MakeScenario(config)
