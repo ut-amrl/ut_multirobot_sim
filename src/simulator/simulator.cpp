@@ -34,7 +34,6 @@
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "gflags/gflags.h"
 
-#include "amrl_msgs/NavigationConfigMsg.h"
 #include "amrl_msgs/Pose2Df.h"
 #include "nav_msgs/Odometry.h"
 #include "ros/time.h"
@@ -61,7 +60,6 @@
 
 DEFINE_bool(localize, false, "Publish localization");
 
-using amrl_msgs::NavigationConfigMsg;
 // using amrl_msgs::Pose2Df;
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
@@ -178,7 +176,6 @@ bool Simulator::Init(ros::NodeHandle& n) {
   halt_pub_ = n.advertise<Bool>("/halt_robot", 1);
   go_alone_pub_ = n.advertise<amrl_msgs::Pose2Df>("/move_base_simple/goal", 1);
   follow_pub_ = n.advertise<amrl_msgs::Pose2Df>("/nav_override", 1);
-  config_pub_ = n.advertise<NavigationConfigMsg>("/nav_config", 1);
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
   scanDataMsg.angle_min = CONFIG_laser_angle_min;
@@ -1009,15 +1006,6 @@ void Simulator::Halt() {
 CumulativeFunctionTimer ga_timer("GoAlone");
 void Simulator::GoAlone() {
   CumulativeFunctionTimer::Invocation invoke(&ga_timer);
-  NavigationConfigMsg conf_msg;
-  conf_msg.max_vel = 1.5;
-  conf_msg.margin = 0.05;
-  conf_msg.clearance_weight = 0.05;
-  conf_msg.ang_accel = -1;
-  conf_msg.max_accel = -1;
-  conf_msg.carrot_dist = -1;
-  conf_msg.max_decel = -1;
-  config_pub_.publish(conf_msg);
   amrl_msgs::Pose2Df target_message;
   target_message.x = goal_pose_.translation.x();
   target_message.y = goal_pose_.translation.y();
@@ -1138,16 +1126,6 @@ void Simulator::Follow() {
   const Vector2f h_pose = target_->GetPose().translation;
   const Vector2f towards_bot = pose - h_pose;
   const Vector2f target_pose = h_pose + kFollowDist * towards_bot.normalized();
-  const Vector2f target_vel = target_->GetTransVel();
-  NavigationConfigMsg conf_msg;
-  conf_msg.max_vel = target_vel.norm() - .01;
-  conf_msg.margin = 0.0;
-  conf_msg.clearance_weight = 0.05;
-  conf_msg.ang_accel = -1;
-  conf_msg.max_accel = -1;
-  conf_msg.carrot_dist = -1;
-  conf_msg.max_decel = -1;
-  config_pub_.publish(conf_msg);
   amrl_msgs::Pose2Df follow_msg;
   follow_msg.x = target_pose.x();
   follow_msg.y = target_pose.y();
@@ -1168,15 +1146,6 @@ void Simulator::Pass() {
   const Vector2f h_pose = target->GetPose().translation;
   const Vector2f target_vel = target->GetTransVel();
   const Vector2f target_pose = h_pose + kLeadDist * target_vel.normalized();
-  NavigationConfigMsg conf_msg;
-  conf_msg.max_vel = target_vel.norm() + .5;
-  conf_msg.margin = 0.0;
-  conf_msg.clearance_weight = 0.5;
-  conf_msg.ang_accel = -1;
-  conf_msg.max_accel = -1;
-  conf_msg.carrot_dist = -1;
-  conf_msg.max_decel = -1;
-  config_pub_.publish(conf_msg);
   amrl_msgs::Pose2Df follow_msg;
   follow_msg.x = target_pose.x();
   follow_msg.y = target_pose.y();
