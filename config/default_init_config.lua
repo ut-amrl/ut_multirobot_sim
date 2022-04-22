@@ -1,4 +1,4 @@
-map_name =  "maps/GDC3/GDC3.vectormap.txt"
+map_name =  "UT_Campus/UT_Campus.vectormap.txt"
 -- Simulator starting location.
-start_poses = { {33.016267, 21.534157, 0} }
+start_poses = { {33.016267, 18.534157, 0} }
 

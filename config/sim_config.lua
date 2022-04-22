@@ -10,7 +10,6 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-init_config_file = "config/default_init_config.lua"
 -- example of loading human crow scenario configs
 -- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
 
@@ -41,7 +40,7 @@ laser_noise_stddev = 0.01;
 laser_angle_min = DegToRad(-135.0);
 laser_angle_max = DegToRad(135.0);
 laser_angle_increment = DegToRad(0.25);
-laser_min_range = 0.02;
+laser_min_range = 0.4;
 laser_max_range = 100.0;
 
 -- Turning error simulation.
@@ -62,7 +61,6 @@ local RobotType = {
 -- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
 -- robot_config = "config/cobot_config.lua"
 robot_types = { RobotType.DIFF_DRIVE }
-robot_config = "config/ut_jackal_config.lua"
 
-laser_topic = "/Cobot/Laser"
+laser_topic = "velodyne_2dscan"
 laser_frame = "base_laser"

@@ -1,0 +1,16 @@
+<launch>
+  <node name="simulator"
+      pkg="ut_multirobot_sim"
+      type="simulator"
+      args="--env_config $(find ut_multirobot_sim)/config/sim_config.lua
+            --robot_config $(find ut_multirobot_sim)/config/ut_jackal_config.lua
+           --init_config $(find ut_multirobot_sim)/config/default_init_config.lua"
+      required="true"
+      cwd = "node"
+      output="screen">
+      <remap from="/robot0/jackal_velocity_controller/odom"
+          to="jackal_velocity_controller/odom"/>
+      <remap from="/robot0/scan" to="velodyne_2dscan"/>
+      <remap from="/robot0/navigation/cmd_vel" to="cmd_vel"/>
+  </node>
+</launch>

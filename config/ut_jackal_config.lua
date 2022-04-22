@@ -1,4 +1,14 @@
-require("config.sim_config");
+function Vector2(x, y)
+  return {x = x, y = y}
+end
+
+function Vector3(x, y, z)
+  return {x = x, y = y, z = z}
+end
+
+function DegToRad(d)
+  return math.pi * d / 180
+end
 
 -- MODEL PARAMETERS
 invert_linear_vel_cmds = false
@@ -34,5 +44,5 @@ car_height = 0.65;
 laser_angle_min = DegToRad(-180.0);
 laser_angle_max = DegToRad(180.0);
 laser_angle_increment = DegToRad(0.1);
-laser_min_range = 0.02;
+laser_min_range = 0.4;
 laser_max_range = 150.0;

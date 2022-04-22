@@ -26,6 +26,7 @@
 #include "glog/logging.h"
 #include "gflags/gflags.h"
 #include "ros/ros.h"
+#include "ros/package.h"
 #include "std_msgs/Bool.h"
 #include "ut_multirobot_sim/SimulatorStateMsg.h"
 
@@ -37,7 +38,18 @@ using ut_multirobot_sim::SimulatorStateMsg;
 SimulatorStateMsg sim_state_;
 bool sim_step_ = false;
 
-DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
+DEFINE_string(env_config,
+              "config/sim_config.lua",
+              "Path to environment config.");
+DEFINE_string(robot_config,
+              "config/ut_jackal_config.lua",
+              "Path to robot config.");
+DEFINE_string(init_config,
+              "config/default_init_config.lua",
+              "Path to config for initial state.");
+DEFINE_string(maps_dir,
+              "",
+              "Path to maps directory.");
 
 void SimStartStop(const std_msgs::Bool& msg) {
   if (msg.data) {
@@ -71,7 +83,14 @@ int main(int argc, char **argv) {
   ros::Subscriber step_sub = n.subscribe(
       "sim_step", 1, SimStep);
 
-  Simulator simulator(FLAGS_sim_config);
+  if (FLAGS_maps_dir.empty()) {
+    FLAGS_maps_dir = ros::package::getPath("amrl_maps");
+  }
+  CHECK_NE(FLAGS_maps_dir, string(""));
+  Simulator simulator(FLAGS_env_config,
+                      FLAGS_robot_config,
+                      FLAGS_init_config,
+                      FLAGS_maps_dir);
   if (!simulator.init(n)) {
     return 1;
   }

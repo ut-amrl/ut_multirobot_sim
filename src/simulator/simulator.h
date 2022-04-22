@@ -102,6 +102,9 @@ class Simulator {
   uint64_t sim_step_count;
   double sim_time;
 
+  std::string robot_config_file_;
+  std::string maps_dir_;
+
  private:
   void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
                      string type, geometry_msgs::PoseStamped p,
@@ -123,7 +126,10 @@ class Simulator {
 
  public:
   Simulator() = delete;
-  explicit Simulator(const std::string& sim_config);
+  explicit Simulator(const std::string& env_config,
+                     const std::string& robot_config,
+                     const std::string& init_config,
+                     const std::string& maps_dir);
   ~Simulator();
   bool init(ros::NodeHandle &n);
   void Run();

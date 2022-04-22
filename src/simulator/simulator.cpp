@@ -61,7 +61,6 @@ using diffdrive::DiffDriveModel;
 using vector_map::VectorMap;
 using human::HumanObject;
 
-CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
 CONFIG_FLOAT(car_length, "car_length");
 CONFIG_FLOAT(car_width, "car_width");
@@ -81,7 +80,6 @@ CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
 
 // Used for topic names and robot specs
 CONFIG_STRINGLIST(robot_types, "robot_types");
-CONFIG_STRING(robot_config, "robot_config");
 CONFIG_STRING(laser_topic, "laser_topic");
 CONFIG_STRING(laser_frame, "laser_frame");
 
@@ -101,17 +99,22 @@ CONFIG_STRINGLIST(human_config_list, "human_config_list");
 /* const vector<string> object_config_list = {"config/human_config.lua"};
 config_reader::ConfigReader object_reader(object_config_list); */
 
-Simulator::Simulator(const std::string& sim_config) :
-    reader_({sim_config}),
-    init_config_reader_({CONFIG_init_config_file}),
+Simulator::Simulator(const std::string& env_config,
+                     const std::string& robot_config,
+                     const std::string& init_config,
+                     const std::string& maps_dir) :
+    reader_({env_config, robot_config}),
+    init_config_reader_({init_config}),
     laser_noise_(0, 1),
     sim_step_count(0),
-    sim_time(0.0) {
+    sim_time(0.0),
+    robot_config_file_(robot_config),
+    maps_dir_(maps_dir) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   if (CONFIG_map_name == "") {
     std::cerr << "Failed to load map from init config file '"
-              << CONFIG_init_config_file << "'" << std::endl;
+              << init_config << "'" << std::endl;
     exit(1);
   }
 }
@@ -122,15 +125,16 @@ double Simulator::GetStepSize() const {
   return CONFIG_DT;
 }
 
-robot_model::RobotModel* MakeMotionModel(const std::string& robot_type, 
-                                         ros::NodeHandle& n, 
-                                         const std::string& topic_prefix) {
+robot_model::RobotModel* MakeMotionModel(const std::string& robot_type,
+                                         ros::NodeHandle& n,
+                                         const std::string& topic_prefix,
+                                         const std::string& robot_config) {
   if (robot_type == "ACKERMANN_DRIVE") {
-      return new AckermannModel({CONFIG_robot_config}, &n);
+      return new AckermannModel({robot_config}, &n);
     } else if (robot_type == "OMNIDIRECTIONAL_DRIVE") {
-      return new OmnidirectionalModel({CONFIG_robot_config}, &n);
+      return new OmnidirectionalModel({robot_config}, &n);
     } else if (robot_type == "DIFF_DRIVE") {
-      return new DiffDriveModel({CONFIG_robot_config}, &n, topic_prefix);
+      return new DiffDriveModel({robot_config}, &n, topic_prefix);
     }
     std::cerr << "Robot type \"" << robot_type
               << "\" has no associated motion model!" << std::endl;
@@ -166,6 +170,7 @@ bool Simulator::init(ros::NodeHandle& n) {
 
 
   initSimulatorVizMarkers();
+  map_.Load(maps_dir_ + "/" + CONFIG_map_name);
   drawMap();
 
   // Create motion model based on robot type
@@ -173,7 +178,7 @@ bool Simulator::init(ros::NodeHandle& n) {
     const auto& robot_type = CONFIG_robot_types.at(i);
     const auto& start_pose = CONFIG_start_poses.at(i);
     const auto pf = IndexToPrefix(i);
-    auto* mm = MakeMotionModel(robot_type, n, pf);
+    auto* mm = MakeMotionModel(robot_type, n, pf, robot_config_file_);
     if (mm == nullptr) {
       return false;
     }
@@ -207,7 +212,7 @@ bool Simulator::init(ros::NodeHandle& n) {
 
   mapLinesPublisher = n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
   objectLinesPublisher = n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
-  
+
 
   br = new tf::TransformBroadcaster();
 
@@ -386,11 +391,6 @@ void Simulator::publishOdometry() {
 }
 
 void Simulator::publishLaser() {
-  if (map_.file_name != CONFIG_map_name) {
-    map_.Load(CONFIG_map_name);
-    drawMap();
-  }
-
   for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
     auto& rps = robot_pub_subs_[i];
     scanDataMsg.header.stamp = ros::Time::now();
