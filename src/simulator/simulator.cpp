@@ -257,7 +257,6 @@ bool Simulator::Init(ros::NodeHandle& n) {
   br = new tf::TransformBroadcaster();
 
   this->LoadObject(n);
-  GoAlone();
   return true;
 }
 
@@ -804,30 +803,6 @@ void Simulator::PublishLocalization() {
   }
 }
 
-void Simulator::UpdateHumans(const pedsim_msgs::AgentStates& humans) {
-  const vector<pedsim_msgs::AgentState> human_list = humans.agent_states;
-  int human_id = 0;
-  // Iterate throught the objects and find the humans
-  for (size_t i = 0; i < objects.size(); ++i) {
-    if (objects[i]->GetType() == HUMAN_OBJECT) {
-      // Cast the object as a human
-      EntityBase* e_raw = objects[i].get();
-      HumanObject* human = static_cast<HumanObject*>(e_raw);
-      // Get the corresponding agent state from pedsim
-      pedsim_msgs::AgentState agent_state = human_list[human_id];
-      ut_multirobot_sim::HumanControlCommand command;
-      command.header.frame_id = agent_state.header.frame_id;
-      command.header.stamp = ros::Time::now();
-      command.translational_velocity = agent_state.twist.linear;
-      command.rotational_velocity = 0.0;
-      command.pose = agent_state.pose.position;
-
-      human->ManualControlCb(command);
-      human_id++;
-    }
-  }
-}
-
 vector<Pose2Df> Simulator::GetRobotPoses() const {
   vector<Pose2Df> output;
   for (auto& rps : robot_pub_subs_) {
@@ -988,31 +963,6 @@ bool Simulator::GoalReached() const {
   return distance < goal_threshold_;
 }
 
-CumulativeFunctionTimer pub_timer("Publishing Halt");
-void Simulator::HaltPub(Bool halt_message) {
-  CumulativeFunctionTimer::Invocation invoke(&pub_timer);
-  halt_pub_.publish(halt_message);
-}
-
-CumulativeFunctionTimer halt_timer("Halt");
-void Simulator::Halt() {
-  CumulativeFunctionTimer::Invocation invoke(&halt_timer);
-  Bool halt_message;
-  halt_message.data = true;
-  HaltPub(halt_message);
-  robot_pub_subs_[0].motion_model->SetVel({0, {0, 0}});
-}
-
-CumulativeFunctionTimer ga_timer("GoAlone");
-void Simulator::GoAlone() {
-  CumulativeFunctionTimer::Invocation invoke(&ga_timer);
-  amrl_msgs::Pose2Df target_message;
-  target_message.x = goal_pose_.translation.x();
-  target_message.y = goal_pose_.translation.y();
-  target_message.theta = goal_pose_.angle;
-  go_alone_pub_.publish(target_message);
-}
-
 vector<HumanObject*> Simulator::GetHumans() const {
   vector<HumanObject*> output;
   for (size_t i = 0; i < objects.size(); ++i) {
@@ -1025,153 +975,12 @@ vector<HumanObject*> Simulator::GetHumans() const {
   return output;
 }
 
-HumanObject* GetClosest(const vector<HumanObject*> humans,
-                        const Vector2f pose,
-                        const vector<int> indices,
-                        int* index) {
-  float best_dist = 9999;
-  HumanObject* best_human = nullptr;
-  int best_index = 0;
-  int count = 0;
-  for (HumanObject* human : humans) {
-    const Vector2f h_pose = human->GetPose().translation;
-    const Vector2f diff = h_pose - pose;
-    const float dist = diff.norm();
-    if (dist < best_dist) {
-      best_dist = dist;
-      best_human = human;
-      best_index = count;
-    }
-    count++;
-  }
-  *index = best_index;
-  return best_human;
-}
-
-HumanObject* Simulator::FindFollowTarget(const int& robot_index,
-                                         bool* found) {
-  // Order is front_left, front, front_right
-  vector<HumanObject*> left;
-  vector<HumanObject*> front_left;
-  vector<HumanObject*> front;
-  vector<HumanObject*> front_right;
-  vector<HumanObject*> right;
-  vector<int> indices;
-  // todo(jaholtz) Consider if we need to shrink or grow this margin.
-  const float kRobotLength = 0.5;
-  const float kLowerLeft = DegToRad(90.0);
-  const float kUpperLeft = DegToRad(15.0);
-  const float kLowerRight = DegToRad(270.0);
-  const float kUpperRight = DegToRad(345.0);
-
-  const vector<HumanObject*> humans = GetHumans();
-  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
-  const Vector2f pose = robot->cur_loc.translation;
-  const float theta = robot->cur_loc.angle;
-
-  for (size_t i = 0; i < humans.size(); i++) {
-    HumanObject* human = humans[i];
-    const Vector2f h_pose(human->GetPose().translation.x(),
-                          human->GetPose().translation.y());
-    const bool intersects = map_.Intersects(pose, h_pose);
-    if (intersects) {
-      break;
-    }
-    // Transform the pose to robot reference frame
-    const Vector2f diff = h_pose - pose;
-    Eigen::Rotation2Df rot(-theta);
-    const Vector2f transformed = rot * diff;
-    const float angle = math_util::AngleMod(geometry::Angle(diff) - theta);
-    if (transformed.x() > kRobotLength) {
-      if (angle < kLowerLeft && angle > kUpperLeft) {
-        front_left.push_back(human);
-      } else if (angle > kLowerRight && angle < kUpperRight) {
-        front_right.push_back(human);
-      } else if (angle < kUpperLeft || angle > kUpperRight) {
-        front.push_back(human);
-        indices.push_back(i);
-      }
-    } else if (transformed.x() > 0) {
-      if (angle < kLowerLeft && angle > kUpperLeft) {
-        left.push_back(human);
-      } else if (angle > kLowerRight && angle < kUpperRight) {
-        right.push_back(human);
-      }
-    }
-  }
-  *found = true;
-  if (front.size() < 1) {
-    *found = false;
-  }
-  return GetClosest(front, pose, indices, &follow_target_);
-}
-
-CumulativeFunctionTimer follow_timer("Follow");
-void Simulator::Follow() {
-  CumulativeFunctionTimer::Invocation invoke(&follow_timer);
-  const float kFollowDist = 1.5;
-  // TODO(jaholtz) Currently assumes only one robot.
-  const int robot_index = 0;
-  if (!target_locked_) {
-    bool found = true;
-    target_ = FindFollowTarget(robot_index, &found);
-    if (!found) {
-      Halt();
-      return;
-    }
-    target_locked_ = true;
-  }
-  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
-  const Vector2f pose = robot->cur_loc.translation;
-  const Vector2f h_pose = target_->GetPose().translation;
-  const Vector2f towards_bot = pose - h_pose;
-  const Vector2f target_pose = h_pose + kFollowDist * towards_bot.normalized();
-  amrl_msgs::Pose2Df follow_msg;
-  follow_msg.x = target_pose.x();
-  follow_msg.y = target_pose.y();
-  follow_pub_.publish(follow_msg);
-}
-
-CumulativeFunctionTimer pass_timer("Pass");
-void Simulator::Pass() {
-  CumulativeFunctionTimer::Invocation invoke(&pass_timer);
-  const float kLeadDist = 1.5;
-  const int robot_index = 0;
-  bool found = true;
-  HumanObject* target = FindFollowTarget(robot_index, &found);
-  if (!found) {
-    Halt();
-    return;
-  }
-  const Vector2f h_pose = target->GetPose().translation;
-  const Vector2f target_vel = target->GetTransVel();
-  const Vector2f target_pose = h_pose + kLeadDist * target_vel.normalized();
-  amrl_msgs::Pose2Df follow_msg;
-  follow_msg.x = target_pose.x();
-  follow_msg.y = target_pose.y();
-  follow_pub_.publish(follow_msg);
+int Simulator::GetRobotState() const {
+  return action_;
 }
 
 void Simulator::SetAction(const int& action) {
-  if (action_ != action) {
-    target_locked_ = false;
-  }
   action_ = action;
-}
-
-int Simulator::GetFollowTarget() const {
-  if (action_ == 2 || action_ == 3) {
-    return follow_target_;
-  }
-  return -1;
-}
-
-Vector2f Simulator::GetLocalTarget() const {
-  return local_target_;
-}
-
-int Simulator::GetRobotState() const {
-  return action_;
 }
 
 vector<geometry_msgs::Pose2D> PoseVecToGeomMessage(

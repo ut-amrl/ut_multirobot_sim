@@ -26,12 +26,9 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "glog/logging.h"
 #include "gflags/gflags.h"
-#include "pedsim_srvs/StepPedsim.h"
-#include "pedsim_srvs/ResetPedsim.h"
 #include "ros/init.h"
 #include "ut_multirobot_sim/utmrsStepper.h"
 #include "ut_multirobot_sim/utmrsReset.h"
-#include "pedsim_msgs/AgentStates.h"
 #include "ros/ros.h"
 #include "ros/service.h"
 #include "std_msgs/Bool.h"
@@ -51,9 +48,6 @@ Simulator* simulator_;
 bool sim_step_ = false;
 
 DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
-DEFINE_string(scene_config,
-    "config/gdc_gym_gen/scene.xml", "Path to pedsim scene config.");
-DEFINE_bool(use_pedsim, false, "Interface with Pedsim for human sim.");
 DEFINE_bool(service_mode, true,
     "Use services instead of message for communication.");
 DEFINE_double(speedup_factor, 1.0, "Speedup Simulation");
@@ -61,27 +55,6 @@ DEFINE_double(speedup_factor, 1.0, "Speedup Simulation");
 void SimStartStop(const std_msgs::Bool& msg) {
   sim_state_.sim_state = !sim_state_.sim_state;
   std_srvs::Empty empty;
-  if (FLAGS_use_pedsim && !sim_state_.sim_state) {
-    ros::service::call("/pedsim_simulator/pause_simulation", empty);
-  } else if (FLAGS_use_pedsim) {
-    ros::service::call("/pedsim_simulator/unpause_simulation", empty);
-  }
-}
-
-CumulativeFunctionTimer ped_timer("StepPedsim");
-void StepPedsim() {
-  CumulativeFunctionTimer::Invocation invoke(&ped_timer);
-  // Step Pedsim if necessary
-  if (FLAGS_use_pedsim) {
-    pedsim_srvs::StepPedsim::Request req;
-    pedsim_srvs::StepPedsim::Response res;
-    req.steps = 1;
-    if (ros::service::call("/pedsim_simulator/StepPedsim", req, res)) {
-      // Update the simulator with pedsims return
-      const pedsim_msgs::AgentStates humans = res.agent_states;
-      simulator_->UpdateHumans(humans);
-    }
-  }
 }
 
 CumulativeFunctionTimer sim_timer("StepUTMRS");
@@ -97,7 +70,6 @@ void StepSimulator() {
 CumulativeFunctionTimer step_timer("Step");
 void Step() {
   CumulativeFunctionTimer::Invocation invoke(&step_timer);
-  StepPedsim();
   StepSimulator();
 }
 
@@ -134,7 +106,6 @@ bool StepService(utmrsStepper::Request &req,
   res.robot_poses = PoseVecToMessage(simulator_->GetRobotPoses());
   res.robot_vels = PoseVecToMessage(simulator_->GetRobotVels());
 
-
   ut_multirobot_sim::Pose2Df goal_msg;
   Pose2Df goal_pose = simulator_->GetGoalPose();
   goal_msg.x = goal_pose.translation.x();
@@ -142,13 +113,8 @@ bool StepService(utmrsStepper::Request &req,
   goal_msg.theta = goal_pose.angle;
   res.goal_pose = goal_msg;
   ut_multirobot_sim::Pose2Df local_msg;
-  Eigen::Vector2f local_target = simulator_->GetLocalTarget();
-  local_msg.x = local_target.x();
-  local_msg.y = local_target.y();
   local_msg.theta = 0.0;
-  res.local_target = local_msg;
   res.robot_state = simulator_->GetRobotState();
-  res.follow_target = simulator_->GetFollowTarget();
   ut_multirobot_sim::Pose2Df door_msg;
   Pose2Df door_pose = simulator_->GetNextDoorPose();
   door_msg.x = door_pose.translation.x();
@@ -168,13 +134,6 @@ bool ResetService(utmrsReset::Request &req,
   if (!simulator_->Reset()) {
     return false;
   }
-  if (FLAGS_use_pedsim) {
-    pedsim_srvs::ResetPedsim::Request req;
-    pedsim_srvs::ResetPedsim::Response res;
-    // TODO(jaholtz) Get this from elsewhere (scenario generator?)
-    req.filename = FLAGS_scene_config;
-    ros::service::call("/pedsim_simulator/ResetPedsim", req, res);
-  }
   return true;
 }
 
@@ -190,16 +149,12 @@ int main(int argc, char **argv) {
     "sim_state", 1, true);
   sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
   std_srvs::Empty empty;
-  ros::service::call("/pedsim_simulator/pause_simulation", empty);
 
   ros::Subscriber start_stop_sub = n.subscribe(
     "sim_start_stop", 1, SimStartStop);
 
   ros::Subscriber step_sub = n.subscribe(
       "sim_step", 1, SimStep);
-
-  ros::ServiceClient pedStep =
-      n.serviceClient<pedsim_srvs::StepPedsim>("/pedsim_simulator/StepPedsim", true);
 
   ros::ServiceServer utmrsStep =
     n.advertiseService("utmrsStepper", StepService);

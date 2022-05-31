@@ -6,8 +6,6 @@
   <url>https://github.com/ut-amrl/ut_multirobot_sim</url>
   <depend package="roscpp"/>
   <depend package="std_msgs"/>
-  <depend package="pedsim_simulator" />
-  <depend package="pedsim_srvs" />
   <depend package="geometry_msgs"/>
   <depend package="nav_msgs"/>
   <depend package="sensor_msgs"/>

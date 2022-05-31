@@ -30,7 +30,6 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include "nav_msgs/Odometry.h"
-#include "pedsim_msgs/AgentStates.h"
 #include "ros/package.h"
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
@@ -165,7 +164,6 @@ class Simulator {
   bool Init(ros::NodeHandle &n);
   void Run();
   bool Reset();
-  void UpdateHumans(const pedsim_msgs::AgentStates& humans);
   double GetSimTime() const { return sim_time; }
   uint64_t GetSimStepCount() const { return sim_step_count; }
   double GetStepSize() const;

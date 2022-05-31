@@ -1,5 +1,0 @@
-<package>
-    <description>pedsim/ut_multirobot_sim proxy</description>
-    <depend package="pedsim_simulator" />
-    <depend package="ut_multirobot_sim" />
-</package>
