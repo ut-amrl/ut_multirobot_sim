@@ -96,6 +96,10 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        camera1:
+          Value: true
+        map:
+          Value: true
       Marker Alpha: 1
       Marker Scale: 3
       Name: TF
@@ -103,7 +107,9 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        map:
+          camera1:
+            {}
       Update Interval: 0
       Value: false
     - Class: rviz/Marker
@@ -113,6 +119,38 @@ Visualization Manager:
       Namespaces:
         robot_position: true
       Queue Size: 100
+      Value: true
+    - Camera Info Topic: /camera1/camera_info
+      Class: rviz_camera_stream/CameraPub
+      Enabled: true
+      Frame Rate: -1
+      Image Topic: /rviz1/camera1/image
+      Name: CameraPub1
+      Queue Size: 2
+      Value: true
+      Visibility:
+        Axes: true
+        CameraPub2: true
+        Grid: true
+        Image1: true
+        Image2: true
+        TF: true
+        Value: true
+        Marker: True
+        robot_position: True
+      Namespaces:
+        robot_position: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /rviz1/camera1/image
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Image1
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true

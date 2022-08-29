@@ -92,8 +92,6 @@ class Simulator {
   ros::Publisher config_pub_;
   tf::TransformBroadcaster *br;
 
-  std::vector<RobotPubSub> robot_pub_subs_;
-
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
   ut_multirobot_sim::Localization2DMsg localizationMsg;
@@ -115,18 +113,18 @@ class Simulator {
   // TODO(jaholtz) Initialize these, possibly all need to be arrays
   // (one per robot)
   bool complete_;
-  Pose2Df goal_pose_;
-  Eigen::Vector2f local_target_;
+  vector<Pose2Df> goal_pose_;
+  vector<Eigen::Vector2f> local_target_;
   // TODO(jaholtz) Open question, what's the best way to handle their not being
   // a next door?
   Pose2Df next_door_pose_;
   int next_door_state_;
   ros::NodeHandle nh_;
-  int action_;
-  int current_step_;
-  int follow_target_;
-  bool target_locked_;
-  human::HumanObject* target_;
+  vector<int> action_;
+  vector<int> current_step_;
+  vector<int> follow_target_;
+  vector<bool> target_locked_;
+  vector<human::HumanObject*> target_;
 
  private:
   void InitVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
@@ -149,16 +147,17 @@ class Simulator {
   void PublishDoorStates();
   void Update();
   void LoadObject(ros::NodeHandle &n);
-  void GoAlone();
-  void Follow();
+  void GoAlone(const int& robot_id);
+  void Follow(const int& robot_id);
   void Halt();
-  void Pass();
+  void Pass(const int& robot_id);
   void RunAction();
   void HaltPub(std_msgs::Bool halt_message);
   vector<human::HumanObject*> GetHumans() const;
   human::HumanObject* FindFollowTarget(const int& robot_index, bool* found);
 
  public:
+  std::vector<RobotPubSub> robot_pub_subs_;
   Simulator() = delete;
   explicit Simulator(const std::string& sim_config);
   ~Simulator();
@@ -178,16 +177,23 @@ class Simulator {
 
   nav_msgs::Odometry GetOdom(const int& robot_id);
   sensor_msgs::LaserScan GetLaser(const int& robot_id);
-  Pose2Df GetGoalPose() const;
+  Pose2Df GetGoalPose(const int& robot_id) const;
   Pose2Df GetNextDoorPose() const;
   int GetNextDoorState() const;
-  int GetRobotState() const;
-  int GetFollowTarget() const;
-  Eigen::Vector2f GetLocalTarget() const;
-  bool IsComplete() const;
-  bool GoalReached() const;
-  bool CheckMapCollision() const;
-  bool CheckHumanCollision() const;
-  void SetAction(const int& action);
+  int GetRobotState(const int& robot_id) const;
+  int GetFollowTarget(const int& robot_id) const;
+  Eigen::Vector2f GetLocalTarget(const int& robot_id) const;
+  bool IsComplete(const int& robot_id) const;
+  bool GoalReached(const int& robot_id) const;
+  bool CheckMapCollision(const int& robot_id) const;
+  bool CheckHumanCollision(const int& robot_id) const;
+  void SetAction(const int& robot_id, const int& action);
 };
+
+namespace simulator {
+    robot_model::RobotModel* MakeMotionModel(const std::string& robot_type, ros::NodeHandle& n, const std::string& topic_prefix);
+    std::string IndexToPrefix(const size_t index);
+};
+
+
 #endif  // SIMULATOR_H

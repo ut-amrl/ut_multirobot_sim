@@ -1,0 +1,16 @@
+ut_multirobot_sim/Pose2Df[] robot_poses
+ut_multirobot_sim/Pose2Df[] robot_vels
+ut_multirobot_sim/Pose2Df[] other_robot_poses
+ut_multirobot_sim/Pose2Df[] other_robot_vels
+ut_multirobot_sim/Pose2Df[] human_poses
+ut_multirobot_sim/Pose2Df[] human_vels
+ut_multirobot_sim/Pose2Df goal_pose
+ut_multirobot_sim/Pose2Df local_target
+ut_multirobot_sim/Pose2Df door_pose
+uint8 door_state
+uint8 robot_state
+int32 follow_target
+float32 reward
+bool done
+bool success
+bool collision

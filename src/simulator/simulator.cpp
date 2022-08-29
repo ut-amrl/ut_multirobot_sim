@@ -131,13 +131,13 @@ Simulator::Simulator(const std::string& sim_config) :
     sim_step_count(0),
     sim_time(0.0),
     complete_(false),
-    goal_pose_(0.0, {43.0,  4.5}),
+    goal_pose_({}),
     next_door_pose_(0.0, {0.0, 0.0}),
     //  TODO(jaholtz) set this to the open state (whatever that is)
     next_door_state_(0),
-    action_(0),
-    current_step_(0),
-    target_locked_(false) {
+    action_({}),
+    current_step_({}),
+    target_locked_({}) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
   if (CONFIG_map_name == "") {
@@ -199,7 +199,7 @@ bool Simulator::Init(ros::NodeHandle& n) {
 
   // Create motion model based on robot type
   for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
-    const auto& robot_type = CONFIG_robot_types.at(i);
+    const auto& robot_type = CONFIG_robot_types.at(0);
     const auto& start_pose = CONFIG_start_poses.at(i);
     const auto pf = IndexToPrefix(i);
     auto* mm = MakeMotionModel(robot_type, n, pf);
@@ -207,6 +207,12 @@ bool Simulator::Init(ros::NodeHandle& n) {
       return false;
     }
     mm->SetPose(Pose2Df(start_pose.z(), {start_pose.x(), start_pose.y()}));
+
+    goal_pose_.push_back(Pose2Df(0, {CONFIG_goal_poses[i][0], CONFIG_goal_poses[i][1]}));
+
+    local_target_.push_back({0, 0});
+    follow_target_.push_back({0});
+    target_locked_.push_back({0});
 
     robot_pub_subs_.emplace_back(RobotPubSub());
     auto& rps = robot_pub_subs_.back();
@@ -238,7 +244,6 @@ bool Simulator::Init(ros::NodeHandle& n) {
         localizationMsg.header.seq = 0;
       }
   }
-  goal_pose_ = {0, {CONFIG_goal_poses[0][0], CONFIG_goal_poses[0][1]}};
 
   InitSimulatorVizMarkers();
   DrawMap();
@@ -257,12 +262,14 @@ bool Simulator::Init(ros::NodeHandle& n) {
   br = new tf::TransformBroadcaster();
 
   this->LoadObject(n);
-  GoAlone();
+
+  for (int i = 0; i < robot_pub_subs_.size(); i++){
+    GoAlone(i);
+  }
   return true;
 }
 
 bool Simulator::Reset() {
-  current_step_ = 0;
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
   scanDataMsg.angle_min = CONFIG_laser_angle_min;
@@ -284,10 +291,19 @@ bool Simulator::Reset() {
     return false;
   }
 
+  goal_pose_ = vector<Pose2Df>({});
+  action_ = vector<int>({});
+  current_step_ = vector<int>({});
+
   // Update motion model based
   for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
     const auto& start_pose = CONFIG_start_poses.at(i);
     const auto pf = IndexToPrefix(i);
+
+    goal_pose_.push_back(Pose2Df(0, {CONFIG_goal_poses[i][0], CONFIG_goal_poses[i][1]}));
+    action_.push_back(0);
+    current_step_.push_back(0);
+
     RobotPubSub* robot = &robot_pub_subs_[i];
     robot->motion_model->SetPose(Pose2Df(start_pose.z(),
                                        {start_pose.x(), start_pose.y()}));
@@ -297,10 +313,8 @@ bool Simulator::Reset() {
         localizationMsg.header.seq = 0;
       }
   }
-  goal_pose_ = {0, {CONFIG_goal_poses[0][0], CONFIG_goal_poses[0][1]}};
 
   this->LoadObject(nh_);
-  action_ = 0;
   Run();
   return true;
 }
@@ -844,6 +858,10 @@ vector<Pose2Df> Simulator::GetRobotVels() const {
   return output;
 }
 
+//vector<Pose2Df> Simulator::GetVisibleRobotPoses(const int& robot_id) const {
+//
+//}
+
 vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
   vector<Pose2Df> output;
   const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
@@ -920,8 +938,8 @@ vector<Pose2Df> Simulator::GetHumanVels() const {
   return output;
 }
 
-Pose2Df Simulator::GetGoalPose() const {
-  return goal_pose_;
+Pose2Df Simulator::GetGoalPose(const int& robot_id) const {
+  return goal_pose_.at(robot_id);
 }
 
 Pose2Df Simulator::GetNextDoorPose() const {
@@ -932,19 +950,17 @@ int Simulator::GetNextDoorState() const {
   return next_door_state_;
 }
 
-bool Simulator::IsComplete() const {
-  // TODO(jaholtz) this is currently assuming a single robot.
-  const int robot_index = 0;
-  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+bool Simulator::IsComplete(const int& robot_id) const {
+  const RobotPubSub* robot = &robot_pub_subs_[robot_id];
   const float distance =
-      (robot->cur_loc.translation - goal_pose_.translation).norm();
+      (robot->cur_loc.translation - goal_pose_.at(robot_id).translation).norm();
   const float goal_threshold_ = 0.5;
-  const bool timeout = current_step_ > CONFIG_max_steps;
+  const bool timeout = current_step_.at(robot_id) > CONFIG_max_steps;
   return distance < goal_threshold_ || timeout;
 }
 
-bool Simulator::CheckHumanCollision() const {
-  const RobotPubSub* robot = &robot_pub_subs_[0];
+bool Simulator::CheckHumanCollision(const int& robot_id) const {
+  const RobotPubSub* robot = &robot_pub_subs_[robot_id];
 
   // Check for collision with a human
   const vector<HumanObject*> humans = GetHumans();
@@ -965,8 +981,8 @@ bool Simulator::CheckHumanCollision() const {
   return false;
 }
 
-bool Simulator::CheckMapCollision() const {
-  const RobotPubSub* robot = &robot_pub_subs_[0];
+bool Simulator::CheckMapCollision(const int& robot_id) const {
+  const RobotPubSub* robot = &robot_pub_subs_[robot_id];
   // Check for collision with the map
   const Vector2f robot_length({0.4, 0.0});
   const Eigen::Rotation2Df rot(robot->cur_loc.angle);
@@ -978,12 +994,10 @@ bool Simulator::CheckMapCollision() const {
   return false;
 }
 
-bool Simulator::GoalReached() const {
-  // TODO(jaholtz) this is currently assuming a single robot.
-  const int robot_index = 0;
-  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+bool Simulator::GoalReached(const int& robot_id) const {
+  const RobotPubSub* robot = &robot_pub_subs_[robot_id];
   const float distance =
-      (robot->cur_loc.translation - goal_pose_.translation).norm();
+      (robot->cur_loc.translation - goal_pose_.at(robot_id).translation).norm();
   const float goal_threshold_ = 0.5;
   return distance < goal_threshold_;
 }
@@ -1000,16 +1014,20 @@ void Simulator::Halt() {
   Bool halt_message;
   halt_message.data = true;
   HaltPub(halt_message);
-  robot_pub_subs_[0].motion_model->SetVel({0, {0, 0}});
+  // TODO - publish the robot id
+  for (auto& rps : robot_pub_subs_) {
+      rps.motion_model->SetVel({0, {0, 0}});
+  }
 }
 
 CumulativeFunctionTimer ga_timer("GoAlone");
-void Simulator::GoAlone() {
+void Simulator::GoAlone(const int& robot_id) {
   CumulativeFunctionTimer::Invocation invoke(&ga_timer);
   amrl_msgs::Pose2Df target_message;
-  target_message.x = goal_pose_.translation.x();
-  target_message.y = goal_pose_.translation.y();
-  target_message.theta = goal_pose_.angle;
+  target_message.x = goal_pose_.at(robot_id).translation.x();
+  target_message.y = goal_pose_.at(robot_id).translation.y();
+  target_message.theta = goal_pose_.at(robot_id).angle;
+  // TODO - publish the robot id
   go_alone_pub_.publish(target_message);
 }
 
@@ -1103,42 +1121,42 @@ HumanObject* Simulator::FindFollowTarget(const int& robot_index,
   if (front.size() < 1) {
     *found = false;
   }
-  return GetClosest(front, pose, indices, &follow_target_);
+  return GetClosest(front, pose, indices, &follow_target_.at(robot_index));
 }
 
 CumulativeFunctionTimer follow_timer("Follow");
-void Simulator::Follow() {
+void Simulator::Follow(const int& robot_id) {
   CumulativeFunctionTimer::Invocation invoke(&follow_timer);
   const float kFollowDist = 1.5;
   // TODO(jaholtz) Currently assumes only one robot.
-  const int robot_index = 0;
-  if (!target_locked_) {
+  if (!target_locked_.at(robot_id)) {
     bool found = true;
-    target_ = FindFollowTarget(robot_index, &found);
+    target_[robot_id] = FindFollowTarget(robot_id, &found);
     if (!found) {
       Halt();
       return;
     }
-    target_locked_ = true;
+    target_locked_[robot_id] = true;
   }
-  const RobotPubSub* robot = &robot_pub_subs_[robot_index];
+  const RobotPubSub* robot = &robot_pub_subs_[robot_id];
   const Vector2f pose = robot->cur_loc.translation;
-  const Vector2f h_pose = target_->GetPose().translation;
+  const Vector2f h_pose = target_.at(robot_id)->GetPose().translation;
   const Vector2f towards_bot = pose - h_pose;
   const Vector2f target_pose = h_pose + kFollowDist * towards_bot.normalized();
   amrl_msgs::Pose2Df follow_msg;
   follow_msg.x = target_pose.x();
   follow_msg.y = target_pose.y();
+
+  // TODO - Publish the robot id
   follow_pub_.publish(follow_msg);
 }
 
 CumulativeFunctionTimer pass_timer("Pass");
-void Simulator::Pass() {
+void Simulator::Pass(const int& robot_id) {
   CumulativeFunctionTimer::Invocation invoke(&pass_timer);
   const float kLeadDist = 1.5;
-  const int robot_index = 0;
   bool found = true;
-  HumanObject* target = FindFollowTarget(robot_index, &found);
+  HumanObject* target = FindFollowTarget(robot_id, &found);
   if (!found) {
     Halt();
     return;
@@ -1149,29 +1167,30 @@ void Simulator::Pass() {
   amrl_msgs::Pose2Df follow_msg;
   follow_msg.x = target_pose.x();
   follow_msg.y = target_pose.y();
+  // TODO - publish robot id
   follow_pub_.publish(follow_msg);
 }
 
-void Simulator::SetAction(const int& action) {
-  if (action_ != action) {
-    target_locked_ = false;
+void Simulator::SetAction(const int& robot_id, const int& action) {
+  if (action_.at(robot_id) != action) {
+    target_locked_.at(robot_id) = false;
   }
-  action_ = action;
+  action_.at(robot_id) = action;
 }
 
-int Simulator::GetFollowTarget() const {
-  if (action_ == 2 || action_ == 3) {
-    return follow_target_;
+int Simulator::GetFollowTarget(const int& robot_id) const {
+  if (action_.at(robot_id) == 2 || action_.at(robot_id) == 3) {
+    return follow_target_.at(robot_id);
   }
   return -1;
 }
 
-Vector2f Simulator::GetLocalTarget() const {
-  return local_target_;
+Vector2f Simulator::GetLocalTarget(const int& robot_id) const {
+  return local_target_.at(robot_id);
 }
 
-int Simulator::GetRobotState() const {
-  return action_;
+int Simulator::GetRobotState(const int& robot_id) const {
+  return action_.at(robot_id);
 }
 
 vector<geometry_msgs::Pose2D> PoseVecToGeomMessage(
@@ -1188,38 +1207,43 @@ vector<geometry_msgs::Pose2D> PoseVecToGeomMessage(
 }
 
 void Simulator::RunAction() {
-  socialNavSrv::Request req;
-  socialNavSrv::Response res;
-  // Assuming we're working with the first robot
-  RobotPubSub* robot = &robot_pub_subs_[0];
-  req.action = action_;
-  req.loc.x = robot->cur_loc.translation.x();
-  req.loc.y = robot->cur_loc.translation.y();
-  req.loc.theta = robot->cur_loc.angle;
-  req.odom = GetOdom(0);
-  req.laser = GetLaser(0);
-  req.goal_pose.x = goal_pose_.translation.x();
-  req.goal_pose.y = goal_pose_.translation.y();
-  req.goal_pose.theta = goal_pose_.angle;
-  double time = sim_time;
-  req.time = time;
-  req.human_poses = PoseVecToGeomMessage(GetVisibleHumanPoses(0));
-  req.human_vels = PoseVecToGeomMessage(GetVisibleHumanVels(0));
-  if (action_ == 1) {
-    robot->motion_model->SetVel({0, {0, 0}});
-  } else if (ros::service::call("socialNavSrv", req, res)) {
-    // Update the simulator with navigation result
-    robot->motion_model->SetCmd(res.cmd_vel, res.cmd_curve);
-    if (res.cmd_vel == 0.0) {
-      robot->motion_model->SetVel({0, {0, 0}});
+    socialNavSrv::Request req;
+    socialNavSrv::Response res;
+    // Assuming we're working with the first robot
+    for (int i = 0; i < robot_pub_subs_.size(); i++) {
+        RobotPubSub *robot = &robot_pub_subs_[i];
+        req.action = action_.at(i);
+        req.loc.x = robot->cur_loc.translation.x();
+        req.loc.y = robot->cur_loc.translation.y();
+        req.loc.theta = robot->cur_loc.angle;
+        req.odom = GetOdom(0);
+        req.laser = GetLaser(0);
+        req.goal_pose.x = goal_pose_.at(i).translation.x();
+        req.goal_pose.y = goal_pose_.at(i).translation.y();
+        req.goal_pose.theta = goal_pose_.at(i).angle;
+        double time = sim_time;
+        req.time = time;
+        req.human_poses = PoseVecToGeomMessage(GetVisibleHumanPoses(i));
+        req.human_vels = PoseVecToGeomMessage(GetVisibleHumanVels(i));
+        if (action_.at(i) == 1) {
+            robot->motion_model->SetVel({0, {0, 0}});
+        } else if (ros::service::call("socialNavSrv", req, res)) {
+            // Update the simulator with navigation result
+            robot->motion_model->SetCmd(res.cmd_vel, res.cmd_curve);
+            if (res.cmd_vel == 0.0) {
+                robot->motion_model->SetVel({0, {0, 0}});
+            }
+            local_target_[i] = {res.local_target.x, res.local_target.y};
+        }
     }
-    local_target_ = {res.local_target.x, res.local_target.y};
-  }
 }
 
 void Simulator::Run() {
   // Run Action
-  current_step_++;
+  for (int i = 0; i < robot_pub_subs_.size(); i++) {
+    current_step_[i]++;
+  }
+
   RunAction();
   // Simulate time-step.
   Update();

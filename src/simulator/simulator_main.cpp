@@ -38,6 +38,7 @@
 #include "std_srvs/Empty.h"
 #include "ut_multirobot_sim/SimulatorStateMsg.h"
 #include "ut_multirobot_sim/Pose2Df.h"
+#include "ut_multirobot_sim/robotStep.h"
 
 #include "shared/util/timer.h"
 #include "simulator.h"
@@ -45,6 +46,7 @@
 using ut_multirobot_sim::SimulatorStateMsg;
 using ut_multirobot_sim::utmrsStepper;
 using ut_multirobot_sim::utmrsReset;
+using ut_multirobot_sim::robotStep;
 
 SimulatorStateMsg sim_state_;
 Simulator* simulator_;
@@ -120,47 +122,70 @@ vector<ut_multirobot_sim::Pose2Df> PoseVecToMessage(
   return output;
 }
 
+robotStep robotStepService(const int& action, const int& index) {
+    robotStep res;
+
+    // Get the action from the request
+    // Apply the action (send to the right place?)
+    simulator_->SetAction(index, action);
+
+
+    // Get Poses/Velocities & Convert to Message format
+    res.human_poses = PoseVecToMessage(simulator_->GetVisibleHumanPoses(index));
+    res.human_vels = PoseVecToMessage(simulator_->GetVisibleHumanVels(index));
+
+    vector<Pose2Df> pose = vector<Pose2Df>({simulator_->robot_pub_subs_[index].cur_loc});
+    vector<Pose2Df> vels = vector<Pose2Df>({simulator_->robot_pub_subs_[index].vel});
+
+    res.robot_poses = PoseVecToMessage(pose);
+    res.robot_vels = PoseVecToMessage(vels);
+
+    res.other_robot_poses = PoseVecToMessage(simulator_->GetRobotPoses());
+    res.other_robot_vels = PoseVecToMessage(simulator_->GetRobotVels());
+
+
+    ut_multirobot_sim::Pose2Df goal_msg;
+    Pose2Df goal_pose = simulator_->GetGoalPose(index);
+    goal_msg.x = goal_pose.translation.x();
+    goal_msg.y = goal_pose.translation.y();
+    goal_msg.theta = goal_pose.angle;
+    res.goal_pose = goal_msg;
+    ut_multirobot_sim::Pose2Df local_msg;
+    Eigen::Vector2f local_target = simulator_->GetLocalTarget(index);
+    local_msg.x = local_target.x();
+    local_msg.y = local_target.y();
+    local_msg.theta = 0.0;
+    res.local_target = local_msg;
+    res.robot_state = simulator_->GetRobotState(index);
+    res.follow_target = simulator_->GetFollowTarget(index);
+    ut_multirobot_sim::Pose2Df door_msg;
+    Pose2Df door_pose = simulator_->GetNextDoorPose();
+    door_msg.x = door_pose.translation.x();
+    door_msg.y = door_pose.translation.y();
+    door_msg.theta = door_pose.angle;
+    res.door_pose = door_msg;
+    res.door_state = simulator_->GetNextDoorState();
+    res.done = simulator_->IsComplete(index) || simulator_->CheckMapCollision(index);
+    res.success = simulator_->GoalReached(index);
+    res.collision =
+            simulator_->CheckHumanCollision(index) || simulator_->CheckMapCollision(index);
+    return res;
+}
+
 bool StepService(utmrsStepper::Request &req,
                  utmrsStepper::Response &res) {
-  // Get the action from the request
-  // Apply the action (send to the right place?)
-  simulator_->SetAction(req.action);
-  // Step the simulator as necessary
-  Step();
 
-  // Get Poses/Velocities & Convert to Message format
-  res.human_poses = PoseVecToMessage(simulator_->GetVisibleHumanPoses(0));
-  res.human_vels = PoseVecToMessage(simulator_->GetVisibleHumanVels(0));
-  res.robot_poses = PoseVecToMessage(simulator_->GetRobotPoses());
-  res.robot_vels = PoseVecToMessage(simulator_->GetRobotVels());
+    vector<robotStep> responses;
+    for (size_t i = 0; i < simulator_->robot_pub_subs_.size(); ++i) {
+        int action = req.actions[i];
+        responses.push_back(robotStepService(action, i));
+    }
 
+    // Step the simulator as necessary
+    Step();
 
-  ut_multirobot_sim::Pose2Df goal_msg;
-  Pose2Df goal_pose = simulator_->GetGoalPose();
-  goal_msg.x = goal_pose.translation.x();
-  goal_msg.y = goal_pose.translation.y();
-  goal_msg.theta = goal_pose.angle;
-  res.goal_pose = goal_msg;
-  ut_multirobot_sim::Pose2Df local_msg;
-  Eigen::Vector2f local_target = simulator_->GetLocalTarget();
-  local_msg.x = local_target.x();
-  local_msg.y = local_target.y();
-  local_msg.theta = 0.0;
-  res.local_target = local_msg;
-  res.robot_state = simulator_->GetRobotState();
-  res.follow_target = simulator_->GetFollowTarget();
-  ut_multirobot_sim::Pose2Df door_msg;
-  Pose2Df door_pose = simulator_->GetNextDoorPose();
-  door_msg.x = door_pose.translation.x();
-  door_msg.y = door_pose.translation.y();
-  door_msg.theta = door_pose.angle;
-  res.door_pose = door_msg;
-  res.door_state = simulator_->GetNextDoorState();
-  res.done = simulator_->IsComplete() || simulator_->CheckMapCollision();
-  res.success = simulator_->GoalReached();
-  res.collision =
-      simulator_->CheckHumanCollision() || simulator_->CheckMapCollision();
-  return true;
+    res.robot_responses = responses;
+    return true;
 }
 
 bool ResetService(utmrsReset::Request &req,
