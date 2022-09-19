@@ -90,7 +90,7 @@ class Simulator {
   ros::Publisher go_alone_pub_;
   ros::Publisher follow_pub_;
   ros::Publisher config_pub_;
-  tf::TransformBroadcaster *br;
+  vector<tf::TransformBroadcaster *> br;
 
   sensor_msgs::LaserScan scanDataMsg;
   nav_msgs::Odometry odometryTwistMsg;
@@ -172,8 +172,11 @@ class Simulator {
   std::vector<Pose2Df> GetRobotVels() const;
   std::vector<Pose2Df> GetHumanPoses() const;
   std::vector<Pose2Df> GetVisibleHumanPoses(const int& robot_id) const;
+  std::vector<Pose2Df> GetVisibleRobotPoses(const int& robot_id) const;
+
   std::vector<Pose2Df> GetHumanVels() const;
   std::vector<Pose2Df> GetVisibleHumanVels(const int& robot_id) const;
+  std::vector<Pose2Df> GetVisibleRobotVels(const int& robot_id) const;
 
   nav_msgs::Odometry GetOdom(const int& robot_id);
   sensor_msgs::LaserScan GetLaser(const int& robot_id);
@@ -187,6 +190,7 @@ class Simulator {
   bool GoalReached(const int& robot_id) const;
   bool CheckMapCollision(const int& robot_id) const;
   bool CheckHumanCollision(const int& robot_id) const;
+  bool CheckRobotCollision(const int& robot_id) const;
   void SetAction(const int& robot_id, const int& action);
 };
 

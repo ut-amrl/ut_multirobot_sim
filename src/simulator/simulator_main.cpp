@@ -140,8 +140,8 @@ robotStep robotStepService(const int& action, const int& index) {
     res.robot_poses = PoseVecToMessage(pose);
     res.robot_vels = PoseVecToMessage(vels);
 
-    res.other_robot_poses = PoseVecToMessage(simulator_->GetRobotPoses());
-    res.other_robot_vels = PoseVecToMessage(simulator_->GetRobotVels());
+    res.other_robot_poses = PoseVecToMessage(simulator_->GetVisibleRobotPoses(index));
+    res.other_robot_vels = PoseVecToMessage(simulator_->GetVisibleRobotVels(index));
 
 
     ut_multirobot_sim::Pose2Df goal_msg;
@@ -168,7 +168,7 @@ robotStep robotStepService(const int& action, const int& index) {
     res.done = simulator_->IsComplete(index) || simulator_->CheckMapCollision(index);
     res.success = simulator_->GoalReached(index);
     res.collision =
-            simulator_->CheckHumanCollision(index) || simulator_->CheckMapCollision(index);
+            simulator_->CheckHumanCollision(index) || simulator_->CheckMapCollision(index) || simulator_->CheckRobotCollision(index);
     return res;
 }
 

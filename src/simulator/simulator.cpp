@@ -55,6 +55,8 @@
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
 #include "graph_navigation/socialNavSrv.h"
+#include "graph_navigation/socialNavReq.h"
+#include "graph_navigation/socialNavResp.h"
 // #include "ut_multirobot_sim/human_object.h"
 #include "vector_map.h"
 
@@ -81,7 +83,6 @@ using door::DoorState;
 using ut_multirobot_sim::DoorControlMsg;
 using ut_multirobot_sim::HumanStateMsg;
 using ut_multirobot_sim::HumanStateArrayMsg;
-using graph_navigation::socialNavSrv;
 
 // CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
@@ -191,11 +192,14 @@ bool Simulator::Init(ros::NodeHandle& n) {
   odometryTwistMsg.header.frame_id = "odom";
   odometryTwistMsg.child_frame_id = "base_footprint";
 
-  if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
-    std::cerr << "Robot type and robot start pose lists are"
-                 "not the same size!" << std::endl;
-    return false;
-  }
+  // TODO - when making the MakeMotionModel, the CONFIG_robot_types gets reduced to a single item, this
+  //  check is no longer valid until MakeMotionalModel is fixed.
+
+  //  if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
+  //    std::cerr << "Robot type and robot start pose lists are"
+  //                 "not the same size!" << std::endl;
+  //    return false;
+  //  }
 
   // Create motion model based on robot type
   for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
@@ -213,6 +217,8 @@ bool Simulator::Init(ros::NodeHandle& n) {
     local_target_.push_back({0, 0});
     follow_target_.push_back({0});
     target_locked_.push_back({0});
+    action_.push_back(0);
+
 
     robot_pub_subs_.emplace_back(RobotPubSub());
     auto& rps = robot_pub_subs_.back();
@@ -232,9 +238,9 @@ bool Simulator::Init(ros::NodeHandle& n) {
     rps.vizLaserPublisher =
         n.advertise<sensor_msgs::LaserScan>(pf + "/scan", 1);
     rps.posMarkerPublisher = n.advertise<visualization_msgs::Marker>(
-        pf + "/simulator_visualization", 1);
+        0 + "/simulator_visualization", 100);
     rps.truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
-        pf + "/simulator_true_pose", 1);
+        0 + "/simulator_true_pose", 100);
 
       if (FLAGS_localize) {
         rps.localizationPublisher =
@@ -243,6 +249,9 @@ bool Simulator::Init(ros::NodeHandle& n) {
         localizationMsg.header.frame_id = "map";
         localizationMsg.header.seq = 0;
       }
+
+    br.push_back(new tf::TransformBroadcaster());
+
   }
 
   InitSimulatorVizMarkers();
@@ -259,11 +268,10 @@ bool Simulator::Init(ros::NodeHandle& n) {
     n.advertise<ut_multirobot_sim::HumanStateArrayMsg>("/human_states", 1);
   doorStatePublisher =
     n.advertise<ut_multirobot_sim::DoorArrayMsg>("/door_states", 1);
-  br = new tf::TransformBroadcaster();
 
   this->LoadObject(n);
 
-  for (int i = 0; i < robot_pub_subs_.size(); i++){
+  for (size_t i = 0; i < robot_pub_subs_.size(); i++){
     GoAlone(i);
   }
   return true;
@@ -285,11 +293,14 @@ bool Simulator::Reset() {
   odometryTwistMsg.header.frame_id = "odom";
   odometryTwistMsg.child_frame_id = "base_footprint";
 
-  if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
-    std::cerr << "Robot type and robot start pose lists are"
-                 "not the same size!" << std::endl;
-    return false;
-  }
+  // TODO - when making the MakeMotionModel, the CONFIG_robot_types gets reduced to a single item, this
+  //  check is no longer valid until MakeMotionalModel is fixed.
+
+  //  if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
+  //    std::cerr << "Robot type and robot start pose lists are"
+  //                 "not the same size!" << std::endl;
+  //    return false;
+  //  }
 
   goal_pose_ = vector<Pose2Df>({});
   action_ = vector<int>({});
@@ -308,7 +319,7 @@ bool Simulator::Reset() {
     robot->motion_model->SetPose(Pose2Df(start_pose.z(),
                                        {start_pose.x(), start_pose.y()}));
 
-      if (FLAGS_localize) {
+    if (FLAGS_localize) {
         localizationMsg.header.frame_id = "map";
         localizationMsg.header.seq = 0;
       }
@@ -452,7 +463,8 @@ void Simulator::InitSimulatorVizMarkers() {
   InitVizMarker(lineListMarker, "map_lines", 0, "linelist", p, scale, 0.0,
       color);
 
-  for (auto& rps : robot_pub_subs_) {
+  for (int i = 0; i < int(robot_pub_subs_.size()); ++i){
+    auto& rps = robot_pub_subs_.at(i);
     p.pose.position.z = 0.5 * CONFIG_car_height;
     p.pose.position.x = rps.cur_loc.translation.x();
     p.pose.position.y = rps.cur_loc.translation.y();
@@ -465,7 +477,7 @@ void Simulator::InitSimulatorVizMarkers() {
     color[3] = 0.8;
     InitVizMarker(rps.robotPosMarker,
                   "robot_position",
-                  1,
+                  i+3,
                   "cube",
                   p,
                   scale,
@@ -554,6 +566,7 @@ void Simulator::PublishOdometry() {
     rps.robotPosMarker.pose.orientation.y = robotQ.y();
     rps.robotPosMarker.pose.orientation.z = robotQ.z();
     rps.robotPosMarker.pose.orientation.w = robotQ.w();
+
   }
 }
 
@@ -646,7 +659,7 @@ void Simulator::PublishTransform() {
     if(CONFIG_publish_map_to_odom) {
         transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
         transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-        br->sendTransform(tf::StampedTransform(transform,
+        br.at(i)->sendTransform(tf::StampedTransform(transform,
                                                ros::Time::now(), "/map",
                                                pf + "/odom"));
     }
@@ -654,10 +667,10 @@ void Simulator::PublishTransform() {
     // Use the first robot to handle the "default" no prefix case.
     // Useful for making this place nicer with single robot cases (and
     // third-party software that assumes the single robot case.)
-    if (i == 0) {
+    if (i == 0 || true) {
         transform.setOrigin(tf::Vector3(0.0,0.0,0.0));
         transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-        br->sendTransform(tf::StampedTransform(transform,
+        br.at(i)->sendTransform(tf::StampedTransform(transform,
                                                ros::Time::now(), pf + "/odom",
                                                "/odom"));
     }
@@ -665,7 +678,7 @@ void Simulator::PublishTransform() {
           rps.cur_loc.translation.y(), 0.0));
     q.setRPY(0.0, 0.0, rps.cur_loc.angle);
     transform.setRotation(q);
-    br->sendTransform(tf::StampedTransform(transform,
+    br.at(i)->sendTransform(tf::StampedTransform(transform,
                                            ros::Time::now(),
                                            pf + "/odom",
                                            pf + "/base_footprint"));
@@ -673,14 +686,14 @@ void Simulator::PublishTransform() {
     if(CONFIG_publish_foot_to_base){
         transform.setOrigin(tf::Vector3(0.0 ,0.0, 0.0));
         transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-        br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+        br.at(i)->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
           pf + "/base_footprint", pf + "/base_link"));
     }
 
     transform.setOrigin(tf::Vector3(CONFIG_laser_x,
           CONFIG_laser_y, CONFIG_laser_z));
     transform.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1));
-    br->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
+    br.at(i)->sendTransform(tf::StampedTransform(transform, ros::Time::now(),
         pf + "/base_link", pf + CONFIG_laser_frame));
   }
 }
@@ -868,17 +881,43 @@ vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
   const float robot_angle = robot_pub_subs_[robot_id].cur_loc.angle;
   const Pose2Df zero_pose(0, {0, 0});
   ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
+    if (int(i) == robot_id){
+      continue;
+    }
+
+    const Pose2Df other_robot_pose = robot_pub_subs_[i].cur_loc;
+
+    if (map_.Intersects(robot_pose, other_robot_pose.translation)) {
+      output.push_back(zero_pose);
+    } else {
+      Eigen::Rotation2Df rotation(-robot_angle);
+      const Vector2f local_robot =
+              rotation * (other_robot_pose.translation - robot_pose);
+      const Pose2Df local_pose(other_robot_pose.angle, local_robot);
+      output.push_back(local_pose);
+    }
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetVisibleRobotPoses(const int& robot_id) const {
+  vector<Pose2Df> output;
+  const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
+  const float robot_angle = robot_pub_subs_[robot_id].cur_loc.angle;
+  const Pose2Df zero_pose(0, {0, 0});
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
   for (size_t i = 0; i < objects.size(); ++i) {
     if (objects[i]->GetType() == HUMAN_OBJECT) {
       EntityBase* base = objects[i].get();
       HumanObject* human = static_cast<HumanObject*>(base);
       const Pose2Df human_pose = human->GetPose();
       if (map_.Intersects(robot_pose, human_pose.translation)) {
-          output.push_back(zero_pose);
+        output.push_back(zero_pose);
       } else {
         Eigen::Rotation2Df rotation(-robot_angle);
         const Vector2f local_human =
-            rotation * (human_pose.translation - robot_pose);
+                rotation * (human_pose.translation - robot_pose);
         const Pose2Df local_pose(human_pose.angle, local_human);
         output.push_back(local_pose);
       }
@@ -920,6 +959,32 @@ vector<Pose2Df> Simulator::GetVisibleHumanVels(const int& robot_id) const {
             rotation * (human->GetTransVel()) - robot_vel;
         output.push_back({static_cast<float>(human->GetRotVel()), local_human});
       }
+    }
+  }
+  return output;
+}
+
+vector<Pose2Df> Simulator::GetVisibleRobotVels(const int& robot_id) const {
+  vector<Pose2Df> output;
+  const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
+  const Vector2f robot_vel = robot_pub_subs_[robot_id].vel.translation;
+  const float robot_angle = robot_pub_subs_[robot_id].cur_loc.angle;
+  const Pose2Df zero_pose(0, {0, 0});
+  ut_multirobot_sim::HumanStateArrayMsg human_array_msg;
+  for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
+
+    if (int(i) == robot_id){
+      continue;
+    }
+
+    const Pose2Df other_robot_pose = robot_pub_subs_[i].cur_loc;
+    if (map_.Intersects(robot_pose, other_robot_pose.translation)) {
+      output.push_back(zero_pose);
+    } else {
+      Eigen::Rotation2Df rotation(-robot_angle);
+      const Vector2f local_human =
+              rotation * robot_pub_subs_[i].vel.translation - robot_vel;
+      output.push_back({static_cast<float>(robot_pub_subs_[i].vel.angle), local_human});
     }
   }
   return output;
@@ -981,6 +1046,30 @@ bool Simulator::CheckHumanCollision(const int& robot_id) const {
   return false;
 }
 
+bool Simulator::CheckRobotCollision(const int& robot_id) const {
+  const RobotPubSub* robot = &robot_pub_subs_[robot_id];
+
+  // Check for collision with a human
+  const Vector2f robot_pose = robot->cur_loc.translation;
+
+  for (size_t i = 0; i < robot_pub_subs_.size(); i++) {
+    if (int(i) == robot_id) {
+      continue;
+    }
+
+    const Vector2f r_pose(robot_pub_subs_[i].cur_loc.translation.x(),
+                          robot_pub_subs_[i].cur_loc.translation.y());
+    //
+    const float kCollisionDist = 0.4;
+    const Vector2f diff = robot_pose - r_pose;
+    if (diff.norm() < kCollisionDist) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool Simulator::CheckMapCollision(const int& robot_id) const {
   const RobotPubSub* robot = &robot_pub_subs_[robot_id];
   // Check for collision with the map
@@ -1028,6 +1117,7 @@ void Simulator::GoAlone(const int& robot_id) {
   target_message.y = goal_pose_.at(robot_id).translation.y();
   target_message.theta = goal_pose_.at(robot_id).angle;
   // TODO - publish the robot id
+  std::cout << "Publish GoAlone message" << std::endl;
   go_alone_pub_.publish(target_message);
 }
 
@@ -1207,40 +1297,53 @@ vector<geometry_msgs::Pose2D> PoseVecToGeomMessage(
 }
 
 void Simulator::RunAction() {
-    socialNavSrv::Request req;
-    socialNavSrv::Response res;
-    // Assuming we're working with the first robot
-    for (int i = 0; i < robot_pub_subs_.size(); i++) {
-        RobotPubSub *robot = &robot_pub_subs_[i];
-        req.action = action_.at(i);
-        req.loc.x = robot->cur_loc.translation.x();
-        req.loc.y = robot->cur_loc.translation.y();
-        req.loc.theta = robot->cur_loc.angle;
-        req.odom = GetOdom(0);
-        req.laser = GetLaser(0);
-        req.goal_pose.x = goal_pose_.at(i).translation.x();
-        req.goal_pose.y = goal_pose_.at(i).translation.y();
-        req.goal_pose.theta = goal_pose_.at(i).angle;
-        double time = sim_time;
-        req.time = time;
-        req.human_poses = PoseVecToGeomMessage(GetVisibleHumanPoses(i));
-        req.human_vels = PoseVecToGeomMessage(GetVisibleHumanVels(i));
-        if (action_.at(i) == 1) {
-            robot->motion_model->SetVel({0, {0, 0}});
-        } else if (ros::service::call("socialNavSrv", req, res)) {
-            // Update the simulator with navigation result
-            robot->motion_model->SetCmd(res.cmd_vel, res.cmd_curve);
-            if (res.cmd_vel == 0.0) {
-                robot->motion_model->SetVel({0, {0, 0}});
-            }
-            local_target_[i] = {res.local_target.x, res.local_target.y};
-        }
+  graph_navigation::socialNavSrv::Request all_reqs;
+  graph_navigation::socialNavSrv::Response all_res;
+  // Assuming we're working with the first robot
+  for (size_t i = 0; i < robot_pub_subs_.size(); i++) {
+    graph_navigation::socialNavReq req = graph_navigation::socialNavReq();
+    RobotPubSub *robot = &robot_pub_subs_[i];
+    req.action = action_.at(i);
+    req.loc.x = robot->cur_loc.translation.x();
+    req.loc.y = robot->cur_loc.translation.y();
+    req.loc.theta = robot->cur_loc.angle;
+    req.odom = GetOdom(i);
+    req.laser = GetLaser(i);
+    req.goal_pose.x = goal_pose_.at(i).translation.x();
+    req.goal_pose.y = goal_pose_.at(i).translation.y();
+    req.goal_pose.theta = goal_pose_.at(i).angle;
+    double time = sim_time;
+    req.time = time;
+    req.human_poses = PoseVecToGeomMessage(GetVisibleHumanPoses(i));
+    req.human_vels = PoseVecToGeomMessage(GetVisibleHumanVels(i));
+
+    all_reqs.nav_reqs.push_back(req);
+  }
+
+  ros::service::call("socialNavSrv", all_reqs, all_res);
+
+  for (size_t i = 0; i < robot_pub_subs_.size(); i++) {
+    RobotPubSub *robot = &robot_pub_subs_[i];
+
+    if (action_.at(i) == 1) {
+      robot->motion_model->SetVel({0, {0, 0}});
+    } else {
+      if (all_res.nav_resps.size() <= i){
+        continue;
+      }
+      // Update the simulator with navigation result
+      robot->motion_model->SetCmd(all_res.nav_resps.at(i).cmd_vel, all_res.nav_resps.at(i).cmd_curve);
+      if (all_res.nav_resps.at(i).cmd_vel == 0.0) {
+        robot->motion_model->SetVel({0, {0, 0}});
+      }
+      local_target_[i] = {all_res.nav_resps.at(i).local_target.x, all_res.nav_resps.at(i).local_target.y};
     }
+  }
 }
 
 void Simulator::Run() {
   // Run Action
-  for (int i = 0; i < robot_pub_subs_.size(); i++) {
+  for (size_t i = 0; i < robot_pub_subs_.size(); i++) {
     current_step_[i]++;
   }
 
