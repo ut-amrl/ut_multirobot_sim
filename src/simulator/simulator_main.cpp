@@ -39,6 +39,7 @@
 #include "ut_multirobot_sim/SimulatorStateMsg.h"
 #include "ut_multirobot_sim/Pose2Df.h"
 #include "ut_multirobot_sim/robotStep.h"
+#include "ut_multirobot_sim/MarkerColor.h"
 
 #include "shared/util/timer.h"
 #include "simulator.h"
@@ -47,9 +48,12 @@ using ut_multirobot_sim::SimulatorStateMsg;
 using ut_multirobot_sim::utmrsStepper;
 using ut_multirobot_sim::utmrsReset;
 using ut_multirobot_sim::robotStep;
+using ut_multirobot_sim::MarkerColor;
+using Eigen::Vector2f;
 
 SimulatorStateMsg sim_state_;
 Simulator* simulator_;
+
 bool sim_step_ = false;
 
 DEFINE_string(sim_config, "config/sim_config.lua", "Path to sim config.");
@@ -122,12 +126,14 @@ vector<ut_multirobot_sim::Pose2Df> PoseVecToMessage(
   return output;
 }
 
-robotStep robotStepService(const int& action, const int& index) {
+robotStep robotStepService(const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle,  const string message, const MarkerColor color, const int& index) {
     robotStep res;
 
     // Get the action from the request
     // Apply the action (send to the right place?)
-    simulator_->SetAction(index, action);
+    simulator_->SetAction(index, action, action_vel_x, action_vel_y, action_vel_angle);
+    simulator_->SetMessage(index, message);
+    simulator_->SetAgentColor(index, color);
 
 
     // Get Poses/Velocities & Convert to Message format
@@ -175,10 +181,21 @@ robotStep robotStepService(const int& action, const int& index) {
 bool StepService(utmrsStepper::Request &req,
                  utmrsStepper::Response &res) {
 
+    if (simulator_->robot_pub_subs_.size() != req.actions.size()){
+      std::cout << ("REINIT") << std::endl;
+      simulator_->Reinit();
+    }
+
     vector<robotStep> responses;
     for (size_t i = 0; i < simulator_->robot_pub_subs_.size(); ++i) {
         int action = req.actions[i];
-        responses.push_back(robotStepService(action, i));
+        float action_vel_x = req.action_vel_x[i];
+        float action_vel_y = req.action_vel_y[i];
+        float action_vel_angle = req.action_vel_angle[i];
+        string message = req.messages[i];
+        MarkerColor color = req.colors[i];
+
+        responses.push_back(robotStepService(action, action_vel_x, action_vel_y, action_vel_angle, message, color, i));
     }
 
     // Step the simulator as necessary
@@ -206,10 +223,10 @@ bool ResetService(utmrsReset::Request &req,
 int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, false);
-  printf("\nUT Multi-Robot Simulator\n\n");
-
   ros::init(argc, argv, "UT_MultiRobot_Sim");
   ros::NodeHandle n;
+
+  printf("\nUT Multi-Robot Simulator\n\n");
 
   ros::Publisher sim_state_pub = n.advertise<SimulatorStateMsg>(
     "sim_state", 1, true);

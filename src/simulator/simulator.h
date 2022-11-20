@@ -41,6 +41,7 @@
 #include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "ut_multirobot_sim/DoorControlMsg.h"
+#include "ut_multirobot_sim/MarkerColor.h"
 
 #include "std_msgs/Bool.h"
 #include "shared/math/geometry.h"
@@ -58,15 +59,19 @@
 
 using namespace std;
 using pose_2d::Pose2Df;
+using Eigen::Vector2f;
+using ut_multirobot_sim::MarkerColor;
 
 class Simulator {
   config_reader::ConfigReader reader_;
 
   std::vector<std::unique_ptr<EntityBase>> objects;
+  ros::NodeHandle _n;
 
   struct RobotPubSub {
     Pose2Df vel;
     Pose2Df cur_loc;
+
 
     ros::Subscriber initSubscriber;
     ros::Publisher odometryTwistPublisher;
@@ -75,15 +80,20 @@ class Simulator {
     ros::Publisher posMarkerPublisher;
     ros::Publisher truePosePublisher;
     ros::Publisher localizationPublisher;
+    ros::Publisher velocityArrowPublisher;
+    ros::Publisher textPublisher;
     std::unique_ptr<robot_model::RobotModel> motion_model;
 
     visualization_msgs::Marker robotPosMarker;
+    visualization_msgs::Marker robotVelocityArrow;
+    visualization_msgs::Marker robotText;
   };
   ros::Subscriber initSubscriber;
   ros::Subscriber doorSubscriber;
 
   ros::Publisher mapLinesPublisher;
   ros::Publisher objectLinesPublisher;
+  ros::Publisher robotLinesPublisher;
   ros::Publisher humanStateArrayPublisher;
   ros::Publisher doorStatePublisher;
   ros::Publisher halt_pub_;
@@ -100,6 +110,9 @@ class Simulator {
 
   visualization_msgs::Marker lineListMarker;
   visualization_msgs::Marker objectLinesMarker;
+  visualization_msgs::Marker robotLinesMarker;
+  visualization_msgs::Marker otherRobotsLinesMarker;
+
 
   static const float DT;
   geometry_msgs::PoseStamped truePoseMsg;
@@ -121,10 +134,14 @@ class Simulator {
   int next_door_state_;
   ros::NodeHandle nh_;
   vector<int> action_;
+  vector<float> action_vel_x_;
+  vector<float> action_vel_y_;
+  vector<float> action_vel_angle_;
   vector<int> current_step_;
   vector<int> follow_target_;
   vector<bool> target_locked_;
   vector<human::HumanObject*> target_;
+  vector<std::string> robot_texts_;
 
  private:
   void InitVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
@@ -134,7 +151,8 @@ class Simulator {
   void InitSimulatorVizMarkers();
   void DrawMap();
   void DrawObjects();
-  void DoorCallback(const ut_multirobot_sim::DoorControlMsg& msg);
+  void DrawOtherRobots();
+    void DoorCallback(const ut_multirobot_sim::DoorControlMsg& msg);
   void InitalLocationCallback(
       const geometry_msgs::PoseWithCovarianceStamped &msg);
   void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
@@ -152,6 +170,7 @@ class Simulator {
   void Halt();
   void Pass(const int& robot_id);
   void RunAction();
+  std::vector<geometry::Line2f> GetRobotLines(const int& robot_id);
   void HaltPub(std_msgs::Bool halt_message);
   vector<human::HumanObject*> GetHumans() const;
   human::HumanObject* FindFollowTarget(const int& robot_index, bool* found);
@@ -162,6 +181,7 @@ class Simulator {
   explicit Simulator(const std::string& sim_config);
   ~Simulator();
   bool Init(ros::NodeHandle &n);
+  bool Reinit();
   void Run();
   bool Reset();
   void UpdateHumans(const pedsim_msgs::AgentStates& humans);
@@ -191,7 +211,9 @@ class Simulator {
   bool CheckMapCollision(const int& robot_id) const;
   bool CheckHumanCollision(const int& robot_id) const;
   bool CheckRobotCollision(const int& robot_id) const;
-  void SetAction(const int& robot_id, const int& action);
+  void SetAction(const int& robot_id, const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle);
+  void SetMessage(const int& robot_id, const string& message);
+  void SetAgentColor(const int& robot_id, const MarkerColor color);
 };
 
 namespace simulator {

@@ -54,9 +54,11 @@
 #include "ut_multirobot_sim/DoorStateMsg.h"
 #include "ut_multirobot_sim/Localization2DMsg.h"
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
+#include "ut_multirobot_sim/MarkerColor.h"
 #include "graph_navigation/socialNavSrv.h"
 #include "graph_navigation/socialNavReq.h"
 #include "graph_navigation/socialNavResp.h"
+
 // #include "ut_multirobot_sim/human_object.h"
 #include "vector_map.h"
 
@@ -83,6 +85,7 @@ using door::DoorState;
 using ut_multirobot_sim::DoorControlMsg;
 using ut_multirobot_sim::HumanStateMsg;
 using ut_multirobot_sim::HumanStateArrayMsg;
+using ut_multirobot_sim::MarkerColor;
 
 // CONFIG_STRING(init_config_file, "init_config_file");
 // Used for visualizations
@@ -102,6 +105,8 @@ CONFIG_FLOAT(num_humans, "num_humans");
 CONFIG_BOOL(publish_tfs, "publish_tfs");
 CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
 CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
+// Observation Controls
+CONFIG_BOOL(partially_observable, "partially_observable");
 
 // Used for topic names and robot specs
 CONFIG_STRINGLIST(robot_types, "robot_types");
@@ -138,6 +143,7 @@ Simulator::Simulator(const std::string& sim_config) :
     next_door_state_(0),
     action_({}),
     current_step_({}),
+    robot_texts_({}),
     target_locked_({}) {
   truePoseMsg.header.seq = 0;
   truePoseMsg.header.frame_id = "map";
@@ -173,7 +179,136 @@ std::string IndexToPrefix(const size_t index) {
   return "robot" + std::to_string(index);
 }
 
+bool Simulator::Reinit(){
+  halt_pub_ = _n.advertise<Bool>("/halt_robot", 1);
+  go_alone_pub_ = _n.advertise<amrl_msgs::Pose2Df>("/move_base_simple/goal", 1);
+  follow_pub_ = _n.advertise<amrl_msgs::Pose2Df>("/nav_override", 1);
+  scanDataMsg.header.seq = 0;
+  scanDataMsg.header.frame_id = CONFIG_laser_frame;
+  scanDataMsg.angle_min = CONFIG_laser_angle_min;
+  scanDataMsg.angle_max = CONFIG_laser_angle_max;
+  scanDataMsg.angle_increment = CONFIG_laser_angle_increment;
+  scanDataMsg.range_min = CONFIG_laser_min_range;
+  scanDataMsg.range_max = CONFIG_laser_max_range;
+  scanDataMsg.intensities.clear();
+  scanDataMsg.time_increment = 0.0;
+  scanDataMsg.scan_time = 0.05;
+
+  odometryTwistMsg.header.seq = 0;
+  odometryTwistMsg.header.frame_id = "odom";
+  odometryTwistMsg.child_frame_id = "base_footprint";
+
+  robot_pub_subs_.clear();
+  local_target_.clear();
+  follow_target_.clear();
+  target_locked_.clear();
+  action_.clear();
+  action_vel_x_.clear();
+  action_vel_y_.clear();
+  action_vel_angle_.clear();
+  robot_texts_.clear();
+  br.clear();
+
+
+  // TODO - when making the MakeMotionModel, the CONFIG_robot_types gets reduced to a single item, this
+  //  check is no longer valid until MakeMotionalModel is fixed.
+
+  //  if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
+  //    std::cerr << "Robot type and robot start pose lists are"
+  //                 "not the same size!" << std::endl;
+  //    return false;
+  //  }
+
+  // Create motion model based on robot type
+  for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
+    const auto& robot_type = CONFIG_robot_types.at(0);
+    const auto& start_pose = CONFIG_start_poses.at(i);
+    const auto pf = IndexToPrefix(i);
+    auto* mm = MakeMotionModel(robot_type, _n, pf);
+    if (mm == nullptr) {
+      return false;
+    }
+    mm->SetPose(Pose2Df(start_pose.z(), {start_pose.x(), start_pose.y()}));
+
+    goal_pose_.push_back(Pose2Df(0, {CONFIG_goal_poses[i][0], CONFIG_goal_poses[i][1]}));
+
+    local_target_.push_back({0, 0});
+    follow_target_.push_back({0});
+    target_locked_.push_back({0});
+    action_.push_back(0);
+    action_vel_x_.push_back(0.);
+    action_vel_y_.push_back(0.);
+    action_vel_angle_.push_back(0.);
+    robot_texts_.push_back("");
+
+
+
+    robot_pub_subs_.emplace_back(RobotPubSub());
+    auto& rps = robot_pub_subs_.back();
+    rps.motion_model = std::unique_ptr<robot_model::RobotModel>(mm);
+
+    rps.initSubscriber = _n.subscribe<ut_multirobot_sim::Localization2DMsg>(
+            pf + "/initialpose", 1, [&](const boost::shared_ptr<
+                    const ut_multirobot_sim::Localization2DMsg>& msg) {
+              const Vector2f loc(msg->pose.x, msg->pose.y);
+              const float angle = msg->pose.theta;
+              rps.motion_model->SetPose({angle, loc});
+            });
+    rps.odometryTwistPublisher =
+            _n.advertise<nav_msgs::Odometry>(pf + "/odom", 1);
+    rps.laserPublisher =
+            _n.advertise<sensor_msgs::LaserScan>(pf + CONFIG_laser_topic, 1);
+    rps.vizLaserPublisher =
+            _n.advertise<sensor_msgs::LaserScan>(pf + "/scan", 1);
+    rps.posMarkerPublisher = _n.advertise<visualization_msgs::Marker>(
+            0 + "/simulator_visualization", 100);
+    rps.truePosePublisher = _n.advertise<geometry_msgs::PoseStamped>(
+            0 + "/simulator_true_pose", 100);
+    rps.velocityArrowPublisher = _n.advertise<visualization_msgs::Marker>(
+            0 + "/simulator_velocity_visualization", 100);
+    rps.textPublisher = _n.advertise<visualization_msgs::Marker>(
+            0 + "/simulator_text_visualization", 100);
+
+    if (FLAGS_localize) {
+      rps.localizationPublisher =
+              _n.advertise<ut_multirobot_sim::Localization2DMsg>(
+                      pf + "/localization", 1);
+      localizationMsg.header.frame_id = "map";
+      localizationMsg.header.seq = 0;
+    }
+
+    br.push_back(new tf::TransformBroadcaster());
+
+  }
+
+  InitSimulatorVizMarkers();
+  DrawMap();
+
+  mapLinesPublisher =
+          _n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
+  objectLinesPublisher =
+          _n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
+  robotLinesPublisher =
+          _n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
+
+  doorSubscriber =
+          _n.subscribe("/door/command", 1, &Simulator::DoorCallback, this);
+
+  humanStateArrayPublisher =
+          _n.advertise<ut_multirobot_sim::HumanStateArrayMsg>("/human_states", 1);
+  doorStatePublisher =
+          _n.advertise<ut_multirobot_sim::DoorArrayMsg>("/door_states", 1);
+
+  this->LoadObject(_n);
+
+  for (size_t i = 0; i < robot_pub_subs_.size(); i++){
+    GoAlone(i);
+  }
+  return true;
+}
+
 bool Simulator::Init(ros::NodeHandle& n) {
+  _n = n;
   halt_pub_ = n.advertise<Bool>("/halt_robot", 1);
   go_alone_pub_ = n.advertise<amrl_msgs::Pose2Df>("/move_base_simple/goal", 1);
   follow_pub_ = n.advertise<amrl_msgs::Pose2Df>("/nav_override", 1);
@@ -218,6 +353,10 @@ bool Simulator::Init(ros::NodeHandle& n) {
     follow_target_.push_back({0});
     target_locked_.push_back({0});
     action_.push_back(0);
+    action_vel_x_.push_back(0.);
+    action_vel_y_.push_back(0.);
+    action_vel_angle_.push_back(0.);
+    robot_texts_.push_back("");
 
 
     robot_pub_subs_.emplace_back(RobotPubSub());
@@ -241,14 +380,18 @@ bool Simulator::Init(ros::NodeHandle& n) {
         0 + "/simulator_visualization", 100);
     rps.truePosePublisher = n.advertise<geometry_msgs::PoseStamped>(
         0 + "/simulator_true_pose", 100);
+    rps.velocityArrowPublisher = n.advertise<visualization_msgs::Marker>(
+            0 + "/simulator_velocity_visualization", 100);
+    rps.textPublisher = n.advertise<visualization_msgs::Marker>(
+            0 + "/simulator_text_visualization", 100);
 
-      if (FLAGS_localize) {
-        rps.localizationPublisher =
-            n.advertise<ut_multirobot_sim::Localization2DMsg>(
-            pf + "/localization", 1);
-        localizationMsg.header.frame_id = "map";
-        localizationMsg.header.seq = 0;
-      }
+    if (FLAGS_localize) {
+      rps.localizationPublisher =
+              n.advertise<ut_multirobot_sim::Localization2DMsg>(
+                      pf + "/localization", 1);
+      localizationMsg.header.frame_id = "map";
+      localizationMsg.header.seq = 0;
+    }
 
     br.push_back(new tf::TransformBroadcaster());
 
@@ -261,6 +404,9 @@ bool Simulator::Init(ros::NodeHandle& n) {
       n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
   objectLinesPublisher =
       n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
+  robotLinesPublisher =
+          n.advertise<visualization_msgs::Marker>("/simulator_visualization", 6);
+
   doorSubscriber =
       n.subscribe("/door/command", 1, &Simulator::DoorCallback, this);
 
@@ -278,6 +424,10 @@ bool Simulator::Init(ros::NodeHandle& n) {
 }
 
 bool Simulator::Reset() {
+  if (CONFIG_start_poses.size() != robot_pub_subs_.size()){
+    Simulator::Reinit();
+//    return Simulator::Reset();
+  }
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
   scanDataMsg.angle_min = CONFIG_laser_angle_min;
@@ -313,6 +463,9 @@ bool Simulator::Reset() {
 
     goal_pose_.push_back(Pose2Df(0, {CONFIG_goal_poses[i][0], CONFIG_goal_poses[i][1]}));
     action_.push_back(0);
+    action_vel_x_.push_back(0.);
+    action_vel_y_.push_back(0.);
+    action_vel_angle_.push_back(0.);
     current_step_.push_back(0);
 
     RobotPubSub* robot = &robot_pub_subs_[i];
@@ -424,6 +577,8 @@ void Simulator::InitVizMarker(visualization_msgs::Marker& vizMarker, string ns,
     vizMarker.type = visualization_msgs::Marker::LINE_STRIP;
   } else if (type == "points") {
     vizMarker.type = visualization_msgs::Marker::POINTS;
+  } else if (type == "text") {
+    vizMarker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
   } else {
     vizMarker.type = visualization_msgs::Marker::ARROW;
   }
@@ -485,6 +640,51 @@ void Simulator::InitSimulatorVizMarkers() {
                   color);
   }
 
+  for (int i = 0; i < int(robot_pub_subs_.size()); ++i){
+    auto& rps = robot_pub_subs_.at(i);
+    p.pose.position.z = 0.5 * CONFIG_car_height;
+    p.pose.position.x = rps.cur_loc.translation.x();
+    p.pose.position.y = rps.cur_loc.translation.y();
+    scale.x = CONFIG_car_length;
+    scale.y = CONFIG_car_width;
+    scale.z = CONFIG_car_height;
+    color[0] = 255.0 / 255.0;
+    color[1] = 165.0 / 255.0;
+    color[2] = 0.0 / 255.0;
+    color[3] = 0.9;
+    InitVizMarker(rps.robotVelocityArrow,
+                  "robot_velocity",
+                  i+3,
+                  "arrow",
+                  p,
+                  scale,
+                  0.0,
+                  color);
+  }
+
+  for (int i = 0; i < int(robot_pub_subs_.size()); ++i){
+    auto& rps = robot_pub_subs_.at(i);
+    p.pose.position.z = 0.5 * CONFIG_car_height;
+    p.pose.position.x = rps.cur_loc.translation.x();
+    p.pose.position.y = rps.cur_loc.translation.y();
+    scale.x = CONFIG_car_length;
+    scale.y = CONFIG_car_width;
+    scale.z = 0.25;
+    color[0] = 255.0 / 255.0;
+    color[1] = 255.0 / 255.0;
+    color[2] = 255.0 / 255.0;
+    color[3] = 1.0;
+    InitVizMarker(rps.robotText,
+                  "robot_text",
+                  i+3,
+                  "text",
+                  p,
+                  scale,
+                  0.0,
+                  color);
+  }
+
+
   p.pose.orientation.w = 1.0;
   scale.x = 0.02;
   scale.y = 0.0;
@@ -495,6 +695,13 @@ void Simulator::InitSimulatorVizMarkers() {
   color[3] = 1.0;
   InitVizMarker(objectLinesMarker, "object_lines", 0, "linelist", p, scale,
       0.0, color);
+
+  color[0] = 100.0 / 255.0;
+  color[1] = 0.0 / 255.0;
+  color[2] = 244.0 / 255.0;
+  color[3] = 1.0;
+  InitVizMarker(robotLinesMarker, "object_lines", 0, "linelist", p, scale,
+                0.0, color);
 }
 
 void Simulator::DrawMap() {
@@ -509,6 +716,14 @@ void Simulator::DrawObjects() {
   ros_helpers::ClearMarker(&objectLinesMarker);
   for (const Line2f& l : map_.object_lines) {
     ros_helpers::DrawEigen2DLine(l.p0, l.p1, &objectLinesMarker);
+  }
+}
+
+void Simulator::DrawOtherRobots() {
+  // draw objects
+  ros_helpers::ClearMarker(&robotLinesMarker);
+  for (const Line2f& l : map_.robot_lines) {
+    ros_helpers::DrawEigen2DLine(l.p0, l.p1, &robotLinesMarker);
   }
 }
 
@@ -534,6 +749,7 @@ nav_msgs::Odometry Simulator::GetOdom(const int& robot_id) {
 }
 
 void Simulator::PublishOdometry() {
+  int i = 0;
   for (auto& rps : robot_pub_subs_) {
     tf::Quaternion robotQ = tf::createQuaternionFromYaw(rps.cur_loc.angle);
 
@@ -567,6 +783,40 @@ void Simulator::PublishOdometry() {
     rps.robotPosMarker.pose.orientation.z = robotQ.z();
     rps.robotPosMarker.pose.orientation.w = robotQ.w();
 
+
+    rps.robotText.pose.position.x =
+            rps.cur_loc.translation.x() -
+            cos(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
+    rps.robotText.pose.position.y =
+            rps.cur_loc.translation.y() -
+            sin(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
+    rps.robotText.pose.position.z = 0.5 * CONFIG_car_height;
+    rps.robotText.pose.orientation.w = 1.0;
+//    rps.robotText.pose.orientation.x = robotQ.x();
+//    rps.robotText.pose.orientation.y = robotQ.y();
+//    rps.robotText.pose.orientation.z = robotQ.z();
+//    rps.robotText.pose.orientation.w = robotQ.w();
+
+    tf::Quaternion robotvelQ = tf::createQuaternionFromYaw(rps.vel.angle);
+
+    rps.robotVelocityArrow.pose.position.x =
+            rps.cur_loc.translation.x() -
+            cos(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
+    rps.robotVelocityArrow.pose.position.y =
+            rps.cur_loc.translation.y() -
+            sin(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
+    rps.robotVelocityArrow.pose.position.z = 0.5 * CONFIG_car_height;
+    rps.robotVelocityArrow.pose.orientation.w = 1.0;
+    rps.robotVelocityArrow.pose.orientation.x = robotvelQ.x();
+    rps.robotVelocityArrow.pose.orientation.y = robotvelQ.y();
+    rps.robotVelocityArrow.pose.orientation.z = robotvelQ.z();
+    rps.robotVelocityArrow.pose.orientation.w = robotvelQ.w();
+
+
+    rps.robotVelocityArrow.scale.x = sqrt(rps.vel.translation.x() + rps.vel.translation.y());
+
+    rps.robotText.text = robot_texts_.at(i);
+    i++;
   }
 }
 
@@ -576,6 +826,28 @@ sensor_msgs::LaserScan Simulator::GetLaser(const int& robot_id) {
     map_.Load(CONFIG_map_name);
     DrawMap();
   }
+
+  map_.object_lines.clear();
+  for (size_t i=0; i < objects.size(); i++){
+    objects[i]->Step(CONFIG_DT);
+
+    for (const Line2f& line: objects[i]->GetLines()){
+      map_.object_lines.push_back(line);
+    }
+  }
+  this->DrawObjects();
+
+  int i = 0;
+  for (auto& rps : robot_pub_subs_) {
+    if (i != robot_id){
+      for (const Line2f& line: rps.motion_model->GetLines()) {
+        map_.object_lines.push_back(line);
+      }
+    }
+    i++;
+  }
+
+//  DrawOtherRobots();
 
   scanDataMsg.header.stamp = ros::Time::now();
   scanDataMsg.header.frame_id = IndexToPrefix(robot_id) + CONFIG_laser_frame;
@@ -701,8 +973,11 @@ void Simulator::PublishTransform() {
 void Simulator::PublishVisualizationMarkers() {
   mapLinesPublisher.publish(lineListMarker);
   objectLinesPublisher.publish(objectLinesMarker);
+  robotLinesPublisher.publish(robotLinesMarker);
   for (auto& rps : robot_pub_subs_) {
     rps.posMarkerPublisher.publish(rps.robotPosMarker);
+    rps.velocityArrowPublisher.publish(rps.robotVelocityArrow);
+    rps.textPublisher.publish(rps.robotText);
   }
 }
 
@@ -800,12 +1075,37 @@ void Simulator::Update() {
   map_.object_lines.clear();
   for (size_t i=0; i < objects.size(); i++){
     objects[i]->Step(CONFIG_DT);
+
     for (const Line2f& line: objects[i]->GetLines()){
       map_.object_lines.push_back(line);
     }
   }
+
   this->DrawObjects();
 }
+std::vector<geometry::Line2f> Simulator::GetRobotLines(const int& robot_id){
+  const auto& rps = robot_pub_subs_[robot_id];
+
+  const float r = 1;
+  const int num_segments = 20;
+
+  const float angle_increment = 2 * M_PI / num_segments;
+
+  std::vector<geometry::Line2f> template_lines_ = {};
+
+  Eigen::Vector2f v0(rps.cur_loc.translation.x() + r, rps.cur_loc.translation.y());
+  Eigen::Vector2f v1;
+  const float eps = 0.001;
+  for (int i = 1; i < num_segments; i++) {
+    v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(rps.cur_loc.translation.x() + r, rps.cur_loc.translation.y());
+
+    Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
+    template_lines_.push_back(geometry::Line2f(v0 + eps_vec, v1 - eps_vec));
+    v0 = v1;
+  }
+  template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(rps.cur_loc.translation.x() + r, rps.cur_loc.translation.y())));
+}
+
 
 string GetMapNameFromFilename(string path) {
   char path_cstring[path.length()];
@@ -875,7 +1175,7 @@ vector<Pose2Df> Simulator::GetRobotVels() const {
 //
 //}
 
-vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
+vector<Pose2Df> Simulator::GetVisibleRobotPoses(const int& robot_id) const {
   vector<Pose2Df> output;
   const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
   const float robot_angle = robot_pub_subs_[robot_id].cur_loc.angle;
@@ -888,7 +1188,7 @@ vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
 
     const Pose2Df other_robot_pose = robot_pub_subs_[i].cur_loc;
 
-    if (map_.Intersects(robot_pose, other_robot_pose.translation)) {
+    if (map_.Intersects(robot_pose, other_robot_pose.translation) && CONFIG_partially_observable) {
       output.push_back(zero_pose);
     } else {
       Eigen::Rotation2Df rotation(-robot_angle);
@@ -901,7 +1201,7 @@ vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
   return output;
 }
 
-vector<Pose2Df> Simulator::GetVisibleRobotPoses(const int& robot_id) const {
+vector<Pose2Df> Simulator::GetVisibleHumanPoses(const int& robot_id) const {
   vector<Pose2Df> output;
   const Vector2f robot_pose = robot_pub_subs_[robot_id].cur_loc.translation;
   const float robot_angle = robot_pub_subs_[robot_id].cur_loc.angle;
@@ -912,7 +1212,7 @@ vector<Pose2Df> Simulator::GetVisibleRobotPoses(const int& robot_id) const {
       EntityBase* base = objects[i].get();
       HumanObject* human = static_cast<HumanObject*>(base);
       const Pose2Df human_pose = human->GetPose();
-      if (map_.Intersects(robot_pose, human_pose.translation)) {
+      if (map_.Intersects(robot_pose, human_pose.translation) && CONFIG_partially_observable) {
         output.push_back(zero_pose);
       } else {
         Eigen::Rotation2Df rotation(-robot_angle);
@@ -951,7 +1251,7 @@ vector<Pose2Df> Simulator::GetVisibleHumanVels(const int& robot_id) const {
       EntityBase* base = objects[i].get();
       HumanObject* human = static_cast<HumanObject*>(base);
       const Pose2Df human_pose = human->GetPose();
-      if (map_.Intersects(robot_pose, human_pose.translation)) {
+      if (map_.Intersects(robot_pose, human_pose.translation) && CONFIG_partially_observable) {
           output.push_back(zero_pose);
       } else {
         Eigen::Rotation2Df rotation(-robot_angle);
@@ -978,7 +1278,7 @@ vector<Pose2Df> Simulator::GetVisibleRobotVels(const int& robot_id) const {
     }
 
     const Pose2Df other_robot_pose = robot_pub_subs_[i].cur_loc;
-    if (map_.Intersects(robot_pose, other_robot_pose.translation)) {
+    if (map_.Intersects(robot_pose, other_robot_pose.translation) && CONFIG_partially_observable) {
       output.push_back(zero_pose);
     } else {
       Eigen::Rotation2Df rotation(-robot_angle);
@@ -1261,12 +1561,32 @@ void Simulator::Pass(const int& robot_id) {
   follow_pub_.publish(follow_msg);
 }
 
-void Simulator::SetAction(const int& robot_id, const int& action) {
+void Simulator::SetAction(const int& robot_id, const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle) {
   if (action_.at(robot_id) != action) {
     target_locked_.at(robot_id) = false;
   }
   action_.at(robot_id) = action;
+  action_vel_x_.at(robot_id) = action_vel_x;
+  action_vel_y_.at(robot_id) = action_vel_y;
+  action_vel_angle_.at(robot_id) = action_vel_angle;
 }
+
+void Simulator::SetMessage(const int& robot_id, const string& message){
+  robot_texts_.at(robot_id) = message;
+}
+
+void Simulator::SetAgentColor(const int &robot_id, const MarkerColor color) {
+  if (color.r < 0.){
+    robot_pub_subs_.at(robot_id).robotPosMarker.color.r = 94.0 / 255.0;
+    robot_pub_subs_.at(robot_id).robotPosMarker.color.g = 156.0 / 255.0;
+    robot_pub_subs_.at(robot_id).robotPosMarker.color.b = 255.0 / 255.0;
+    return;
+  }
+  robot_pub_subs_.at(robot_id).robotPosMarker.color.r = color.r / 255.0;
+  robot_pub_subs_.at(robot_id).robotPosMarker.color.g = color.g / 255.0;
+  robot_pub_subs_.at(robot_id).robotPosMarker.color.b = color.b / 255.0;
+}
+
 
 int Simulator::GetFollowTarget(const int& robot_id) const {
   if (action_.at(robot_id) == 2 || action_.at(robot_id) == 3) {
@@ -1304,6 +1624,10 @@ void Simulator::RunAction() {
     graph_navigation::socialNavReq req = graph_navigation::socialNavReq();
     RobotPubSub *robot = &robot_pub_subs_[i];
     req.action = action_.at(i);
+    req.action_vel_x = action_vel_x_.at(i);
+    req.action_vel_y = action_vel_y_.at(i);
+    req.action_vel_angle = action_vel_angle_.at(i);
+
     req.loc.x = robot->cur_loc.translation.x();
     req.loc.y = robot->cur_loc.translation.y();
     req.loc.theta = robot->cur_loc.angle;

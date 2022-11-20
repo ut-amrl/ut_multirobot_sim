@@ -87,6 +87,7 @@ struct VectorMap {
 
   // for all kinds of obstacles
   std::vector<geometry::Line2f> object_lines;
+  std::vector<geometry::Line2f> robot_lines;
   std::string file_name;
 };
 

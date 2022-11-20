@@ -138,8 +138,46 @@ Visualization Manager:
         Value: true
         Marker: True
         robot_position: True
+        robot_velocities: True
+        robot_text: True
       Namespaces:
         robot_position: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /simulator_velocity_visualization
+      Namespaces:
+        robot_position: true
+        robot_velocity: true
+      Name: Velocities
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /simulator_text_visualization
+      Namespaces:
+        robot_position: true
+        robot_text: true
+      Name: RobotText
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker
+      Namespaces:
+        robot_position: true
+        robot_text: true
+      Name: ZoneViz
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker_points
+      Namespaces:
+        robot_position: true
+        robot_text: true
+      Name: ZoneVizPoints
+      Queue Size: 100
+      Value: true
     - Class: rviz/Image
       Enabled: true
       Image Topic: /rviz1/camera1/image

@@ -1,3 +1,8 @@
 int32[] actions
+float32[] action_vel_x
+float32[] action_vel_y
+float32[] action_vel_angle
+string[] messages
+ut_multirobot_sim/MarkerColor[] colors
 ---
 ut_multirobot_sim/robotStep[] robot_responses

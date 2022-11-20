@@ -40,6 +40,7 @@ enum EntityType {
    OMNIDIRECTIONAL_MODEL,
    ROBOT_MODEL,
    SHORT_TERM_OBJECT,
+   PRETRAINED_ROBOT
 };
 
 class EntityBase{

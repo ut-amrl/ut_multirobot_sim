@@ -1,6 +1,9 @@
 PROJECT(ut_multirobot_sim)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.1.0)
+set( CMAKE_BUILD_TYPE Debug )
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 MESSAGE(STATUS "Compilers found: ${CMAKE_CXX_COMPILER_LIST}")
 MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
@@ -17,7 +20,9 @@ IF(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
     "${ESCAPE}[0m")
 ENDIF()
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -fopenmp -Wall -Werror -g")
+#SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -fopenmp -Wall -Werror -g")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -fopenmp -Wall -g -O0")
+
 
 IF(${CXX} MATCHES "g++")
   SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -rdynamic")

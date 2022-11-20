@@ -78,6 +78,25 @@ DiffDriveModel::DiffDriveModel(const vector<string>& config_files,
     odom_msg_.header.frame_id = "odom";
     odom_msg_.child_frame_id = "base_footprint";
 
+    // just a cylinder for now
+    const float r = 0.25;
+    const int num_segments = 20;
+
+    const float angle_increment = 2 * M_PI / num_segments;
+
+    Eigen::Vector2f v0(r, 0.);
+    Eigen::Vector2f v1;
+    const float eps = 0.001;
+    for (int i = 1; i < num_segments; i++) {
+      v1 = Eigen::Rotation2Df(angle_increment * i) * Eigen::Vector2f(r, 0.0);
+
+      Eigen::Vector2f eps_vec = (v1 - v0).normalized() * eps;
+      template_lines_.push_back(geometry::Line2f(v0 + eps_vec, v1 - eps_vec));
+      v0 = v1;
+    }
+    template_lines_.push_back(geometry::Line2f(v1, Eigen::Vector2f(r, 0.0)));
+    pose_lines_ = template_lines_;
+
 }
 
 void DiffDriveModel::Step(const double &dt) {
@@ -145,6 +164,13 @@ void DiffDriveModel::Step(const double &dt) {
     last_time_ = current_time;
 
     PublishOdom(dt);
+
+    Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+    Eigen::Vector2f T = pose_.translation;
+    for (size_t i=0; i < template_lines_.size(); i++) {
+      pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+      pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+    }
 }
 
 void DiffDriveModel::PublishOdom(const float dt) {

@@ -37,6 +37,8 @@ AckermannModel::AckermannModel(const vector<string>& config_file, ros::NodeHandl
       1,
       &AckermannModel::DriveCallback,
       this);
+
+
 }
 
 void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg& msg) {
