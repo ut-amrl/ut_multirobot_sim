@@ -1571,6 +1571,11 @@ void Simulator::SetAction(const int& robot_id, const int& action, const float& a
   action_vel_angle_.at(robot_id) = action_vel_angle;
 }
 
+void Simulator::SetOrder(const int& robot_id, const int& curr, const int& priority) {
+  curr_.at(robot_id) = curr;
+  priority_.at(robot_id) = priority;
+}
+
 void Simulator::SetMessage(const int& robot_id, const string& message){
   robot_texts_.at(robot_id) = message;
 }
@@ -1623,6 +1628,9 @@ void Simulator::RunAction() {
   for (size_t i = 0; i < robot_pub_subs_.size(); i++) {
     graph_navigation::socialNavReq req = graph_navigation::socialNavReq();
     RobotPubSub *robot = &robot_pub_subs_[i];
+
+    req.curr = curr_.at(i);
+    req.priority = priority_.at(i);
     req.action = action_.at(i);
     req.action_vel_x = action_vel_x_.at(i);
     req.action_vel_y = action_vel_y_.at(i);

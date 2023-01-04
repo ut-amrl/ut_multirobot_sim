@@ -1,3 +1,5 @@
+int32[] curr_order
+int32[] priority_order
 int32[] actions
 float32[] action_vel_x
 float32[] action_vel_y

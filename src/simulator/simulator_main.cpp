@@ -126,13 +126,15 @@ vector<ut_multirobot_sim::Pose2Df> PoseVecToMessage(
   return output;
 }
 
-robotStep robotStepService(const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle,  const string message, const MarkerColor color, const int& index) {
+robotStep robotStepService(const int& curr, int& priority, const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle,  const string message, const MarkerColor color, const int& index) {
     robotStep res;
 
     // Get the action from the request
     // Apply the action (send to the right place?)
     simulator_->SetAction(index, action, action_vel_x, action_vel_y, action_vel_angle);
     simulator_->SetMessage(index, message);
+    simulator_->SetOrder(index, curr, priority);
+
     simulator_->SetAgentColor(index, color);
 
 
@@ -188,6 +190,8 @@ bool StepService(utmrsStepper::Request &req,
 
     vector<robotStep> responses;
     for (size_t i = 0; i < simulator_->robot_pub_subs_.size(); ++i) {
+        int curr = req.curr_order[i];
+        int priority = req.priority_order[i];
         int action = req.actions[i];
         float action_vel_x = req.action_vel_x[i];
         float action_vel_y = req.action_vel_y[i];
@@ -195,7 +199,7 @@ bool StepService(utmrsStepper::Request &req,
         string message = req.messages[i];
         MarkerColor color = req.colors[i];
 
-        responses.push_back(robotStepService(action, action_vel_x, action_vel_y, action_vel_angle, message, color, i));
+        responses.push_back(robotStepService(curr, priority, action, action_vel_x, action_vel_y, action_vel_angle, message, color, i));
     }
 
     // Step the simulator as necessary
