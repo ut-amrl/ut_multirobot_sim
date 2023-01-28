@@ -28,7 +28,8 @@ from inside the root of the repo.
     (Replace `MYDIRECTORY` with the actual directory)
     You can also add this to your `~/.bashrc` file so that you don't have to do
     this every time you open a new terminal.
-1. Build the program:
+1. Run `git submodule update --init --recursive` to pull all the submodules.
+1. Build the program (do **not** run `cmake`, `catkin_make`, `rosbuild`):
     ```
     make
     ```
@@ -36,7 +37,6 @@ from inside the root of the repo.
     ```
     make -j
     ```
-1. Do **not** run `cmake`, `catkin_make`, `rosbuild`.
 
 
 ## Run
