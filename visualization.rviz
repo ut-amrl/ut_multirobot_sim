@@ -91,6 +91,15 @@ Visualization Manager:
         object_lines: true
       Queue Size: 100
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /graphnav_simulator_visualization
+      Name: GraphNavMap
+      Namespaces:
+        map_lines: true
+        object_lines: true
+      Queue Size: 100
+      Value: true
     - Class: rviz/TF
       Enabled: false
       Frame Timeout: 15
@@ -176,6 +185,24 @@ Visualization Manager:
         robot_position: true
         robot_text: true
       Name: ZoneVizPoints
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualization_marker_nav_map
+      Namespaces:
+        robot_position: true
+        robot_text: true
+      Name: NavMapPoints
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /visualization_marker_nav_map_titles
+      Namespaces:
+        robot_position: true
+        robot_text: true
+      Name: NavMapPointsTitles
       Queue Size: 100
       Value: true
     - Class: rviz/Image

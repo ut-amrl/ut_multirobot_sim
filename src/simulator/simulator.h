@@ -164,6 +164,7 @@ class Simulator {
   void PublishHumanStates();
   void PublishDoorStates();
   void Update();
+  void ClearMarkers();
   void LoadObject(ros::NodeHandle &n);
   void GoAlone(const int& robot_id);
   void Follow(const int& robot_id);

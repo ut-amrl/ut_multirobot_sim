@@ -56,6 +56,7 @@
 #include "ut_multirobot_sim/HumanStateArrayMsg.h"
 #include "ut_multirobot_sim/MarkerColor.h"
 #include "graph_navigation/socialNavSrv.h"
+#include "graph_navigation/socialNavReset.h"
 #include "graph_navigation/socialNavReq.h"
 #include "graph_navigation/socialNavResp.h"
 
@@ -124,6 +125,7 @@ CONFIG_FLOAT(laser_max_range, "laser_max_range");
 CONFIG_INT(max_steps, "max_steps");
 
 CONFIG_STRING(map_name, "map_name");
+CONFIG_STRING(nav_map_name, "nav_map_name");
 // Initial location
 CONFIG_VECTOR3FLIST(start_poses, "start_poses");
 CONFIG_VECTOR3FLIST(goal_poses, "goal_poses");
@@ -424,10 +426,31 @@ bool Simulator::Init(ros::NodeHandle& n) {
 }
 
 bool Simulator::Reset() {
-  if (CONFIG_start_poses.size() != robot_pub_subs_.size()){
-    Simulator::Reinit();
+  std::cout << "RESETING" << std::endl;
+
+  Simulator::ClearMarkers();
+  map_.Load(CONFIG_map_name);
+
+  graph_navigation::socialNavReset::Request all_reqs;
+  graph_navigation::socialNavResetReq req = graph_navigation::socialNavResetReq();
+
+  req.number_of_agents = robot_pub_subs_.size();
+  req.map_path = CONFIG_nav_map_name;
+
+  all_reqs.reqs.push_back(req);
+  graph_navigation::socialNavReset::Response all_res;
+  ros::service::call("socialNavReset", all_reqs, all_res);
+
+
+//  if (CONFIG_start_poses.size() != robot_pub_subs_.size()){
+  Simulator::Reinit();
 //    return Simulator::Reset();
-  }
+//  }
+
+  DrawMap();
+
+  std::cout<<"Loading " << CONFIG_map_name << std::endl;
+
   scanDataMsg.header.seq = 0;
   scanDataMsg.header.frame_id = CONFIG_laser_frame;
   scanDataMsg.angle_min = CONFIG_laser_angle_min;
@@ -710,6 +733,20 @@ void Simulator::DrawMap() {
     ros_helpers::DrawEigen2DLine(l.p0, l.p1, &lineListMarker);
   }
 }
+
+void Simulator::ClearMarkers() {
+  ros_helpers::ClearMarker(&lineListMarker);
+  ros_helpers::ClearMarker(&objectLinesMarker);
+  ros_helpers::ClearMarker(&robotLinesMarker);
+
+  // TODO: Make these explicit "DELETEALL" markers so you don't need to keep track of them.
+  for (auto& rps : robot_pub_subs_) {
+    ros_helpers::ClearMarker(&rps.robotPosMarker);
+    ros_helpers::ClearMarker(&rps.robotVelocityArrow);
+    ros_helpers::ClearMarker(&rps.robotText);
+  }
+}
+
 
 void Simulator::DrawObjects() {
   // draw objects
