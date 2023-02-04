@@ -513,12 +513,8 @@ string GetMapNameFromFilename(string path) {
   strcpy(path_cstring, path.c_str());
   const string file_name(basename(path_cstring));
   static const string suffix = ".vectormap.txt";
-  const size_t suffix_len = suffix.length();
-  if (file_name.length() > suffix_len &&
-      file_name.substr(file_name.length() - suffix_len, suffix_len) == suffix) {
-    return file_name.substr(0, file_name.length() - suffix_len);
-  }
-  return file_name;
+  size_t found = file_name.find(suffix);
+  return file_name.substr(0, found);
 }
 
 void Simulator::publishLocalization() {
