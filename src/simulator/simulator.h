@@ -137,6 +137,7 @@ class Simulator {
   vector<float> action_vel_x_;
   vector<float> action_vel_y_;
   vector<float> action_vel_angle_;
+  vector<float> robot_max_speeds_;
   vector<int> current_step_;
   vector<int> follow_target_;
   vector<bool> target_locked_;
@@ -215,6 +216,7 @@ class Simulator {
   void SetAction(const int& robot_id, const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle);
   void SetMessage(const int& robot_id, const string& message);
   void SetAgentColor(const int& robot_id, const MarkerColor color);
+  void SetMaxSpeed(const int& robot_id, const float& max_speed);
 };
 
 namespace simulator {

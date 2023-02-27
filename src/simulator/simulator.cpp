@@ -209,6 +209,7 @@ bool Simulator::Reinit(){
   action_vel_y_.clear();
   action_vel_angle_.clear();
   robot_texts_.clear();
+  robot_max_speeds_.clear();
   br.clear();
 
 
@@ -242,6 +243,7 @@ bool Simulator::Reinit(){
     action_vel_y_.push_back(0.);
     action_vel_angle_.push_back(0.);
     robot_texts_.push_back("");
+    robot_max_speeds_.push_back(-1.);
 
 
 
@@ -358,6 +360,7 @@ bool Simulator::Init(ros::NodeHandle& n) {
     action_vel_x_.push_back(0.);
     action_vel_y_.push_back(0.);
     action_vel_angle_.push_back(0.);
+    robot_max_speeds_.push_back(-1.);
     robot_texts_.push_back("");
 
 
@@ -489,6 +492,7 @@ bool Simulator::Reset() {
     action_vel_x_.push_back(0.);
     action_vel_y_.push_back(0.);
     action_vel_angle_.push_back(0.);
+    action_vel_angle_.push_back(-1.);
     current_step_.push_back(0);
 
     RobotPubSub* robot = &robot_pub_subs_[i];
@@ -1612,6 +1616,10 @@ void Simulator::SetMessage(const int& robot_id, const string& message){
   robot_texts_.at(robot_id) = message;
 }
 
+void Simulator::SetMaxSpeed(const int& robot_id, const float& max_speed){
+  robot_max_speeds_.at(robot_id) = max_speed;
+}
+
 void Simulator::SetAgentColor(const int &robot_id, const MarkerColor color) {
   if (color.r < 0.){
     robot_pub_subs_.at(robot_id).robotPosMarker.color.r = 94.0 / 255.0;
@@ -1664,6 +1672,7 @@ void Simulator::RunAction() {
     req.action_vel_x = action_vel_x_.at(i);
     req.action_vel_y = action_vel_y_.at(i);
     req.action_vel_angle = action_vel_angle_.at(i);
+    req.max_speed = robot_max_speeds_.at(i);
 
     req.loc.x = robot->cur_loc.translation.x();
     req.loc.y = robot->cur_loc.translation.y();

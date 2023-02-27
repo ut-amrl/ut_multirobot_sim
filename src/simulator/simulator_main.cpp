@@ -126,7 +126,7 @@ vector<ut_multirobot_sim::Pose2Df> PoseVecToMessage(
   return output;
 }
 
-robotStep robotStepService(const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle,  const string message, const MarkerColor color, const int& index) {
+robotStep robotStepService(const int& action, const float& action_vel_x, const float& action_vel_y, const float& action_vel_angle,  const string message, const MarkerColor color, const float& max_speed, const int& index) {
     robotStep res;
 
     // Get the action from the request
@@ -134,6 +134,7 @@ robotStep robotStepService(const int& action, const float& action_vel_x, const f
     simulator_->SetAction(index, action, action_vel_x, action_vel_y, action_vel_angle);
     simulator_->SetMessage(index, message);
     simulator_->SetAgentColor(index, color);
+    simulator_->SetMaxSpeed(index, max_speed);
 
 
     // Get Poses/Velocities & Convert to Message format
@@ -192,10 +193,11 @@ bool StepService(utmrsStepper::Request &req,
         float action_vel_x = req.action_vel_x[i];
         float action_vel_y = req.action_vel_y[i];
         float action_vel_angle = req.action_vel_angle[i];
+        float max_speed = req.max_speed[i];
         string message = req.messages[i];
         MarkerColor color = req.colors[i];
 
-        responses.push_back(robotStepService(action, action_vel_x, action_vel_y, action_vel_angle, message, color, i));
+        responses.push_back(robotStepService(action, action_vel_x, action_vel_y, action_vel_angle, message, color, max_speed, i));
     }
 
     // Step the simulator as necessary

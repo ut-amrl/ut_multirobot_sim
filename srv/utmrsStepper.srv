@@ -2,6 +2,7 @@ int32[] actions
 float32[] action_vel_x
 float32[] action_vel_y
 float32[] action_vel_angle
+float32[] max_speed
 string[] messages
 ut_multirobot_sim/MarkerColor[] colors
 ---
