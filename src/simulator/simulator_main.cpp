@@ -20,20 +20,19 @@
 //========================================================================
 
 #include <stdio.h>
-
 #include <iostream>
 
 #include "glog/logging.h"
 #include "gflags/gflags.h"
-#include "ros/ros.h"
-#include "ros/package.h"
-#include "std_msgs/Bool.h"
-#include "ut_multirobot_sim/SimulatorStateMsg.h"
+#include <rclcpp/rclcpp.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include "ut_multirobot_sim/msg/simulator_state_msg.hpp"
 
 #include "shared/util/timer.h"
 #include "simulator.h"
 
-using ut_multirobot_sim::SimulatorStateMsg;
+using ut_multirobot_sim::msg::SimulatorStateMsg;
 
 SimulatorStateMsg sim_state_;
 bool sim_step_ = false;
@@ -51,79 +50,80 @@ DEFINE_string(maps_dir,
               "",
               "Path to maps directory.");
 
-void SimStartStop(const std_msgs::Bool& msg) {
-  if (msg.data) {
-    sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
-  } else {
-    sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
-  }
+void SimStartStop(const std_msgs::msg::Bool::SharedPtr msg) {
+    if (msg->data) {
+        sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
+    } else {
+        sim_state_.sim_state = SimulatorStateMsg::SIM_STOPPED;
+    }
 }
 
-void SimStep(const std_msgs::Bool& msg) {
-  // In case multiple step commands are received between sim updates, the
-  // simulator should step at least once.
-  sim_step_ = sim_step_ || msg.data;
+void SimStep(const std_msgs::msg::Bool::SharedPtr msg) {
+    // In case multiple step commands are received between sim updates, the
+    // simulator should step at least once.
+    sim_step_ = sim_step_ || msg->data;
 }
 
 int main(int argc, char **argv) {
-  google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, false);
-  printf("\nUT Multi-Robot Simulator\n\n");
+    google::InitGoogleLogging(argv[0]);
+    google::ParseCommandLineFlags(&argc, &argv, false);
+    printf("\nUT Multi-Robot Simulator\n\n");
 
-  ros::init(argc, argv, "UT_MultiRobot_Sim");
-  ros::NodeHandle n;
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<rclcpp::Node>("ut_multirobot_sim");
 
-  ros::Publisher sim_state_pub = n.advertise<SimulatorStateMsg>(
-      "sim_state", 1, true);
-  sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
+    auto sim_state_pub = node->create_publisher<SimulatorStateMsg>(
+        "sim_state", 1);
+    sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
 
-  ros::Subscriber start_stop_sub = n.subscribe(
-      "sim_start_stop", 1, SimStartStop);
+    auto start_stop_sub = node->create_subscription<std_msgs::msg::Bool>(
+        "sim_start_stop", 1, SimStartStop);
 
-  ros::Subscriber step_sub = n.subscribe(
-      "sim_step", 1, SimStep);
+    auto step_sub = node->create_subscription<std_msgs::msg::Bool>(
+        "sim_step", 1, SimStep);
 
-  if (FLAGS_maps_dir.empty()) {
-    FLAGS_maps_dir = ros::package::getPath("amrl_maps");
-  }
-  CHECK_NE(FLAGS_maps_dir, string(""));
-  Simulator simulator(FLAGS_env_config,
-                      FLAGS_robot_config,
-                      FLAGS_init_config,
-                      FLAGS_maps_dir);
-  if (!simulator.init(n)) {
-    return 1;
-  }
-
-  // main loop
-  RateLoop rate(1.0 / simulator.GetStepSize());
-  while (ros::ok()){
-    ros::spinOnce();
-    switch (sim_state_.sim_state) {
-      case SimulatorStateMsg::SIM_RUNNING : {
-        simulator.Run();
-      } break;
-      case SimulatorStateMsg::SIM_STOPPED : {
-        // Do nothing unless stepping.
-        if (sim_step_) {
-          simulator.Run();
-          // Disable stepping until a step message is received.
-          sim_step_ = false;
-        }
-      } break;
-      default: {
-        LOG(FATAL) << "Unexpected simulator state: " << sim_state_.sim_state;
-      }
+    if (FLAGS_maps_dir.empty()) {
+        FLAGS_maps_dir = ament_index_cpp::get_package_share_directory("amrl_maps");
+    }
+    CHECK_NE(FLAGS_maps_dir, string(""));
+    Simulator simulator(FLAGS_env_config,
+                        FLAGS_robot_config,
+                        FLAGS_init_config,
+                        FLAGS_maps_dir);
+    if (!simulator.init(node)) {
+        return 1;
     }
 
-    // Publish simulator state.
-    sim_state_.sim_step_count = simulator.GetSimStepCount();
-    sim_state_.sim_time = simulator.GetSimTime();
-    sim_state_pub.publish(sim_state_);
-    rate.Sleep();
-  }
+    // main loop
+    RateLoop rate(1.0 / simulator.GetStepSize());
+    while (rclcpp::ok()) {
+        rclcpp::spin_some(node);
+        switch (sim_state_.sim_state) {
+            case SimulatorStateMsg::SIM_RUNNING: {
+                simulator.Run();
+            } break;
+            case SimulatorStateMsg::SIM_STOPPED: {
+                // Do nothing unless stepping.
+                if (sim_step_) {
+                    simulator.Run();
+                    // Disable stepping until a step message is received.
+                    sim_step_ = false;
+                }
+            } break;
+            default: {
+                LOG(FATAL) << "Unexpected simulator state: " << sim_state_.sim_state;
+            }
+        }
 
-  printf("closing.\n");
+        // Publish simulator state.
+        sim_state_.sim_step_count = simulator.GetSimStepCount();
+        sim_state_.sim_time = simulator.GetSimTime();
+        sim_state_pub->publish(sim_state_);
+        rate.Sleep();
+    }
 
-  return(0);
+    printf("closing.\n");
+
+    rclcpp::shutdown();
+    return (0);
 }

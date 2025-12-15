@@ -1,4 +1,4 @@
-Header header
+std_msgs/Header header
 
 float32 dr
 float32 dx
@@ -13,5 +13,5 @@ float32 vr
 float32 vx
 float32 vy
 
-float32 VBatt
+float32 v_batt
 uint8 status

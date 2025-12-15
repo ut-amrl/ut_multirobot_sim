@@ -1,27 +1,24 @@
-# include $(shell rospack find mk)/cmake.mk
-
-#acceptable build_types: Release/Debug/Profile
+SHELL = /bin/bash
 build_type=Release
-# build_type=Debug
 
 .SILENT:
 
-all: build build/CMakeLists.txt.copy
+all: build-only install
+
+install: build/CMakeLists.txt.copy
+	echo "Installing to ./install ..."
+	$(MAKE) --no-print-directory -C build install
+
+build-only: build build/CMakeLists.txt.copy
 	$(info Build_type is [${build_type}])
 	$(MAKE) --no-print-directory -C build
 
 clean:
-	rm -rf bin build lib msg_gen src/ut_multirobot_sim
+	rm -rf build bin lib install
 
-build/CMakeLists.txt.copy: build CMakeLists.txt Makefile msg
-	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) ..
+build/CMakeLists.txt.copy: build CMakeLists.txt Makefile
+	cd build && cmake -DCMAKE_BUILD_TYPE=$(build_type) -DCMAKE_INSTALL_PREFIX=../install ..
 	cp CMakeLists.txt build/CMakeLists.txt.copy
 
 build:
 	mkdir -p build
-
-cleanup_cache:
-	rm -rf build
-
-purge: clean cleanup_cache
-

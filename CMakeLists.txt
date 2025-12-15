@@ -1,67 +1,84 @@
-PROJECT(ut_multirobot_sim)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.8)
+project(ut_multirobot_sim)
 
-MESSAGE(STATUS "Compilers found: ${CMAKE_CXX_COMPILER_LIST}")
 MESSAGE(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 MESSAGE(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 
-string(ASCII 27 ESCAPE)
-IF(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
-  MESSAGE(AUTHOR_WARNING
-    "${ESCAPE}[1;33m"
-    "vector_map.cpp contains a struct not using EIGEN_MAKE_ALIGNED_OPERATOR_NEW"
-    " this may cause issues on your architecture."
-    " See: https://eigen.tuxfamily.org/dox/group__TopicStructHavingEigenMembers"
-    ".html"
-    "${ESCAPE}[0m")
-ENDIF()
+# C++17 required for ROS2
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -Wall -Werror -g")
 
-SET(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Werror -Wall -g")
-
-IF(${CXX} MATCHES "g++")
-  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -rdynamic")
-ENDIF()
-
-IF(${CMAKE_BUILD_TYPE} MATCHES "Release")
+if(CMAKE_BUILD_TYPE MATCHES "Release")
   MESSAGE(STATUS "Additional Flags for Release mode")
-  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fopenmp -O3 -DNDEBUG")
-ELSEIF(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG -fopenmp")
+elseif(CMAKE_BUILD_TYPE MATCHES "Debug")
   MESSAGE(STATUS "Additional Flags for Debug mode")
-  SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g")
-  SET(BUILD_SPECIFIC_LIBRARIES "")
-ENDIF()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+endif()
 
-INCLUDE($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-ROSBUILD_INIT()
-SET(ROS_BUILD_STATIC_LIBS true)
-SET(ROS_BUILD_SHARED_LIBS false)
-
-MESSAGE(STATUS "ROS-Overrride Build Type: ${CMAKE_BUILD_TYPE}")
 MESSAGE(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
-MESSAGE(STATUS "Build-Specific Libraries: ${BUILD_SPECIFIC_LIBRARIES}")
+
+# Define ROS2 for compatibility with shared libraries
+add_compile_definitions(ROS2)
+
+# Find ROS2 packages
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+
+# Handle AMENT_PREFIX_PATH for custom packages
+if(DEFINED ENV{AMENT_PREFIX_PATH})
+  string(REPLACE ":" ";" ament_prefix_path_list "$ENV{AMENT_PREFIX_PATH}")
+  foreach(path ${ament_prefix_path_list})
+    list(APPEND CMAKE_PREFIX_PATH "${path}")
+  endforeach()
+endif()
+
+find_package(amrl_msgs REQUIRED)
+
+# System libraries
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LUA REQUIRED lua5.1)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/submodules")
 
-INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR})
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/config_reader/include)
+include_directories(
+  ${PROJECT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/src
+  ${PROJECT_SOURCE_DIR}/submodules
+  ${PROJECT_SOURCE_DIR}/submodules/config_reader
+  ${PROJECT_SOURCE_DIR}/submodules/config_reader/include
+  ${PROJECT_SOURCE_DIR}/submodules/shared
+  ${LUA_INCLUDE_DIRS}
+)
 
-ROSBUILD_GENMSG()
+# Generate custom messages
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/AckermannCurvatureDriveMsg.msg"
+  "msg/CobotDriveMsg.msg"
+  "msg/CobotOdometryMsg.msg"
+  "msg/Localization2DMsg.msg"
+  "msg/Pose2Df.msg"
+  "msg/SimulatorStateMsg.msg"
+  DEPENDENCIES std_msgs geometry_msgs
+)
 
-ADD_SUBDIRECTORY(${PROJECT_SOURCE_DIR}/submodules/shared)
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/submodules/shared)
+# Build shared library submodule
+add_subdirectory(submodules/shared)
 
-SET(libs roslib roscpp glog gflags amrl_shared_lib
-    ${BUILD_SPECIFIC_LIBRARIES} rosbag X11 lua5.1 boost_system)
-
-SET(target simulator)
-ROSBUILD_ADD_EXECUTABLE(${target}
+# Simulator executable
+add_executable(simulator
   src/simulator/simulator_main.cpp
   src/simulator/simulator.cpp
   src/simulator/vector_map.cpp
@@ -72,8 +89,68 @@ ROSBUILD_ADD_EXECUTABLE(${target}
   src/simulator/diff_drive_model.cpp
   src/simulator/short_term_object.cpp
   src/simulator/human_object.cpp
-  )
-TARGET_LINK_LIBRARIES(${target}
-  ${libs}
 )
 
+# Link ROS2 dependencies
+ament_target_dependencies(simulator
+  rclcpp
+  std_msgs
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  visualization_msgs
+  ament_index_cpp
+  amrl_msgs
+)
+
+# Link to generated messages (same package) - compatible with Foxy/Humble/Jazzy
+if(${rosidl_cmake_VERSION} VERSION_LESS "3.1.5")
+  # Foxy approach
+  rosidl_target_interfaces(simulator ${PROJECT_NAME} "rosidl_typesupport_cpp")
+else()
+  # Humble/Jazzy approach
+  rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+  target_link_libraries(simulator "${cpp_typesupport_target}")
+endif()
+
+# Link system libraries
+target_link_libraries(simulator
+  amrl_shared_lib
+  glog
+  gflags
+  ${LUA_LIBRARIES}
+)
+
+# Install executable
+install(TARGETS simulator
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install config directory
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
+# Install launch files
+install(DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+  FILES_MATCHING PATTERN "*.py"
+)
+
+# Export dependencies
+ament_export_dependencies(
+  rclcpp
+  std_msgs
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  ament_index_cpp
+  amrl_msgs
+  rosidl_default_runtime
+)
+
+ament_package()

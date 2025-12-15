@@ -1,8 +1,12 @@
 .kdev4
-bin
-build
-lib
-msg_gen
+bin/
+build/
+lib/
+install/
+log/
+msg_gen/
 src/ut_multirobot_sim/
 profile_results
 .vscode
+*.pyc
+__pycache__/

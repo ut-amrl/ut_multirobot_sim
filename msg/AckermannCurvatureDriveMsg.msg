@@ -1,4 +1,4 @@
-Header header
+std_msgs/Header header
 
 # Linear velocity command [m/s]. Positive values indicate forward motion,
 # negative values indicate reverse motion.

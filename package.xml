@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ut_multirobot_sim</name>
+  <version>1.0.0</version>
+  <description>UT Multi-Robot Simulator for ROS2</description>
+  <maintainer email="joydeepb@cs.utexas.edu">Joydeep Biswas</maintainer>
+  <license>LGPLv3</license>
+  <url type="website">https://github.com/ut-amrl/ut_multirobot_sim</url>
+  <url type="repository">https://github.com/ut-amrl/ut_multirobot_sim</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <!-- ROS2 Core Dependencies -->
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>ament_index_cpp</depend>
+
+  <!-- AMRL Messages (ROS2 compatible) -->
+  <depend>amrl_msgs</depend>
+
+  <!-- System Dependencies -->
+  <depend>libgoogle-glog-dev</depend>
+  <depend>libgflags-dev</depend>
+  <depend>liblua5.1-dev</depend>
+  <depend>libeigen3-dev</depend>
+
+  <!-- Message generation runtime -->
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <!-- Test Dependencies -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+

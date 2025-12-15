@@ -26,19 +26,18 @@
 #include <vector>
 
 #include "eigen3/Eigen/Dense"
-#include "geometry_msgs/Point32.h"
-#include "geometry_msgs/PoseStamped.h"
-#include "geometry_msgs/PoseWithCovarianceStamped.h"
-#include "nav_msgs/Odometry.h"
-#include "ros/package.h"
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
-#include "tf/transform_broadcaster.h"
-#include "tf/transform_datatypes.h"
-#include "visualization_msgs/Marker.h"
+#include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/point32.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <tf2_ros/transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
-#include "ut_multirobot_sim/AckermannCurvatureDriveMsg.h"
-#include "ut_multirobot_sim/Localization2DMsg.h"
+#include "ut_multirobot_sim/msg/ackermann_curvature_drive_msg.hpp"
+#include "ut_multirobot_sim/msg/localization2_d_msg.hpp"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
@@ -57,84 +56,86 @@ using namespace std;
 using pose_2d::Pose2Df;
 
 class Simulator {
-  config_reader::ConfigReader reader_;
-  config_reader::ConfigReader init_config_reader_;
+    config_reader::ConfigReader reader_;
+    config_reader::ConfigReader init_config_reader_;
 
-  std::vector<std::unique_ptr<EntityBase>> objects;
+    std::vector<std::unique_ptr<EntityBase>> objects;
 
-  struct RobotPubSub {
-    Pose2Df vel;
-    Pose2Df cur_loc;
+    struct RobotPubSub {
+        Pose2Df vel;
+        Pose2Df cur_loc;
 
-    ros::Subscriber initSubscriber;
-    ros::Publisher odometryTwistPublisher;
-    ros::Publisher laserPublisher;
-    ros::Publisher vizLaserPublisher;
-    ros::Publisher posMarkerPublisher;
-    ros::Publisher truePosePublisher;
-    ros::Publisher localizationPublisher;
-    std::unique_ptr<robot_model::RobotModel> motion_model;
+        rclcpp::Subscription<ut_multirobot_sim::msg::Localization2DMsg>::SharedPtr initSubscriber;
+        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometryTwistPublisher;
+        rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laserPublisher;
+        rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr vizLaserPublisher;
+        rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr posMarkerPublisher;
+        rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr truePosePublisher;
+        rclcpp::Publisher<ut_multirobot_sim::msg::Localization2DMsg>::SharedPtr localizationPublisher;
+        std::unique_ptr<robot_model::RobotModel> motion_model;
 
-    visualization_msgs::Marker robotPosMarker;
-  };
+        visualization_msgs::msg::Marker robotPosMarker;
+    };
 
-  ros::Publisher mapLinesPublisher;
-  ros::Publisher objectLinesPublisher;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr mapLinesPublisher;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr objectLinesPublisher;
 
-  std::vector<RobotPubSub> robot_pub_subs_;
+    std::vector<RobotPubSub> robot_pub_subs_;
 
-  tf::TransformBroadcaster *br;
-  sensor_msgs::LaserScan scanDataMsg;
-  nav_msgs::Odometry odometryTwistMsg;
-  ut_multirobot_sim::Localization2DMsg localizationMsg;
+    std::shared_ptr<tf2_ros::TransformBroadcaster> br;
+    sensor_msgs::msg::LaserScan scanDataMsg;
+    nav_msgs::msg::Odometry odometryTwistMsg;
+    ut_multirobot_sim::msg::Localization2DMsg localizationMsg;
 
-  vector_map::VectorMap map_;
+    vector_map::VectorMap map_;
 
-  visualization_msgs::Marker lineListMarker;
-  visualization_msgs::Marker objectLinesMarker;
+    visualization_msgs::msg::Marker lineListMarker;
+    visualization_msgs::msg::Marker objectLinesMarker;
 
-  static const float DT;
-  geometry_msgs::PoseStamped truePoseMsg;
+    static const float DT;
+    geometry_msgs::msg::PoseStamped truePoseMsg;
 
-  std::default_random_engine rng_;
-  std::normal_distribution<float> laser_noise_;
+    std::default_random_engine rng_;
+    std::normal_distribution<float> laser_noise_;
 
-  uint64_t sim_step_count;
-  double sim_time;
+    uint64_t sim_step_count;
+    double sim_time;
 
-  std::string robot_config_file_;
-  std::string maps_dir_;
+    std::string robot_config_file_;
+    std::string maps_dir_;
 
- private:
-  void initVizMarker(visualization_msgs::Marker &vizMarker, string ns, int id,
-                     string type, geometry_msgs::PoseStamped p,
-                     geometry_msgs::Point32 scale, double duration,
-                     std::vector<float> color);
-  void initSimulatorVizMarkers();
-  void drawMap();
-  void drawObjects();
-  void InitalLocationCallback(
-      const geometry_msgs::PoseWithCovarianceStamped &msg);
-  void DriveCallback(const ut_multirobot_sim::AckermannCurvatureDriveMsg &msg);
-  void publishOdometry();
-  void publishLaser();
-  void publishVisualizationMarkers();
-  void publishTransform();
-  void publishLocalization();
-  void update();
-  void loadObject();
+    rclcpp::Node::SharedPtr node_;
 
- public:
-  Simulator() = delete;
-  explicit Simulator(const std::string& env_config,
-                     const std::string& robot_config,
-                     const std::string& init_config,
-                     const std::string& maps_dir);
-  ~Simulator();
-  bool init(ros::NodeHandle &n);
-  void Run();
-  double GetSimTime() const { return sim_time; }
-  uint64_t GetSimStepCount() const { return sim_step_count; }
-  double GetStepSize() const;
+   private:
+    void initVizMarker(visualization_msgs::msg::Marker& vizMarker, string ns, int id,
+                       string type, geometry_msgs::msg::PoseStamped p,
+                       geometry_msgs::msg::Point32 scale, double duration,
+                       std::vector<float> color);
+    void initSimulatorVizMarkers();
+    void drawMap();
+    void drawObjects();
+    void InitalLocationCallback(
+        const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
+    void DriveCallback(const ut_multirobot_sim::msg::AckermannCurvatureDriveMsg::SharedPtr msg);
+    void publishOdometry();
+    void publishLaser();
+    void publishVisualizationMarkers();
+    void publishTransform();
+    void publishLocalization();
+    void update();
+    void loadObject();
+
+   public:
+    Simulator() = delete;
+    explicit Simulator(const std::string& env_config,
+                       const std::string& robot_config,
+                       const std::string& init_config,
+                       const std::string& maps_dir);
+    ~Simulator();
+    bool init(rclcpp::Node::SharedPtr node);
+    void Run();
+    double GetSimTime() const { return sim_time; }
+    uint64_t GetSimStepCount() const { return sim_step_count; }
+    double GetStepSize() const;
 };
 #endif  // SIMULATOR_H
