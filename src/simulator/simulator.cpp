@@ -34,15 +34,15 @@
 #include "gflags/gflags.h"
 
 #include "simulator.h"
-#include "simulator/ackermann_model.h"
-#include "simulator/omnidirectional_model.h"
-#include "simulator/diff_drive_model.h"
+#include "simulator/drive_models/ackermann_model.h"
+#include "simulator/drive_models/omnidirectional_model.h"
+#include "simulator/drive_models/diff_drive_model.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
 #include "shared/math/math_util.h"
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
-#include "ut_multirobot_sim/msg/localization2_d_msg.hpp"
+#include "amrl_msgs/msg/localization2_d_msg.hpp"
 #include "vector_map.h"
 
 DEFINE_bool(localize, false, "Publish localization");
@@ -184,9 +184,9 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
         auto& rps = robot_pub_subs_.back();
         rps.motion_model = std::unique_ptr<robot_model::RobotModel>(mm);
 
-        rps.initSubscriber = node_->create_subscription<ut_multirobot_sim::msg::Localization2DMsg>(
+        rps.initSubscriber = node_->create_subscription<amrl_msgs::msg::Localization2DMsg>(
             pf + "/initialpose", 1,
-            [&rps](const ut_multirobot_sim::msg::Localization2DMsg::SharedPtr msg) {
+            [&rps](const amrl_msgs::msg::Localization2DMsg::SharedPtr msg) {
                 const Vector2f loc(msg->pose.x, msg->pose.y);
                 const float angle = msg->pose.theta;
                 rps.motion_model->SetPose({angle, loc});
@@ -200,7 +200,7 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
             pf + "/simulator_true_pose", 1);
 
         if (FLAGS_localize) {
-            rps.localizationPublisher = node_->create_publisher<ut_multirobot_sim::msg::Localization2DMsg>(
+            rps.localizationPublisher = node_->create_publisher<amrl_msgs::msg::Localization2DMsg>(
                 pf + "/localization", 1);
             localizationMsg.header.frame_id = "map";
         }
@@ -217,11 +217,11 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
 
 // TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
-    // TODO (yifeng): load short term objects from list
-    objects.push_back(
-        std::unique_ptr<ShortTermObject>(new ShortTermObject("short_term_config.lua")));
+    for (const string& config_str : CONFIG_short_term_object_config_list) {
+        objects.push_back(
+            std::unique_ptr<ShortTermObject>(new ShortTermObject(config_str)));
+    }
 
-    // human
     for (const string& config_str : CONFIG_human_config_list) {
         objects.push_back(
             std::unique_ptr<HumanObject>(new HumanObject({config_str})));

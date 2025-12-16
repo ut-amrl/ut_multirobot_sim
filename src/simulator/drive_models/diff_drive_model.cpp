@@ -29,7 +29,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include "diff_drive_model.h"
+#include "simulator/drive_models/diff_drive_model.h"
 #include "shared/util/timer.h"
 
 using Eigen::Rotation2Df;

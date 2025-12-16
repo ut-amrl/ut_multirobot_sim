@@ -38,13 +38,13 @@ SimulatorStateMsg sim_state_;
 bool sim_step_ = false;
 
 DEFINE_string(env_config,
-              "config/sim_config.lua",
+              "config/environment/sim_config.lua",
               "Path to environment config.");
 DEFINE_string(robot_config,
-              "config/ut_jackal_config.lua",
+              "config/robots/ut_jackal_config.lua",
               "Path to robot config.");
 DEFINE_string(init_config,
-              "config/default_init_config.lua",
+              "config/initialization/default_init_config.lua",
               "Path to config for initial state.");
 DEFINE_string(maps_dir,
               "",

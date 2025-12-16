@@ -1,4 +1,4 @@
-#include "simulator/omnidirectional_model.h"
+#include "simulator/drive_models/omnidirectional_model.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"

@@ -1,66 +1,74 @@
-import os, sys
 import argparse
-import numpy as np
+from pathlib import Path
 import yaml
 
-dir = os.path.dirname(__file__)
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = ROOT / "scripts"
+
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config-file', default="example.yml", type=str)
+    parser = argparse.ArgumentParser(description="Generate a human crowd scenario under config/scenarios/human_crowd/")
+    parser.add_argument(
+        "--config-file",
+        default="scripts/example.yml",
+        type=str,
+        help="Path to a YAML scenario description (default: scripts/example.yml)",
+    )
     return parser.parse_args()
 
-def main():
 
+def load_yaml(path: Path):
+    with path.open("rb") as f:
+        return yaml.load(f, yaml.FullLoader)
+
+
+def main():
     args = parse_args()
 
-    with open(dir + "/" + args.config_file, 'rb') as f:
-        data = yaml.load(f, yaml.FullLoader)
+    config_path = Path(args.config_file)
+    if not config_path.is_absolute():
+        config_path = ROOT / config_path
 
-    config = {}
-    for key, value in data.items():
-        if isinstance(value, list):
-            config[key] = []
-            for v in value:
-                print(v)
-                config[key].append(value)
-        else:
-            config[key] = value
+    data = load_yaml(config_path)
 
-    prefix = config["prefix"]
-    folder_path = f"config/human_crowd_scenario_configs/{prefix}"
-    os.makedirs(folder_path, exist_ok=True)
+    prefix = data["prefix"]
+    scenario_dir = ROOT / "config" / "scenarios" / "human_crowd" / prefix
+    human_dir = scenario_dir / "human"
+    scenario_dir.mkdir(parents=True, exist_ok=True)
+    human_dir.mkdir(parents=True, exist_ok=True)
 
-    with  open(dir + "/init_config_template.txt", "r") as f:
-        init_config_str = f.read()
-    
-    with  open(dir + "/human_config_template.txt", "r") as f:
-        human_config_str = f.read()
+    init_template = (SCRIPTS_DIR / "init_config_template.txt").read_text()
+    human_template = (SCRIPTS_DIR / "human_config_template.txt").read_text()
 
-    human_start_goal_positions = config["human_start_goal_positions"][0]
-    map_name = config["map_name"]
-    start_x = config["start_x"]
-    start_y = config["start_y"]
-    start_angle = config["start_angle"]
-    num_human = len(human_start_goal_positions)
+    human_start_goal_positions = data["human_start_goal_positions"]
+    map_name = data["map_name"]
+    start_x = data["start_x"]
+    start_y = data["start_y"]
+    start_angle = data["start_angle"]
 
-    os.makedirs(f"{folder_path}/human", exist_ok=True)
-    # Genereate human data
+    human_config_paths = []
+    for i, (start, goal) in enumerate(human_start_goal_positions):
+        config_file = human_dir / f"human_config_{i}.lua"
+        config_file.write_text(
+            human_template.format(start[0], start[1], goal[0], goal[1])
+        )
+        human_config_paths.append(f"\"{config_file.as_posix()}\"")
 
-    human_config_file_str = ""
-    for i in range(num_human):
-        config_file_name = f"{folder_path}/human/human_config_{i}.lua"
-        with open(config_file_name, "w") as f:
-            f.write(human_config_str.format(human_start_goal_positions[i][0][0], human_start_goal_positions[i][0][1],
-                                      human_start_goal_positions[i][1][0], human_start_goal_positions[i][1][1]))
-        human_config_file_str += f"\"{config_file_name}\" "
-        if i != num_human - 1:
-            human_config_file_str += ",\n\r"
+    init_config_path = scenario_dir / "init_config.lua"
+    init_config_path.write_text(
+        init_template.format(
+            map_name,
+            start_x,
+            start_y,
+            start_angle,
+            ",\n".join(human_config_paths),
+        )
+    )
 
-    # generate init_config
-    with open(f"{folder_path}/init_config.lua", "w") as f:
-        f.write(init_config_str.format(map_name, start_x, start_y, start_angle, human_config_file_str))
+    print(f"Generated {init_config_path} and {len(human_config_paths)} human configs in {human_dir}")
+    print("Use this init_config via --init_config or set init_config_file in config/environment/sim_config.lua.")
 
-            
+
 if __name__ == "__main__":
     main()

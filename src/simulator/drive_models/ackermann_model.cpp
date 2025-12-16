@@ -1,8 +1,9 @@
-#include "simulator/ackermann_model.h"
+#include "simulator/drive_models/ackermann_model.h"
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 
+using amrl_msgs::msg::AckermannCurvatureDriveMsg;
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
 using math_util::AngleDiff;
@@ -11,7 +12,6 @@ using math_util::Bound;
 using std::isfinite;
 using std::string;
 using std::vector;
-using ut_multirobot_sim::msg::AckermannCurvatureDriveMsg;
 
 namespace ackermann {
 
@@ -37,7 +37,7 @@ AckermannModel::AckermannModel(const vector<string>& config_file, rclcpp::Node::
         });
 }
 
-void AckermannModel::DriveCallback(const AckermannCurvatureDriveMsg::SharedPtr msg) {
+void AckermannModel::DriveCallback(const amrl_msgs::msg::AckermannCurvatureDriveMsg::SharedPtr msg) {
     if (!isfinite(msg->velocity) || !isfinite(msg->curvature)) {
         printf("Ignoring non-finite drive values: %f %f\n",
                msg->velocity,

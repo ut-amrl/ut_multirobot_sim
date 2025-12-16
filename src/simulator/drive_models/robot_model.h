@@ -20,7 +20,7 @@
 */
 //========================================================================
 
-#include "simulator/entity_base.h"
+#include "simulator/entities/entity_base.h"
 
 #ifndef SRC_SIMULATOR_ROBOT_MODEL_H_
 #define SRC_SIMULATOR_ROBOT_MODEL_H_

@@ -11,7 +11,7 @@ function DegToRad(d)
 end
 
 -- example of loading human crow scenario configs
--- init_config_file = "config/human_crowd_scenario_configs/example_scenario/init_config.lua"
+-- init_config_file = "config/scenarios/human_crowd/example_scenario/init_config.lua"
 
 -- Time-step for simulation.
 delta_t = 0.025
@@ -55,12 +55,16 @@ local RobotType = {
 }
 
 -- robot_type = RobotType.ACKERMANN_DRIVE
--- robot_config = "config/ut_automata_config.lua"
+-- robot_config = "config/robots/ut_automata_config.lua"
 -- robot_type = RobotType.DIFF_DRIVE
--- robot_config = "config/bwibot_config.lua"
+-- robot_config = "config/robots/bwibot_config.lua"
 -- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
--- robot_config = "config/cobot_config.lua"
+-- robot_config = "config/robots/cobot_config.lua"
 robot_types = { RobotType.DIFF_DRIVE }
 
 laser_topic = "velodyne_2dscan"
 laser_frame = "base_laser"
+
+-- Dynamic objects
+short_term_object_config_list = { "config/dynamic_objects/short_term/short_term_config.lua" }
+human_config_list = {}

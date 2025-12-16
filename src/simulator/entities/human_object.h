@@ -20,7 +20,7 @@
 */
 //========================================================================
 
-#include "simulator/entity_base.h"
+#include "simulator/entities/entity_base.h"
 #include "config_reader/config_reader.h"
 #include <string>
 #ifndef SRC_SIMULATOR_HUMAN_OBJECT_H_

@@ -65,13 +65,10 @@ include_directories(
 
 # Generate custom messages
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/AckermannCurvatureDriveMsg.msg"
   "msg/CobotDriveMsg.msg"
   "msg/CobotOdometryMsg.msg"
-  "msg/Localization2DMsg.msg"
-  "msg/Pose2Df.msg"
   "msg/SimulatorStateMsg.msg"
-  DEPENDENCIES std_msgs geometry_msgs
+  DEPENDENCIES std_msgs geometry_msgs amrl_msgs
 )
 
 # Build shared library submodule
@@ -82,13 +79,13 @@ add_executable(simulator
   src/simulator/simulator_main.cpp
   src/simulator/simulator.cpp
   src/simulator/vector_map.cpp
-  src/simulator/entity_base.cpp
-  src/simulator/robot_model.cpp
-  src/simulator/ackermann_model.cpp
-  src/simulator/omnidirectional_model.cpp
-  src/simulator/diff_drive_model.cpp
-  src/simulator/short_term_object.cpp
-  src/simulator/human_object.cpp
+  src/simulator/entities/entity_base.cpp
+  src/simulator/drive_models/robot_model.cpp
+  src/simulator/drive_models/ackermann_model.cpp
+  src/simulator/drive_models/omnidirectional_model.cpp
+  src/simulator/drive_models/diff_drive_model.cpp
+  src/simulator/entities/short_term_object.cpp
+  src/simulator/entities/human_object.cpp
 )
 
 # Link ROS2 dependencies

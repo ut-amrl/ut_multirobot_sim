@@ -24,7 +24,7 @@
 #include <vector>
 #include "stdlib.h"
 #include "time.h"
-#include "simulator/entity_base.h"
+#include "simulator/entities/entity_base.h"
 
 #ifndef SRC_SIMULATOR_SHORT_TERM_OBJECT_H_
 #define SRC_SIMULATOR_SHORT_TERM_OBJECT_H_

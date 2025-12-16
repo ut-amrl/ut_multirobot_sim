@@ -20,7 +20,7 @@
 */
 //========================================================================
 
-#include "simulator/entity_base.h"
+#include "simulator/entities/entity_base.h"
 
 EntityBase::EntityBase() {
 }

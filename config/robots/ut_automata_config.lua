@@ -1,4 +1,4 @@
-require("config.sim_config");
+require("config.environment.sim_config");
 
 -- Kinematic and dynamic constraints for the car.
 ak_min_turn_radius = 0.98

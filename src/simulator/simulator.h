@@ -36,18 +36,18 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
-#include "ut_multirobot_sim/msg/ackermann_curvature_drive_msg.hpp"
-#include "ut_multirobot_sim/msg/localization2_d_msg.hpp"
+#include "amrl_msgs/msg/ackermann_curvature_drive_msg.hpp"
+#include "amrl_msgs/msg/localization2_d_msg.hpp"
 
 #include "shared/math/geometry.h"
 #include "shared/util/timer.h"
 #include "simulator/vector_map.h"
 #include "config_reader/config_reader.h"
 
-#include "entity_base.h"
-#include "human_object.h"
-#include "robot_model.h"
-#include "short_term_object.h"
+#include "simulator/entities/entity_base.h"
+#include "simulator/entities/human_object.h"
+#include "simulator/drive_models/robot_model.h"
+#include "simulator/entities/short_term_object.h"
 
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
@@ -65,13 +65,13 @@ class Simulator {
         Pose2Df vel;
         Pose2Df cur_loc;
 
-        rclcpp::Subscription<ut_multirobot_sim::msg::Localization2DMsg>::SharedPtr initSubscriber;
+        rclcpp::Subscription<amrl_msgs::msg::Localization2DMsg>::SharedPtr initSubscriber;
         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometryTwistPublisher;
         rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laserPublisher;
         rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr vizLaserPublisher;
         rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr posMarkerPublisher;
         rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr truePosePublisher;
-        rclcpp::Publisher<ut_multirobot_sim::msg::Localization2DMsg>::SharedPtr localizationPublisher;
+        rclcpp::Publisher<amrl_msgs::msg::Localization2DMsg>::SharedPtr localizationPublisher;
         std::unique_ptr<robot_model::RobotModel> motion_model;
 
         visualization_msgs::msg::Marker robotPosMarker;
@@ -85,7 +85,7 @@ class Simulator {
     std::shared_ptr<tf2_ros::TransformBroadcaster> br;
     sensor_msgs::msg::LaserScan scanDataMsg;
     nav_msgs::msg::Odometry odometryTwistMsg;
-    ut_multirobot_sim::msg::Localization2DMsg localizationMsg;
+    amrl_msgs::msg::Localization2DMsg localizationMsg;
 
     vector_map::VectorMap map_;
 
@@ -116,7 +116,7 @@ class Simulator {
     void drawObjects();
     void InitalLocationCallback(
         const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
-    void DriveCallback(const ut_multirobot_sim::msg::AckermannCurvatureDriveMsg::SharedPtr msg);
+    void DriveCallback(const amrl_msgs::msg::AckermannCurvatureDriveMsg::SharedPtr msg);
     void publishOdometry();
     void publishLaser();
     void publishVisualizationMarkers();

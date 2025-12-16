@@ -20,7 +20,7 @@
 */
 //========================================================================
 
-#include "simulator/short_term_object.h"
+#include "simulator/entities/short_term_object.h"
 
 ShortTermObject::ShortTermObject() {
   // angle, (x, y)
@@ -70,4 +70,3 @@ ShortTermObject::ShortTermObject(const std::string& config_file) {
 
 ShortTermObject::~ShortTermObject() {
 }
-

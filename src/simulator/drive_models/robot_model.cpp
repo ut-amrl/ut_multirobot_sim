@@ -20,7 +20,7 @@
 */
 //========================================================================
 
-#include "simulator/robot_model.h"
+#include "simulator/drive_models/robot_model.h"
 
 namespace robot_model {
 

@@ -24,7 +24,7 @@
 
 #include "eigen3/Eigen/Dense"
 #include "math/line2d.h"
-#include "entity_base.h"
+#include "simulator/entities/entity_base.h"
 
 #ifndef VECTOR_MAP_H
 #define VECTOR_MAP_H

@@ -4,7 +4,7 @@
 #include "config_reader/config_reader.h"
 #include "ut_multirobot_sim/msg/cobot_drive_msg.hpp"
 #include "ut_multirobot_sim/msg/cobot_odometry_msg.hpp"
-#include "simulator/robot_model.h"
+#include "simulator/drive_models/robot_model.h"
 
 #ifndef SRC_SIMULATOR_OMNIDIRECTIONAL_MODEL_H_
 #define SRC_SIMULATOR_OMNIDIRECTIONAL_MODEL_H_

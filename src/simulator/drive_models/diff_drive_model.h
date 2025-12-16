@@ -7,7 +7,7 @@
 #include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include "simulator/robot_model.h"
+#include "simulator/drive_models/robot_model.h"
 
 #ifndef SRC_SIMULATOR_DIFFDRIVE_MODEL_H_
 #define SRC_SIMULATOR_DIFFDRIVE_MODEL_H_

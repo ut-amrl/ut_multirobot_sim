@@ -20,7 +20,7 @@
 */
 //========================================================================
 
-#include "simulator/human_object.h"
+#include "simulator/entities/human_object.h"
 
 using std::string;
 using std::vector;
