@@ -44,7 +44,7 @@ DEFINE_string(robot_config,
               "config/robots/ut_jackal_config.lua",
               "Path to robot config.");
 DEFINE_string(init_config,
-              "config/initialization/default_init_config.lua",
+              "config/environment/default_init_config.lua",
               "Path to config for initial state.");
 DEFINE_string(maps_dir,
               "",

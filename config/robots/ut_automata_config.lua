@@ -9,4 +9,4 @@ ak_max_accel = 3.0
 ak_angular_error_bias = DegToRad(0);
 ak_angular_error_rate = 0.1;
 
-ak_drive_callback_topic = "/ackermann_curvature_drive"
+-- Drive topic standardized to "/cmd_vel" in simulator

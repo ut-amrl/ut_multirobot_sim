@@ -122,15 +122,13 @@ double Simulator::GetStepSize() const {
 }
 
 robot_model::RobotModel* MakeMotionModel(const std::string& robot_type,
-                                         rclcpp::Node::SharedPtr node,
-                                         const std::string& topic_prefix,
                                          const std::string& robot_config) {
     if (robot_type == "ACKERMANN_DRIVE") {
-        return new AckermannModel({robot_config}, node);
+        return new AckermannModel({robot_config});
     } else if (robot_type == "OMNIDIRECTIONAL_DRIVE") {
-        return new OmnidirectionalModel({robot_config}, node);
+        return new OmnidirectionalModel({robot_config});
     } else if (robot_type == "DIFF_DRIVE") {
-        return new DiffDriveModel({robot_config}, node, topic_prefix);
+        return new DiffDriveModel({robot_config});
     }
     std::cerr << "Robot type \"" << robot_type
               << "\" has no associated motion model!" << std::endl;
@@ -174,11 +172,17 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
         const auto& robot_type = CONFIG_robot_types.at(i);
         const auto& start_pose = CONFIG_start_poses.at(i);
         const auto pf = IndexToPrefix(i);
-        auto* mm = MakeMotionModel(robot_type, node_, pf, robot_config_file_);
+        auto* mm = MakeMotionModel(robot_type, robot_config_file_);
         if (mm == nullptr) {
             return false;
         }
         mm->SetPose(Pose2Df(start_pose.z(), {start_pose.x(), start_pose.y()}));
+
+        // Initialize ROS interfaces for the motion model
+        std::string drive_topic = "/cmd_vel";  // Standardized topic for all robots
+        if (!mm->Init(node_, pf, drive_topic)) {
+            return false;
+        }
 
         robot_pub_subs_.emplace_back(RobotPubSub());
         auto& rps = robot_pub_subs_.back();
@@ -360,6 +364,23 @@ void Simulator::publishOdometry() {
         odometryTwistMsg.pose.pose.orientation.y = robotQ.y();
         odometryTwistMsg.pose.pose.orientation.z = robotQ.z();
         odometryTwistMsg.pose.pose.orientation.w = robotQ.w();
+
+        // High confidence in x, y position and yaw; no information about z, roll, pitch
+        odometryTwistMsg.pose.covariance[0] = 0.00001;           // x position
+        odometryTwistMsg.pose.covariance[7] = 0.00001;           // y position
+        odometryTwistMsg.pose.covariance[14] = 1000000000000.0;  // z position (unknown)
+        odometryTwistMsg.pose.covariance[21] = 1000000000000.0;  // roll (unknown)
+        odometryTwistMsg.pose.covariance[28] = 1000000000000.0;  // pitch (unknown)
+        odometryTwistMsg.pose.covariance[35] = 0.001;            // yaw
+
+        // Since this is simulated odometry with perfect velocity knowledge
+        odometryTwistMsg.twist.covariance[0] = 0.00001;           // linear x velocity
+        odometryTwistMsg.twist.covariance[7] = 0.00001;           // linear y velocity
+        odometryTwistMsg.twist.covariance[14] = 1000000000000.0;  // linear z velocity (unknown)
+        odometryTwistMsg.twist.covariance[21] = 1000000000000.0;  // angular x velocity (unknown)
+        odometryTwistMsg.twist.covariance[28] = 1000000000000.0;  // angular y velocity (unknown)
+        odometryTwistMsg.twist.covariance[35] = 0.00001;          // angular z velocity
+
         odometryTwistMsg.twist.twist.angular.x = 0.0;
         odometryTwistMsg.twist.twist.angular.y = 0.0;
         odometryTwistMsg.twist.twist.angular.z = rps.vel.angle;

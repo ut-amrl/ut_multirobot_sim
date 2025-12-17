@@ -65,8 +65,6 @@ include_directories(
 
 # Generate custom messages
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/CobotDriveMsg.msg"
-  "msg/CobotOdometryMsg.msg"
   "msg/SimulatorStateMsg.msg"
   DEPENDENCIES std_msgs geometry_msgs amrl_msgs
 )

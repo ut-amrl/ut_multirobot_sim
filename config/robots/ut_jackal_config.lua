@@ -19,8 +19,7 @@ angular_pos_accel_limit = 3.0
 angular_neg_accel_limit = 3.0
 max_angular = 3.0
 max_linear_vel = 2.0
-drive_callback_topic = "/navigation/cmd_vel"
-diff_drive_odom_topic = "/jackal_velocity_controller/odom"
+-- Drive topic standardized to "/cmd_vel" in simulator
 linear_odom_scale = 1.0
 angular_odom_scale = 1.0
 

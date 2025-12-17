@@ -2,8 +2,7 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
-co_drive_callback_topic = "/Cobot/Drive"
-co_cobot_odom_topic = "/Cobot/Odometry"
+-- Drive topic standardized to "/cmd_vel" in simulator
 co_base_radius = 0.2
 co_w0 = DegToRad(45.0)
 co_w1 = DegToRad(135.0)

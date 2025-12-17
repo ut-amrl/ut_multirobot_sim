@@ -52,39 +52,24 @@ CONFIG_FLOAT(max_linear_vel, "max_linear_vel");
 CONFIG_FLOAT(linear_odom_scale, "linear_odom_scale");
 CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
 
-CONFIG_STRING(drive_topic, "drive_callback_topic");
-CONFIG_STRING(odom_topic, "diff_drive_odom_topic");
+// Drive topic standardized to "/cmd_vel" in simulator
 
-DiffDriveModel::DiffDriveModel(const vector<string>& config_files,
-                               rclcpp::Node::SharedPtr node,
-                               const std::string topic_prefix) : RobotModel(),
-                                                                 last_cmd_(),
-                                                                 t_last_cmd_(0),
-                                                                 angular_error_(0, 1),
-                                                                 config_reader_(config_files),
-                                                                 node_(node) {
-    drive_subscriber_ = node->create_subscription<geometry_msgs::msg::Twist>(
-        topic_prefix + CONFIG_drive_topic,
-        1,
-        [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
-            this->DriveCallback(msg);
-        });
-    odom_publisher_ =
-        node->create_publisher<nav_msgs::msg::Odometry>(topic_prefix + CONFIG_odom_topic, 1);
+DiffDriveModel::DiffDriveModel(const vector<string>& config_files) : RobotModel(),
+                                                                     angular_error_(0, 1),
+                                                                     config_reader_(config_files) {
+    // ROS subscription initialized in Init()
     linear_vel_ = 0.0;
     angular_vel_ = 0.0;
     target_linear_vel_ = 0.0;
     target_angular_vel_ = 0.0;
     pose_.translation = Vector2f(0, 0);
     pose_.angle = 0;
-    odom_msg_.header.frame_id = "odom";
-    odom_msg_.child_frame_id = "base_footprint";
-    last_time_ = node->now();
 }
 
 void DiffDriveModel::Step(const double& dt) {
     // TODO(joydeepb): Make the 0.1 either a flag or config.
-    if (t_last_cmd_ < GetMonotonicTime() - 0.1) {
+    static const double kMaxCommandAge = 0.1;
+    if (IsCommandTimedOut(node_->now().seconds(), kMaxCommandAge)) {
         target_angular_vel_ = 0;
         target_linear_vel_ = 0;
     }
@@ -130,41 +115,18 @@ void DiffDriveModel::Step(const double& dt) {
     vel_.angle = angular_vel_;
     pose_.translation += geometry::Heading(pose_.angle) * dx;
     pose_.angle = AngleMod(pose_.angle + vel_.angle * dt);
-
-    tf2::Quaternion q;
-    q.setRPY(0, 0, pose_.angle);
-    quat_.x = q.x();
-    quat_.y = q.y();
-    quat_.z = q.z();
-    quat_.w = q.w();
-    last_time_ = current_time;
-
-    PublishOdom(dt);
-}
-
-void DiffDriveModel::PublishOdom(const float dt) {
-    odom_msg_.header.stamp = last_time_;
-    odom_msg_.pose.pose.position.x = pose_.translation.x();
-    odom_msg_.pose.pose.position.y = pose_.translation.y();
-    odom_msg_.pose.pose.position.z = 0.0;
-    odom_msg_.pose.pose.orientation = quat_;
-    odom_msg_.pose.covariance[0] = 0.00001;
-    odom_msg_.pose.covariance[7] = 0.00001;
-    odom_msg_.pose.covariance[14] = 1000000000000.0;
-    odom_msg_.pose.covariance[21] = 1000000000000.0;
-    odom_msg_.pose.covariance[28] = 1000000000000.0;
-    odom_msg_.pose.covariance[35] = 0.001;
-
-    odom_msg_.twist.twist.linear.x = vel_.translation.x();
-    odom_msg_.twist.twist.linear.y = vel_.translation.y();
-    odom_msg_.twist.twist.angular.z = vel_.angle;
-
-    odom_publisher_->publish(odom_msg_);
+    // Odometry publishing handled centrally by simulator
 }
 
 void DiffDriveModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
+    if (!std::isfinite(msg->linear.x) || !std::isfinite(msg->angular.z)) {
+        printf("Ignoring non-finite drive values: linear.x=%f, angular.z=%f\n",
+               msg->linear.x, msg->angular.z);
+        return;
+    }
     last_cmd_ = *msg;
-    t_last_cmd_ = GetMonotonicTime();
+    t_last_cmd_ = node_->now().seconds();
+
     double x = msg->linear.x, z = msg->angular.z;
 
     // invert motion, if needed
@@ -189,4 +151,5 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr ms
     target_linear_vel_ = x;
     target_angular_vel_ = z;
 }
-};  // namespace diffdrive
+
+}  // namespace diffdrive

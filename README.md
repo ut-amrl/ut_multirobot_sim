@@ -31,9 +31,9 @@ Fixed-timestep ROS2 node that loads configs, builds robots, and steps physics.
 - `simulator_main.cpp`: ROS2 entry; publishes `/sim_state`; subscribes to `/sim_start_stop`, `/sim_step`; launches `Simulator`.
 - `simulator.cpp`: loads map/config, creates motion models, loads humans/short-term objects, runs `Run()` each tick (update physics, publish odom/laser/viz/TF, optional localization).
 - Drive models (`src/simulator/drive_models`):
-  - Ackermann: `/{robot}/ackermann_drive` (`amrl_msgs/AckermannCurvatureDriveMsg`)
-  - Diff drive: `/{robot}/cmd_vel` (`geometry_msgs/Twist`)
-  - Omni: `/{robot}/cobot_drive` (`ut_multirobot_sim/CobotDriveMsg`)
+   - Ackermann: `/{robot}/cmd_vel` (`geometry_msgs/Twist` → interprets as velocity + angular velocity, converts to curvature internally)
+   - Diff drive: `/{robot}/cmd_vel` (`geometry_msgs/Twist` → direct velocity control)
+   - Omni: `/{robot}/cmd_vel` (`geometry_msgs/Twist` → independent x/y/rotation control)
 - Entities (`src/simulator/entities`): humans (single-shot/repeat goals) and short-term obstacles share `EntityBase` geometry/pose.
 
 ### Simulation loop (flow)
@@ -64,10 +64,15 @@ source install/setup.bash
 ros2 run ut_multirobot_sim simulator \
   --env_config config/environment/sim_config.lua \
   --robot_config config/robots/ut_jackal_config.lua \
-  --init_config config/initialization/default_init_config.lua \
+  --init_config config/environment/default_init_config.lua \
   --maps_dir /path/to/amrl_maps \
   [--localize]   # publish /{robot}/localization
 # or: ros2 launch ut_multirobot_sim ut_jackal.launch.py
+
+# To disable all dynamic entities (humans, obstacles):
+# Edit config/environment/sim_config.lua and set:
+# short_term_object_config_list = {}
+# human_config_list = {}
 ```
 
 ## Configuration (what to edit)
@@ -79,13 +84,13 @@ ros2 run ut_multirobot_sim simulator \
 
 ## Topics and TF
 - Publishes per robot: `/odom`, `/scan` (or configured laser topic), `/simulator_true_pose`, `/simulator_visualization`, `/localization` (when `--localize`).
-- Subscribes per robot: drive topic (per model above), `/initialpose`.
+- Subscribes per robot: `/{robot}/cmd_vel` (`geometry_msgs/Twist`), `/initialpose`.
 - Global: `/sim_state`, `/sim_start_stop`, `/sim_step`.
 - TF (per robot): `map → odom → base_footprint → base_link → base_laser`.
 
 ## Navigation integration
 - Ground truth: `/robot{N}/simulator_true_pose` always; `/robot{N}/localization` (with `--localize`) includes map name.
-- Commands: diff drive `/cmd_vel`; Ackermann `/{robot}/ackermann_drive` (`amrl_msgs/AckermannCurvatureDriveMsg`, remap to `/ackermann_curvature_drive` if needed); omni `/{robot}/cobot_drive`.
+- Commands: all robots use `/{robot}/cmd_vel` (`geometry_msgs/Twist`).
 - Run with localization (example above) and remap topics in your launch file as required.
 - Geometry: supports `car_width`, `car_length`, `car_height`, `laser_loc`, `rear_axle_offset`; does not implement `base_link_offset`—navigation configs using it may see small offsets; tune dimensions/offsets accordingly.
 

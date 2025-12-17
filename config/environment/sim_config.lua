@@ -65,6 +65,7 @@ robot_types = { RobotType.DIFF_DRIVE }
 laser_topic = "velodyne_2dscan"
 laser_frame = "base_laser"
 
--- Dynamic objects
-short_term_object_config_list = { "config/dynamic_objects/short_term/short_term_config.lua" }
+-- Dynamic objects (leave empty to disable all entities/humans)
+-- short_term_object_config_list = { "config/dynamic_objects/short_term_config.lua" }
+short_term_object_config_list = {}
 human_config_list = {}

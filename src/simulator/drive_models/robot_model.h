@@ -20,6 +20,8 @@
 */
 //========================================================================
 
+#include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include "simulator/entities/entity_base.h"
 
 #ifndef SRC_SIMULATOR_ROBOT_MODEL_H_
@@ -27,14 +29,28 @@
 
 namespace robot_model {
 class RobotModel : public EntityBase {
- protected:
-  Pose2Df vel_;
+   protected:
+    Pose2Df vel_;
+    geometry_msgs::msg::Twist last_cmd_;
+    double t_last_cmd_;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr drive_subscriber_;
+    rclcpp::Node::SharedPtr node_;
 
- public:
-  RobotModel();
-  virtual ~RobotModel() = default;
-  virtual void SetVel(const pose_2d::Pose2Df& vel);
-  virtual pose_2d::Pose2Df GetVel();
+    // Standardized drive callback for all models
+    virtual void DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) = 0;
+
+   public:
+    RobotModel();
+    virtual ~RobotModel() = default;
+
+    // Initialize with ROS node and topic
+    virtual bool Init(rclcpp::Node::SharedPtr node, const std::string& topic_prefix, const std::string& drive_topic);
+
+    virtual void SetVel(const pose_2d::Pose2Df& vel);
+    virtual pose_2d::Pose2Df GetVel();
+
+    // Check if drive command has timed out
+    bool IsCommandTimedOut(double current_time, double max_age = 0.1) const;
 };
 }  // namespace robot_model
 

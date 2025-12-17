@@ -3,9 +3,9 @@
 #include "shared/math/math_util.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 
-using amrl_msgs::msg::AckermannCurvatureDriveMsg;
 using Eigen::Rotation2Df;
 using Eigen::Vector2f;
+using geometry_msgs::msg::Twist;
 using math_util::AngleDiff;
 using math_util::AngleMod;
 using math_util::Bound;
@@ -20,51 +20,52 @@ CONFIG_FLOAT(max_accel, "ak_max_accel");
 CONFIG_FLOAT(max_speed, "ak_max_speed");
 CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
 CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
-CONFIG_STRING(drive_topic, "ak_drive_callback_topic");
 
-AckermannModel::AckermannModel(const vector<string>& config_file, rclcpp::Node::SharedPtr node) : RobotModel(),
-                                                                                                  last_cmd_(),
-                                                                                                  t_last_cmd_(0),
-                                                                                                  angular_error_(0, 1),
-                                                                                                  config_reader_(config_file) {
-    last_cmd_.velocity = 0;
-    last_cmd_.curvature = 0;
-    drive_subscriber_ = node->create_subscription<AckermannCurvatureDriveMsg>(
-        CONFIG_drive_topic,
-        1,
-        [this](const AckermannCurvatureDriveMsg::SharedPtr msg) {
-            this->DriveCallback(msg);
-        });
+AckermannModel::AckermannModel(const vector<string>& config_files) : RobotModel(),
+                                                                     angular_error_(0, 1),
+                                                                     config_reader_(config_files) {
+    // ROS subscription initialized in Init()
 }
 
-void AckermannModel::DriveCallback(const amrl_msgs::msg::AckermannCurvatureDriveMsg::SharedPtr msg) {
-    if (!isfinite(msg->velocity) || !isfinite(msg->curvature)) {
-        printf("Ignoring non-finite drive values: %f %f\n",
-               msg->velocity,
-               msg->curvature);
+void AckermannModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
+    if (!isfinite(msg->linear.x) || !isfinite(msg->angular.z)) {
+        printf("Ignoring non-finite drive values: linear.x=%f, angular.z=%f\n",
+               msg->linear.x, msg->angular.z);
         return;
     }
     last_cmd_ = *msg;
-    t_last_cmd_ = GetMonotonicTime();
+    t_last_cmd_ = node_->now().seconds();
 }
 
 void AckermannModel::Step(const double& dt) {
     // TODO(jaholtz) For faster than real time simulation we may need
     // a wallclock invariant method for this.
     static const double kMaxCommandAge = 0.1;
-    if (GetMonotonicTime() > t_last_cmd_ + kMaxCommandAge) {
-        last_cmd_.velocity = 0;
+    if (IsCommandTimedOut(node_->now().seconds(), kMaxCommandAge)) {
+        last_cmd_.linear.x = 0;
+        last_cmd_.angular.z = 0;
     }
+
     const float vel = vel_.translation.x();
     // Epsilon curvature corresponding to a very large radius of turning.
     static const float kEpsilonCurvature = 1.0 / 1E3;
     // Commanded speed bounded to motion limit.
-    float desired_vel = last_cmd_.velocity;
+    float desired_vel = last_cmd_.linear.x;
     Bound(-CONFIG_max_speed, CONFIG_max_speed, &desired_vel);
+
+    // Convert Twist (velocities) to Ackermann parameters (velocity + curvature)
+    // curvature = angular_velocity / linear_velocity (when linear_velocity != 0)
+    float desired_curvature = 0.0f;
+    if (fabs(last_cmd_.linear.x) < 1e-6) {
+        // If velocity is near zero, set curvature to zero (stop turning)
+        desired_curvature = 0.0f;
+    } else {
+        desired_curvature = last_cmd_.angular.z / last_cmd_.linear.x;
+    }
+
     // Maximum magnitude of curvature according to turning limits.
     const float max_curvature = 1.0 / CONFIG_min_turn_r;
     // Commanded curvature bounded to turning limit.
-    float desired_curvature = last_cmd_.curvature;
     Bound(-max_curvature, max_curvature, &desired_curvature);
     // Indicates if the command is for linear motion.
     const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
