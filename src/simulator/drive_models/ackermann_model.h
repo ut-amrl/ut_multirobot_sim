@@ -16,14 +16,14 @@ class AckermannModel : public robot_model::RobotModel {
     // linear.x = velocity (m/s), angular.z = angular velocity (rad/s)
     // Then compute curvature = angular_velocity / linear_velocity internally
     std::default_random_engine rng_;
-    std::normal_distribution<float> angular_error_;
+    std::normal_distribution<float> turning_error_;
 
     // Config values
-    float min_turn_radius_;
-    float max_accel_;
-    float max_speed_;
-    float angular_bias_;
-    float angular_error_rate_;
+    float min_turn_radius_;     // Minimum turning radius [m]
+    float max_accel_;           // Maximum acceleration [m/s²]
+    float max_speed_;           // Maximum velocity [m/s]
+    float turning_error_bias_;  // Systematic turning error [rad/s]
+    float turning_error_rate_;  // Turning error per curvature [unitless]
 
     // Standardized drive callback - interprets Twist as Ackermann command
     void DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) override;

@@ -38,19 +38,12 @@ using ut_multirobot_sim::msg::SimulatorStateMsg;
 SimulatorStateMsg sim_state_;
 bool sim_step_ = false;
 
-// Load configuration from environment config file
-// Clean structure: each robot has its own type, pose, and config file
 SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
                                     const std::string& maps_dir) {
-    config_reader::ConfigReader reader({env_config});
-    SimulatorConfig config;
-
+    // Declare CONFIG_ macros BEFORE creating ConfigReader
     // ENVIRONMENT: Map and simulation settings
     CONFIG_STRING(map_name, "map_name");
     CONFIG_FLOAT(dt, "delta_t");
-    config.maps_dir = maps_dir;
-    config.map_name = CONFIG_map_name;
-    config.dt = CONFIG_dt;
 
     // SENSORS: Laser scan settings
     CONFIG_STRING(laser_topic, "laser_topic");
@@ -61,6 +54,24 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     CONFIG_FLOAT(laser_angle_increment, "laser_angle_increment");
     CONFIG_FLOAT(laser_min_range, "laser_min_range");
     CONFIG_FLOAT(laser_max_range, "laser_max_range");
+
+    // ROBOT FLEET
+    CONFIG_STRINGLIST(robot_types, "robot_types");
+    CONFIG_VECTOR3FLIST(start_poses, "start_poses");
+    CONFIG_STRINGLIST(robot_configs, "robot_configs");
+
+    // DYNAMIC OBJECTS
+    CONFIG_STRINGLIST(short_term_object_configs, "short_term_object_config_list");
+    CONFIG_STRINGLIST(human_configs, "human_config_list");
+
+    // NOW create ConfigReader - it will populate the CONFIG_ variables
+    config_reader::ConfigReader reader({env_config});
+
+    SimulatorConfig config;
+    config.maps_dir = maps_dir;
+    config.map_name = CONFIG_map_name;
+    config.dt = CONFIG_dt;
+
     config.laser_topic = CONFIG_laser_topic;
     config.laser_frame = CONFIG_laser_frame;
     config.laser_stdev = CONFIG_laser_stdev;
@@ -70,12 +81,7 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     config.laser_min_range = CONFIG_laser_min_range;
     config.laser_max_range = CONFIG_laser_max_range;
 
-    // ROBOT FLEET: Load parallel arrays (types, poses, config files)
-    CONFIG_STRINGLIST(robot_types, "robot_types");
-    CONFIG_VECTOR3FLIST(start_poses, "start_poses");
-    CONFIG_STRINGLIST(robot_configs, "robot_configs");
-
-    // Build RobotConfig list from parallel arrays
+    // Build RobotConfig list
     if (CONFIG_robot_types.size() != CONFIG_start_poses.size() ||
         CONFIG_robot_types.size() != CONFIG_robot_configs.size()) {
         std::cerr << "ERROR: robot_types, start_poses, and robot_configs must have same length!" << std::endl;
@@ -90,9 +96,6 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
         config.robots.push_back(robot);
     }
 
-    // DYNAMIC OBJECTS: Humans and short-term objects
-    CONFIG_STRINGLIST(short_term_object_configs, "short_term_object_config_list");
-    CONFIG_STRINGLIST(human_configs, "human_config_list");
     config.short_term_object_configs = CONFIG_short_term_object_configs;
     config.human_configs = CONFIG_human_configs;
 

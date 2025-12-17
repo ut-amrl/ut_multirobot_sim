@@ -18,15 +18,14 @@ using std::vector;
 
 namespace omnidrive {
 
-OmnidirectionalModel::OmnidirectionalModel(const std::string& config_file) : RobotModel(),
-                                                                             angular_error_(0, 1) {
+OmnidirectionalModel::OmnidirectionalModel(const std::string& config_file) : RobotModel() {
+    CONFIG_FLOAT(max_accel, "max_accel");
+    CONFIG_FLOAT(max_angle_accel, "max_angular_accel");
+    CONFIG_FLOAT(max_speed, "max_speed");
+    CONFIG_FLOAT(max_angle_vel, "max_angular_vel");
+
     // Load config from file
     config_reader::ConfigReader reader({config_file});
-
-    CONFIG_FLOAT(max_accel, "co_max_accel");
-    CONFIG_FLOAT(max_angle_accel, "co_max_angle_accel");
-    CONFIG_FLOAT(max_speed, "co_max_speed");
-    CONFIG_FLOAT(max_angle_vel, "co_max_angle_vel");
 
     max_accel_ = CONFIG_max_accel;
     max_angle_accel_ = CONFIG_max_angle_accel;
@@ -78,7 +77,7 @@ void OmnidirectionalModel::Step(const double& dt) {
     }
     const float max_angle_accel = max_angle_accel_ * dt;
     float delta_ang_v = desired_ang_vel - vel_.angle;
-    if (fabs(desired_ang_vel) > max_angle_accel) {
+    if (fabs(delta_ang_v) > max_angle_accel) {  // FIX: Check delta, not desired!
         delta_ang_v = Sign(delta_ang_v) * max_angle_accel;
     }
     vel_.angle += delta_ang_v;

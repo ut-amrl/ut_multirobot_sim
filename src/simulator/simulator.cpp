@@ -37,6 +37,7 @@
 #include "simulator/drive_models/ackermann_model.h"
 #include "simulator/drive_models/omnidirectional_model.h"
 #include "simulator/drive_models/diff_drive_model.h"
+#include "simulator/drive_models/ideal_model.h"
 #include "shared/math/geometry.h"
 #include "shared/math/line2d.h"
 #include "shared/math/math_util.h"
@@ -53,6 +54,7 @@ using geometry::Heading;
 using geometry::Line2f;
 using geometry_msgs::msg::PoseWithCovarianceStamped;
 using human::HumanObject;
+using ideal::IdealModel;
 using math_util::AngleMod;
 using math_util::DegToRad;
 using math_util::RadToDeg;
@@ -82,6 +84,8 @@ robot_model::RobotModel* MakeMotionModel(const std::string& robot_type,
         return new OmnidirectionalModel(robot_config_file);
     } else if (robot_type == "DIFF_DRIVE") {
         return new DiffDriveModel(robot_config_file);
+    } else if (robot_type == "IDEAL_DRIVE") {
+        return new IdealModel(robot_config_file);
     }
     std::cerr << "Robot type \"" << robot_type
               << "\" has no associated motion model!" << std::endl;
@@ -107,11 +111,9 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
     scanDataMsg.scan_time = 0.05;
 
     odometryTwistMsg.header.frame_id = "odom";
-    odometryTwistMsg.child_frame_id = "base_footprint";
+    odometryTwistMsg.child_frame_id = "base_link";
 
-    initSimulatorVizMarkers();
     map_.Load(config_.maps_dir + "/" + config_.map_name);
-    drawMap();
 
     // Create motion models for each robot
     for (size_t i = 0; i < config_.robots.size(); ++i) {
@@ -130,24 +132,18 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
         }
 
         // Load robot geometry from its config file
-        config_reader::ConfigReader robot_reader({robot.config_file});
         CONFIG_FLOAT(car_length, "car_length");
         CONFIG_FLOAT(car_width, "car_width");
-        CONFIG_FLOAT(car_height, "car_height");
-        CONFIG_FLOAT(rear_axle_offset, "rear_axle_offset");
-        CONFIG_FLOAT(laser_x, "laser_loc.x");
-        CONFIG_FLOAT(laser_y, "laser_loc.y");
-        CONFIG_FLOAT(laser_z, "laser_loc.z");
+        CONFIG_VECTOR3F(laser_loc, "laser_loc");
+        config_reader::ConfigReader robot_reader({robot.config_file});
 
         robot_pub_subs_.emplace_back(RobotPubSub());
         auto& rps = robot_pub_subs_.back();
         rps.car_length = CONFIG_car_length;
         rps.car_width = CONFIG_car_width;
-        rps.car_height = CONFIG_car_height;
-        rps.rear_axle_offset = CONFIG_rear_axle_offset;
-        rps.laser_x = CONFIG_laser_x;
-        rps.laser_y = CONFIG_laser_y;
-        rps.laser_z = CONFIG_laser_z;
+        rps.laser_x = CONFIG_laser_loc.x();
+        rps.laser_y = CONFIG_laser_loc.y();
+        rps.laser_z = CONFIG_laser_loc.z();
         rps.motion_model = std::unique_ptr<robot_model::RobotModel>(mm);
 
         rps.initSubscriber = node_->create_subscription<amrl_msgs::msg::Localization2DMsg>(
@@ -158,13 +154,16 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
                 rps.motion_model->SetPose({angle, loc});
             });
         rps.odometryTwistPublisher = node_->create_publisher<nav_msgs::msg::Odometry>(pf + "/odom", 1);
-        rps.laserPublisher = node_->create_publisher<sensor_msgs::msg::LaserScan>(pf + config_.laser_topic, 1);
+        rps.laserPublisher = node_->create_publisher<sensor_msgs::msg::LaserScan>(pf + "/" + config_.laser_topic, 1);
         rps.posMarkerPublisher = node_->create_publisher<visualization_msgs::msg::Marker>(
             pf + "/simulator_visualization", 6);
         rps.localizationPublisher = node_->create_publisher<amrl_msgs::msg::Localization2DMsg>(
             pf + "/localization", 1);
         localizationMsg.header.frame_id = "map";
     }
+
+    initSimulatorVizMarkers();
+    drawMap();
 
     mapLinesPublisher = node_->create_publisher<visualization_msgs::msg::Marker>("/simulator_visualization", 6);
     objectLinesPublisher = node_->create_publisher<visualization_msgs::msg::Marker>("/simulator_visualization", 6);
@@ -268,10 +267,10 @@ void Simulator::initSimulatorVizMarkers() {
                   color);
 
     for (auto& rps : robot_pub_subs_) {
-        p.pose.position.z = 0.5 * rps.car_height;
+        p.pose.position.z = 0.0;  // Place markers on ground plane for 2D simulation
         scale.x = rps.car_length;
         scale.y = rps.car_width;
-        scale.z = rps.car_height;
+        scale.z = 0.05;  // Thin marker for 2D visualization
         color[0] = 94.0 / 255.0;
         color[1] = 156.0 / 255.0;
         color[2] = 255.0 / 255.0;
@@ -347,12 +346,10 @@ void Simulator::publishOdometry() {
         rps.odometryTwistPublisher->publish(odometryTwistMsg);
 
         // TODO(jaholtz) visualization should not always be based on car
-        // parameters
-        rps.robotPosMarker.pose.position.x =
-            rps.cur_loc.translation.x() - cos(rps.cur_loc.angle) * rps.rear_axle_offset;
-        rps.robotPosMarker.pose.position.y =
-            rps.cur_loc.translation.y() - sin(rps.cur_loc.angle) * rps.rear_axle_offset;
-        rps.robotPosMarker.pose.position.z = 0.5 * rps.car_height;
+        // parameters - simplified to 2D markers
+        rps.robotPosMarker.pose.position.x = rps.cur_loc.translation.x();
+        rps.robotPosMarker.pose.position.y = rps.cur_loc.translation.y();
+        rps.robotPosMarker.pose.position.z = 0.0;  // Ground plane for 2D simulation
         rps.robotPosMarker.pose.orientation.x = robotQ.x();
         rps.robotPosMarker.pose.orientation.y = robotQ.y();
         rps.robotPosMarker.pose.orientation.z = robotQ.z();
@@ -398,7 +395,7 @@ void Simulator::publishTransform() {
         auto& rps = robot_pub_subs_[i];
         const auto pf = IndexToPrefix(i);
 
-        // Publish standard ROS navigation TF tree: map → odom → base_footprint → base_link → base_laser
+        // Publish simplified TF tree: map → odom → base_link → base_laser
         // map → odom (identity transform - map and odom frames are coincident in simulation)
         transform.header.stamp = node_->now();
         transform.header.frame_id = "/map";
@@ -413,28 +410,14 @@ void Simulator::publishTransform() {
         transform.transform.rotation.w = q.w();
         br->sendTransform(transform);
 
-        // odom → base_footprint (robot pose in odom frame)
+        // odom → base_link (robot pose in odom frame)
         transform.header.stamp = node_->now();
         transform.header.frame_id = pf + "/odom";
-        transform.child_frame_id = pf + "/base_footprint";
+        transform.child_frame_id = pf + "/base_link";
         transform.transform.translation.x = rps.cur_loc.translation.x();
         transform.transform.translation.y = rps.cur_loc.translation.y();
         transform.transform.translation.z = 0.0;
         q.setRPY(0.0, 0.0, rps.cur_loc.angle);
-        transform.transform.rotation.x = q.x();
-        transform.transform.rotation.y = q.y();
-        transform.transform.rotation.z = q.z();
-        transform.transform.rotation.w = q.w();
-        br->sendTransform(transform);
-
-        // base_footprint → base_link (identity - same frame in 2D simulation)
-        transform.header.stamp = node_->now();
-        transform.header.frame_id = pf + "/base_footprint";
-        transform.child_frame_id = pf + "/base_link";
-        transform.transform.translation.x = 0.0;
-        transform.transform.translation.y = 0.0;
-        transform.transform.translation.z = 0.0;
-        q.setRPY(0.0, 0.0, 0.0);
         transform.transform.rotation.x = q.x();
         transform.transform.rotation.y = q.y();
         transform.transform.rotation.z = q.z();
@@ -500,12 +483,20 @@ void Simulator::update() {
 }
 
 string GetMapNameFromFilename(string path) {
-    char path_cstring[path.length()];
-    strcpy(path_cstring, path.c_str());
-    const string file_name(basename(path_cstring));
+    const size_t last_slash = path.find_last_of('/');
+    if (last_slash != string::npos) {
+        path = path.substr(last_slash + 1);
+    }
     static const string suffix = ".vectormap.txt";
-    size_t found = file_name.find(suffix);
-    return file_name.substr(0, found);
+    const size_t suffix_pos = path.rfind(suffix);
+    if (suffix_pos != string::npos) {
+        return path.substr(0, suffix_pos);
+    }
+    const size_t dot_pos = path.find_last_of('.');
+    if (dot_pos != string::npos) {
+        return path.substr(0, dot_pos);
+    }
+    return path;
 }
 
 void Simulator::publishLocalization() {

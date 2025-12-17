@@ -103,9 +103,8 @@ class Simulator {
         Pose2Df cur_loc;  // Current pose (x,y,theta)
 
         // Robot geometry (loaded from robot's config file)
-        float car_length, car_width, car_height;  // Robot dimensions
-        float rear_axle_offset;                   // Rear axle offset from center
-        float laser_x, laser_y, laser_z;          // Laser position relative to base_link
+        float car_length, car_width;      // Robot dimensions
+        float laser_x, laser_y, laser_z;  // Laser position relative to base_link
 
         // ROS interfaces
         rclcpp::Subscription<amrl_msgs::msg::Localization2DMsg>::SharedPtr initSubscriber;      // Initial pose reset

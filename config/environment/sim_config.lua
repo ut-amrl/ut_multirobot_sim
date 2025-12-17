@@ -3,20 +3,14 @@ function Vector2(x, y)
 end
 
 function Vector3(x, y, z)
-  return {x = x, y = y, z = z}
+  return {x, y, z}  -- Return array-style table for Eigen::Vector3f
 end
 
 function DegToRad(d)
   return math.pi * d / 180
 end
 
--- example of loading human crow scenario configs
--- init_config_file = "config/scenarios/human_crowd/example_scenario/init_config.lua"
-
--- ENVIRONMENT CONFIGURATION
--- Pure environment settings: map, simulation timestep, sensors, dynamic objects
-
--- Map name (without path/extension, e.g., "GDC1")
+-- Map name
 map_name = "GDC1"
 
 -- Simulation timestep
@@ -34,13 +28,12 @@ laser_angle_increment = DegToRad(0.25)
 laser_min_range = 0.4
 laser_max_range = 100.0
 
--- ROBOT FLEET CONFIGURATION
--- Define robots to simulate: parallel arrays of equal length
+-- ROBOT FLEET
 -- Each index corresponds to one robot (robot_types[i], start_poses[i], robot_configs[i])
 
-robot_types = { "DIFF_DRIVE" }
+robot_types = { "IDEAL_DRIVE" }
 start_poses = { Vector3(0, 0, 0) }  -- x, y, theta_rad  
-robot_configs = { "config/robots/ut_jackal_config.lua" }
+robot_configs = { "config/robots/ideal_config.lua" }
 
 -- Example: Add more robots by extending all three arrays
 -- robot_types = { "DIFF_DRIVE", "ACKERMANN_DRIVE", "OMNIDIRECTIONAL_DRIVE" }

@@ -14,14 +14,12 @@ class OmnidirectionalModel : public robot_model::RobotModel {
    private:
     // Interpret geometry_msgs/Twist as omnidirectional commands:
     // linear.x, linear.y = translational velocity, angular.z = rotational velocity
-    std::default_random_engine rng_;
-    std::normal_distribution<float> angular_error_;
 
     // Config values
-    float max_accel_;
-    float max_angle_accel_;
-    float max_speed_;
-    float max_angle_vel_;
+    float max_accel_;        // Maximum linear acceleration [m/s²]
+    float max_angle_accel_;  // Maximum angular acceleration [rad/s²]
+    float max_speed_;        // Maximum linear velocity [m/s]
+    float max_angle_vel_;    // Maximum angular velocity [rad/s]
 
     // Standardized drive callback - interprets Twist as omnidirectional command
     void DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) override;

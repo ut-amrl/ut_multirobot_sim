@@ -82,6 +82,7 @@ add_executable(simulator
   src/simulator/drive_models/ackermann_model.cpp
   src/simulator/drive_models/omnidirectional_model.cpp
   src/simulator/drive_models/diff_drive_model.cpp
+  src/simulator/drive_models/ideal_model.cpp
   src/simulator/entities/short_term_object.cpp
   src/simulator/entities/human_object.cpp
 )

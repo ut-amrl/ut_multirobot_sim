@@ -17,22 +17,22 @@ using std::vector;
 namespace ackermann {
 
 AckermannModel::AckermannModel(const std::string& config_file) : RobotModel() {
+    CONFIG_FLOAT(min_turn_radius, "min_turn_radius");
+    CONFIG_FLOAT(max_accel, "max_accel");
+    CONFIG_FLOAT(max_speed, "max_speed");
+    CONFIG_FLOAT(turning_error_bias, "turning_error_bias");
+    CONFIG_FLOAT(turning_error_rate, "turning_error_rate");
+
     // Load config from file
     config_reader::ConfigReader reader({config_file});
-
-    CONFIG_FLOAT(min_turn_radius, "ak_min_turn_radius");
-    CONFIG_FLOAT(max_accel, "ak_max_accel");
-    CONFIG_FLOAT(max_speed, "ak_max_speed");
-    CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
-    CONFIG_FLOAT(angular_error_rate, "ak_angular_error_rate");
 
     min_turn_radius_ = CONFIG_min_turn_radius;
     max_accel_ = CONFIG_max_accel;
     max_speed_ = CONFIG_max_speed;
-    angular_bias_ = CONFIG_angular_bias;
-    angular_error_rate_ = CONFIG_angular_error_rate;
+    turning_error_bias_ = CONFIG_turning_error_bias;
+    turning_error_rate_ = CONFIG_turning_error_rate;
 
-    angular_error_ = std::normal_distribution<float>(angular_bias_, angular_error_rate_);
+    turning_error_ = std::normal_distribution<float>(turning_error_bias_, turning_error_rate_);
 
     // ROS subscription initialized in Init()
 }
@@ -91,14 +91,18 @@ void AckermannModel::Step(const double& dt) {
     float dtheta = 0;
     if (linear_motion) {
         d_vector.x() = dist;
-        dtheta = dt * angular_bias_;
+        dtheta = turning_error_(rng_) * dt * turning_error_bias_;
     } else {
         const float r = 1.0 / desired_curvature;
-        dtheta = dist * desired_curvature +
-                 angular_error_(rng_) * dt * angular_bias_ +
-                 angular_error_(rng_) * angular_error_rate_ * fabs(dist * desired_curvature);
+        const float base_dtheta = dist * desired_curvature;
+        const float error_sample = turning_error_(rng_);
+        dtheta = base_dtheta +
+                 error_sample * dt * turning_error_bias_ +
+                 error_sample * turning_error_rate_ * fabs(base_dtheta);
         d_vector = {r * sin(dtheta), r * (1.0 - cos(dtheta))};
     }
+    // Track angular velocity for downstream odometry publication
+    vel_.angle = (dt > 0.0) ? dtheta / dt : 0.0f;
     // Update the Pose
     pose_.translation += Eigen::Rotation2Df(pose_.angle) * d_vector;
     pose_.angle = AngleMod(pose_.angle + dtheta);

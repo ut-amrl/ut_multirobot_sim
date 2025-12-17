@@ -81,7 +81,7 @@ ros2 run ut_multirobot_sim simulator \
     - `robot_configs`: Config file path per robot
   - Dynamic objects: humans and obstacles
 - `config/robots/*.lua` - Per-robot configs containing:
-  - Robot geometry: dimensions (`car_width`, `car_length`, `car_height`), laser location (`laser_loc`), rear axle offset
+  - Robot geometry: dimensions (`car_width`, `car_length`), laser location (`laser_loc`)
   - Drive model parameters: speeds, accelerations, odometry scales, etc.
 
 **Common Edits:**
@@ -99,13 +99,13 @@ ros2 run ut_multirobot_sim simulator \
 - Publishes per robot: `/odom`, `/scan` (or configured laser topic), `/localization` (ground truth with map), `/simulator_visualization`.
 - Subscribes per robot: `/{robot}/cmd_vel` (`geometry_msgs/Twist`), `/initialpose`.
 - Global: `/sim_state`, `/sim_start_stop`, `/sim_step`.
-- TF (per robot): `map → odom → base_footprint → base_link → base_laser`.
+- TF (per robot): `map → odom → base_link → base_laser`.
 
 ## Navigation integration
 - Ground truth localization: `/robot{N}/localization` (`amrl_msgs/Localization2DMsg`) includes pose and map name.
 - Commands: all robots use `/robot{N}/cmd_vel` (`geometry_msgs/Twist`).
 - Odometry: `/robot{N}/odom` (`nav_msgs/Odometry`) with pose and twist covariance.
-- Geometry: Configurable via robot config: `car_width`, `car_length`, `car_height`, `laser_loc`, `rear_axle_offset`.
+- Geometry: Configurable via robot config: `car_width`, `car_length`, `laser_loc`.
 
 ## Multi-robot
 - In `sim_config.lua`, set parallel arrays (`robot_types`, `start_poses`, `robot_configs`) of equal length
@@ -135,5 +135,5 @@ Outputs scenario configs under `config/scenarios/human_crowd/<prefix>/`. Referen
 ## Debugging / quick checks
 - `ros2 topic list`, `ros2 topic echo /sim_state` to confirm the loop.
 - `ros2 topic echo /robot0/odom` or `/robot0/scan` to verify motion/sensing.
-- Empty scans or TF issues? Check laser params and TF flags (`publish_tfs`, `publish_map_to_odom`, `publish_foot_to_base`) in env/robot configs.
+- Empty scans or TF issues? Check laser params and ensure TF is being published.
 - Map load issues? Confirm `map_name` and `--maps_dir`.

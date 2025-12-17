@@ -1,5 +1,5 @@
 function Vector3(x, y, z)
-  return {x = x, y = y, z = z}
+  return {x, y, z}  -- Return array-style table for Eigen::Vector3f
 end
 
 function DegToRad(d)
@@ -12,13 +12,11 @@ end
 -- ROBOT GEOMETRY
 car_width = 0.281
 car_length = 0.535
-car_height = 0.15
-rear_axle_offset = -0.162
 laser_loc = Vector3(0.2, 0.0, 0.15)
 
 -- ACKERMANN DRIVE MODEL PARAMETERS
-ak_min_turn_radius = 0.98
-ak_max_speed = 1.2
-ak_max_accel = 3.0
-ak_angular_error_bias = DegToRad(0)
-ak_angular_error_rate = 0.1
+min_turn_radius = 0.98       -- Minimum turning radius [m]
+max_speed = 1.2              -- Maximum velocity [m/s]
+max_accel = 3.0              -- Maximum acceleration [m/s²]
+turning_error_bias = DegToRad(0)   -- Systematic turning error [rad/s]
+turning_error_rate = 0.1     -- Turning error per curvature [unitless]

@@ -42,11 +42,7 @@ using std::vector;
 
 namespace diffdrive {
 
-DiffDriveModel::DiffDriveModel(const std::string& config_file) : RobotModel(),
-                                                                 angular_error_(0, 1) {
-    // Load config from file
-    config_reader::ConfigReader reader({config_file});
-
+DiffDriveModel::DiffDriveModel(const std::string& config_file) : RobotModel() {
     CONFIG_BOOL(invert_linear_vel_cmds, "invert_linear_vel_cmds");
     CONFIG_BOOL(invert_angular_vel_cmds, "invert_angular_vel_cmds");
     CONFIG_FLOAT(linear_pos_accel_limit, "linear_pos_accel_limit");
@@ -55,8 +51,9 @@ DiffDriveModel::DiffDriveModel(const std::string& config_file) : RobotModel(),
     CONFIG_FLOAT(angular_neg_accel_limit, "angular_neg_accel_limit");
     CONFIG_FLOAT(max_angular_vel, "max_angular");
     CONFIG_FLOAT(max_linear_vel, "max_linear_vel");
-    CONFIG_FLOAT(linear_odom_scale, "linear_odom_scale");
-    CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
+
+    // Load config from file
+    config_reader::ConfigReader reader({config_file});
 
     invert_linear_vel_cmds_ = CONFIG_invert_linear_vel_cmds;
     invert_angular_vel_cmds_ = CONFIG_invert_angular_vel_cmds;
@@ -66,8 +63,6 @@ DiffDriveModel::DiffDriveModel(const std::string& config_file) : RobotModel(),
     angular_neg_accel_limit_ = CONFIG_angular_neg_accel_limit;
     max_angular_vel_ = CONFIG_max_angular_vel;
     max_linear_vel_ = CONFIG_max_linear_vel;
-    linear_odom_scale_ = CONFIG_linear_odom_scale;
-    angular_odom_scale_ = CONFIG_angular_odom_scale;
     // ROS subscription initialized in Init()
     linear_vel_ = 0.0;
     angular_vel_ = 0.0;
@@ -84,38 +79,45 @@ void DiffDriveModel::Step(const double& dt) {
         target_angular_vel_ = 0;
         target_linear_vel_ = 0;
     }
-    rclcpp::Time current_time = node_->now();
-    // Update the linear velocity based on the linear acceleration limits
-    if (linear_vel_ < target_linear_vel_) {
-        // Must increase linear speed
-        if (linear_pos_accel_limit_ == 0.0 || target_linear_vel_ - linear_vel_ < linear_pos_accel_limit_) {
+    // Apply acceleration limits (multiply by dt to get velocity change per timestep)
+    const float max_linear_dv_pos = linear_pos_accel_limit_ * dt;
+    const float max_linear_dv_neg = linear_neg_accel_limit_ * dt;
+    const float max_angular_dv_pos = angular_pos_accel_limit_ * dt;
+    const float max_angular_dv_neg = angular_neg_accel_limit_ * dt;
+
+    // Update linear velocity based on acceleration limits
+    float linear_dv = target_linear_vel_ - linear_vel_;
+    if (linear_dv > 0) {
+        // Accelerating forward
+        if (max_linear_dv_pos == 0.0 || linear_dv < max_linear_dv_pos) {
             linear_vel_ = target_linear_vel_;
         } else {
-            linear_vel_ += linear_pos_accel_limit_;
+            linear_vel_ += max_linear_dv_pos;
         }
-    } else if (linear_vel_ > target_linear_vel_) {
-        // Must decrease linear speed
-        if (linear_neg_accel_limit_ == 0.0 || linear_vel_ - target_linear_vel_ < linear_neg_accel_limit_) {
+    } else if (linear_dv < 0) {
+        // Decelerating / reversing
+        if (max_linear_dv_neg == 0.0 || -linear_dv < max_linear_dv_neg) {
             linear_vel_ = target_linear_vel_;
         } else {
-            linear_vel_ -= linear_neg_accel_limit_;
+            linear_vel_ -= max_linear_dv_neg;
         }
     }
 
-    // Update the angular velocity based on the angular acceleration limits
-    if (angular_vel_ < target_angular_vel_) {
-        // Must increase angular speed
-        if (angular_pos_accel_limit_ == 0.0 || target_angular_vel_ - angular_vel_ < angular_pos_accel_limit_) {
+    // Update angular velocity based on acceleration limits
+    float angular_dv = target_angular_vel_ - angular_vel_;
+    if (angular_dv > 0) {
+        // Turning CCW
+        if (max_angular_dv_pos == 0.0 || angular_dv < max_angular_dv_pos) {
             angular_vel_ = target_angular_vel_;
         } else {
-            angular_vel_ += angular_pos_accel_limit_;
+            angular_vel_ += max_angular_dv_pos;
         }
-    } else if (angular_vel_ > target_angular_vel_) {
-        // Must decrease angular speed
-        if (angular_neg_accel_limit_ == 0.0 || angular_vel_ - target_angular_vel_ < angular_neg_accel_limit_) {
+    } else if (angular_dv < 0) {
+        // Turning CW
+        if (max_angular_dv_neg == 0.0 || -angular_dv < max_angular_dv_neg) {
             angular_vel_ = target_angular_vel_;
         } else {
-            angular_vel_ -= angular_neg_accel_limit_;
+            angular_vel_ -= max_angular_dv_neg;
         }
     }
 
