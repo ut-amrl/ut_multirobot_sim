@@ -10,7 +10,17 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
--- MODEL PARAMETERS
+-- UT JACKAL ROBOT CONFIGURATION
+-- Robot-specific dimensions and drive model parameters
+
+-- ROBOT GEOMETRY
+car_width = 0.43
+car_length = 0.50
+car_height = 0.65
+rear_axle_offset = 0.0
+laser_loc = Vector3(0.07, 0, 0.5)
+
+-- DIFFERENTIAL DRIVE MODEL PARAMETERS
 invert_linear_vel_cmds = false
 invert_angular_vel_cmds = false
 linear_pos_accel_limit = 3.0
@@ -19,29 +29,5 @@ angular_pos_accel_limit = 3.0
 angular_neg_accel_limit = 3.0
 max_angular = 3.0
 max_linear_vel = 2.0
--- Drive topic standardized to "/cmd_vel" in simulator
 linear_odom_scale = 1.0
 angular_odom_scale = 1.0
-
-
--- SIMULATOR PARAMETERS
-
--- tf
-publish_map_to_odom = false
-publish_foot_to_base = false
-
--- Kinematic
-rear_axle_offset = 0.0
-min_turn_radius = 0.0
-
-laser_topic = "velodyne_2dscan"
-laser_loc = Vector3(0.07, 0, 0.5)
-car_width = 0.43
-car_length = 0.50
-car_height = 0.65;
-
-laser_angle_min = DegToRad(-180.0);
-laser_angle_max = DegToRad(180.0);
-laser_angle_increment = DegToRad(0.1);
-laser_min_range = 0.4;
-laser_max_range = 150.0;

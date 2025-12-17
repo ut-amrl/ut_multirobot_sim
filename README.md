@@ -61,42 +61,66 @@ colcon build --packages-select ut_multirobot_sim   # or: make
 ## Run
 ```bash
 source install/setup.bash
-ros2 run ut_multirobot_sim simulator \
-  --env_config config/environment/sim_config.lua \
-  --robot_config config/robots/ut_jackal_config.lua \
-  --init_config config/environment/default_init_config.lua \
-  --maps_dir /path/to/amrl_maps \
-  [--localize]   # publish /{robot}/localization
-# or: ros2 launch ut_multirobot_sim ut_jackal.launch.py
+ros2 run ut_multirobot_sim simulator --config config/environment/sim_config.lua
 
-# To disable all dynamic entities (humans, obstacles):
-# Edit config/environment/sim_config.lua and set:
-# short_term_object_config_list = {}
-# human_config_list = {}
+# Optional: Specify custom maps directory
+ros2 run ut_multirobot_sim simulator \
+  --config config/environment/sim_config.lua \
+  --maps_dir /path/to/amrl_maps
 ```
 
-## Configuration (what to edit)
-- `config/environment/sim_config.lua`: timing, map, laser, TF flags, dynamic object defaults.
-- `config/robots/*.lua`: motion model params and topics per robot type.
-- `config/initialization/*.lua`: map name and start poses per robot.
+## Configuration
+
+**Config Structure:**
+- `config/environment/sim_config.lua` - Main config containing:
+  - Environment: map name, simulation timestep
+  - Sensors: laser scan settings
+  - Robot fleet: **parallel arrays** defining each robot:
+    - `robot_types`: Drive model type per robot (DIFF_DRIVE, ACKERMANN_DRIVE, OMNIDIRECTIONAL_DRIVE)
+    - `start_poses`: Initial pose per robot (x, y, theta)
+    - `robot_configs`: Config file path per robot
+  - Dynamic objects: humans and obstacles
+- `config/robots/*.lua` - Per-robot configs containing:
+  - Robot geometry: dimensions (`car_width`, `car_length`, `car_height`), laser location (`laser_loc`), rear axle offset
+  - Drive model parameters: speeds, accelerations, odometry scales, etc.
+
+**Common Edits:**
+- **Single robot**: Set all three arrays with one entry each in `sim_config.lua`
+- **Multiple robots (different types)**: Extend all three arrays:
+  ```lua
+  robot_types = { "DIFF_DRIVE", "ACKERMANN_DRIVE" }
+  start_poses = { Vector3(0,0,0), Vector3(5,0,0) }
+  robot_configs = { "config/robots/ut_jackal_config.lua", "config/robots/ut_automata_config.lua" }
+  ```
+- **Disable entities**: Set `short_term_object_config_list = {}` and `human_config_list = {}` in `sim_config.lua`
 - `config/dynamic_objects/...`: optional humans and short-term obstacles.
-- Optional generated scenarios: `config/scenarios/human_crowd/<prefix>/init_config.lua` (via `scripts/generate_config.py`).
 
 ## Topics and TF
-- Publishes per robot: `/odom`, `/scan` (or configured laser topic), `/simulator_true_pose`, `/simulator_visualization`, `/localization` (when `--localize`).
+- Publishes per robot: `/odom`, `/scan` (or configured laser topic), `/localization` (ground truth with map), `/simulator_visualization`.
 - Subscribes per robot: `/{robot}/cmd_vel` (`geometry_msgs/Twist`), `/initialpose`.
 - Global: `/sim_state`, `/sim_start_stop`, `/sim_step`.
 - TF (per robot): `map → odom → base_footprint → base_link → base_laser`.
 
 ## Navigation integration
-- Ground truth: `/robot{N}/simulator_true_pose` always; `/robot{N}/localization` (with `--localize`) includes map name.
-- Commands: all robots use `/{robot}/cmd_vel` (`geometry_msgs/Twist`).
-- Run with localization (example above) and remap topics in your launch file as required.
-- Geometry: supports `car_width`, `car_length`, `car_height`, `laser_loc`, `rear_axle_offset`; does not implement `base_link_offset`—navigation configs using it may see small offsets; tune dimensions/offsets accordingly.
+- Ground truth localization: `/robot{N}/localization` (`amrl_msgs/Localization2DMsg`) includes pose and map name.
+- Commands: all robots use `/robot{N}/cmd_vel` (`geometry_msgs/Twist`).
+- Odometry: `/robot{N}/odom` (`nav_msgs/Odometry`) with pose and twist covariance.
+- Geometry: Configurable via robot config: `car_width`, `car_length`, `car_height`, `laser_loc`, `rear_axle_offset`.
 
 ## Multi-robot
-- In init config, set `robot_types` and `start_poses` arrays of equal length; namespaces become `/robot0`, `/robot1`, ...
-- Send commands to each namespace independently (e.g., `/robot1/cmd_vel`).
+- In `sim_config.lua`, set parallel arrays (`robot_types`, `start_poses`, `robot_configs`) of equal length
+- Each robot gets its own namespace: `/robot0`, `/robot1`, ...
+- Each robot can have a different type and config file:
+  ```lua
+  robot_types = { "DIFF_DRIVE", "ACKERMANN_DRIVE", "OMNIDIRECTIONAL_DRIVE" }
+  start_poses = { Vector3(0,0,0), Vector3(5,0,0), Vector3(10,0,0) }
+  robot_configs = {
+      "config/robots/ut_jackal_config.lua",
+      "config/robots/ut_automata_config.lua",
+      "config/robots/cobot_config.lua"
+  }
+  ```
+- Send commands to each namespace independently (e.g., `/robot1/cmd_vel`)
 
 ## Visualization
 Use RViz2 (`ros2 run rviz2 rviz2`); fixed frame `map`; add `/simulator_visualization` and `/robot0/scan` (or your laser topic); view TF tree.
@@ -106,7 +130,7 @@ Use RViz2 (`ros2 run rviz2 rviz2`); fixed frame `map`; add `/simulator_visualiza
 ```bash
 python scripts/generate_config.py --config-file scripts/example.yml
 ```
-Outputs under `config/scenarios/human_crowd/<prefix>/` (`init_config.lua` + per-human configs). Use the generated `init_config.lua` via `--init_config` or set `init_config_file` inside `config/environment/sim_config.lua`.
+Outputs scenario configs under `config/scenarios/human_crowd/<prefix>/`. Reference the generated configs in `sim_config.lua` by updating `human_config_list` and `start_poses`.
 
 ## Debugging / quick checks
 - `ros2 topic list`, `ros2 topic echo /sim_state` to confirm the loop.

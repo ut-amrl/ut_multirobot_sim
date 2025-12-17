@@ -18,7 +18,19 @@ class DiffDriveModel : public robot_model::RobotModel {
     // linear.x = forward velocity, angular.z = rotational velocity
     std::default_random_engine rng_;
     std::normal_distribution<float> angular_error_;
-    config_reader::ConfigReader config_reader_;
+
+    // Config values
+    bool invert_linear_vel_cmds_;
+    bool invert_angular_vel_cmds_;
+    float linear_pos_accel_limit_;
+    float linear_neg_accel_limit_;
+    float angular_pos_accel_limit_;
+    float angular_neg_accel_limit_;
+    float max_angular_vel_;
+    float max_linear_vel_;
+    float linear_odom_scale_;
+    float angular_odom_scale_;
+
     float target_linear_vel_;
     float target_angular_vel_;
     double linear_vel_;
@@ -30,8 +42,8 @@ class DiffDriveModel : public robot_model::RobotModel {
 
    public:
     DiffDriveModel() = delete;
-    // Initialize with config files
-    DiffDriveModel(const std::vector<std::string>& config_files);
+    // Initialize with config file
+    DiffDriveModel(const std::string& config_file);
     ~DiffDriveModel() = default;
     // define Step function for updating
     void Step(const double& dt);

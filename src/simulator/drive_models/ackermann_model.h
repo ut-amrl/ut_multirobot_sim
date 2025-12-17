@@ -17,18 +17,24 @@ class AckermannModel : public robot_model::RobotModel {
     // Then compute curvature = angular_velocity / linear_velocity internally
     std::default_random_engine rng_;
     std::normal_distribution<float> angular_error_;
-    config_reader::ConfigReader config_reader_;
+
+    // Config values
+    float min_turn_radius_;
+    float max_accel_;
+    float max_speed_;
+    float angular_bias_;
+    float angular_error_rate_;
 
     // Standardized drive callback - interprets Twist as Ackermann command
     void DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) override;
 
    public:
     AckermannModel() = delete;
-    // Initialize with config files
-    AckermannModel(const std::vector<std::string> &config_files);
+    // Initialize with config file
+    AckermannModel(const std::string& config_file);
     ~AckermannModel() = default;
     // define Step function for updating
-    void Step(const double &dt);
+    void Step(const double& dt);
 };
 
 }  // namespace ackermann

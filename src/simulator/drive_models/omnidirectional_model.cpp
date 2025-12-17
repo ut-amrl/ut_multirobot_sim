@@ -1,4 +1,5 @@
 #include "simulator/drive_models/omnidirectional_model.h"
+#include "config_reader/config_reader.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"
@@ -17,14 +18,20 @@ using std::vector;
 
 namespace omnidrive {
 
-CONFIG_FLOAT(max_accel, "co_max_accel");
-CONFIG_FLOAT(max_angle_accel, "co_max_angle_accel");
-CONFIG_FLOAT(max_speed, "co_max_speed");
-CONFIG_FLOAT(max_angle_vel, "co_max_angle_vel");
+OmnidirectionalModel::OmnidirectionalModel(const std::string& config_file) : RobotModel(),
+                                                                             angular_error_(0, 1) {
+    // Load config from file
+    config_reader::ConfigReader reader({config_file});
 
-OmnidirectionalModel::OmnidirectionalModel(const vector<string>& config_files) : RobotModel(),
-                                                                                 angular_error_(0, 1),
-                                                                                 config_reader_(config_files) {
+    CONFIG_FLOAT(max_accel, "co_max_accel");
+    CONFIG_FLOAT(max_angle_accel, "co_max_angle_accel");
+    CONFIG_FLOAT(max_speed, "co_max_speed");
+    CONFIG_FLOAT(max_angle_vel, "co_max_angle_vel");
+
+    max_accel_ = CONFIG_max_accel;
+    max_angle_accel_ = CONFIG_max_angle_accel;
+    max_speed_ = CONFIG_max_speed;
+    max_angle_vel_ = CONFIG_max_angle_vel;
     // ROS subscription initialized in Init()
 }
 
@@ -50,13 +57,13 @@ void OmnidirectionalModel::Step(const double& dt) {
 
     // Cap Velocity to max speed
     Vector2f desired_vel(last_cmd_.linear.x, last_cmd_.linear.y);
-    if (desired_vel.norm() > CONFIG_max_speed) {
-        desired_vel = CONFIG_max_speed * desired_vel.normalized();
+    if (desired_vel.norm() > max_speed_) {
+        desired_vel = max_speed_ * desired_vel.normalized();
     }
 
     // Cap acceleration to max accel
     Vector2f delta_v = desired_vel - vel_.translation;
-    const float max_accel = CONFIG_max_accel * dt;
+    const float max_accel = max_accel_ * dt;
     if (delta_v.norm() > max_accel) {
         delta_v = max_accel * delta_v.normalized();
     }
@@ -66,10 +73,10 @@ void OmnidirectionalModel::Step(const double& dt) {
 
     // Cap the rotational velocity and acceleration
     float desired_ang_vel = last_cmd_.angular.z;
-    if (fabs(desired_ang_vel) > CONFIG_max_angle_vel) {
-        desired_ang_vel = Sign(desired_ang_vel) * CONFIG_max_angle_vel;
+    if (fabs(desired_ang_vel) > max_angle_vel_) {
+        desired_ang_vel = Sign(desired_ang_vel) * max_angle_vel_;
     }
-    const float max_angle_accel = CONFIG_max_angle_accel * dt;
+    const float max_angle_accel = max_angle_accel_ * dt;
     float delta_ang_v = desired_ang_vel - vel_.angle;
     if (fabs(desired_ang_vel) > max_angle_accel) {
         delta_ang_v = Sign(delta_ang_v) * max_angle_accel;

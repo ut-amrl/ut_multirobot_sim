@@ -13,59 +13,44 @@ end
 -- example of loading human crow scenario configs
 -- init_config_file = "config/scenarios/human_crowd/example_scenario/init_config.lua"
 
--- Time-step for simulation.
+-- ENVIRONMENT CONFIGURATION
+-- Pure environment settings: map, simulation timestep, sensors, dynamic objects
+
+-- Map name (without path/extension, e.g., "GDC1")
+map_name = "GDC1"
+
+-- Simulation timestep
 delta_t = 0.025
 
--- Simulator TF publications
-publish_tfs = true;
-publish_foot_to_base = true;
-publish_map_to_odom = true;
-
--- Car dimensions.
-car_width = 0.281
-car_length = 0.535
-car_height = 0.15;
-
--- Location of the robot's rear wheel axle relative to the center of the body.
-rear_axle_offset = -0.162
-laser_loc = Vector3(0.2, 0, 0.15)
-
--- Kinematic and dynamic constraints for the car.
-min_turn_radius = 0.98
-max_speed = 1.2
-max_accel = 3.0
-
--- Laser rangefinder parameters.
-laser_noise_stddev = 0.01;
-laser_angle_min = DegToRad(-135.0);
-laser_angle_max = DegToRad(135.0);
-laser_angle_increment = DegToRad(0.25);
-laser_min_range = 0.4;
-laser_max_range = 100.0;
-
--- Turning error simulation.
-angular_error_bias = DegToRad(0);
-angular_error_rate = 0.1;
-
--- Defining robot type enumerator
-local RobotType = {
-    ACKERMANN_DRIVE="ACKERMANN_DRIVE",
-    OMNIDIRECTIONAL_DRIVE="OMNIDIRECTIONAL_DRIVE",
-    DIFF_DRIVE="DIFF_DRIVE"
-}
-
--- robot_type = RobotType.ACKERMANN_DRIVE
--- robot_config = "config/robots/ut_automata_config.lua"
--- robot_type = RobotType.DIFF_DRIVE
--- robot_config = "config/robots/bwibot_config.lua"
--- robot_type = RobotType.OMNIDIRECTIONAL_DRIVE
--- robot_config = "config/robots/cobot_config.lua"
-robot_types = { RobotType.DIFF_DRIVE }
-
-laser_topic = "velodyne_2dscan"
+-- Laser scan ROS topics and frames
+laser_topic = "scan"
 laser_frame = "base_laser"
 
--- Dynamic objects (leave empty to disable all entities/humans)
--- short_term_object_config_list = { "config/dynamic_objects/short_term_config.lua" }
+-- Laser scan settings (sensor specs, same for all robots)
+laser_noise_stddev = 0.01
+laser_angle_min = DegToRad(-135.0)
+laser_angle_max = DegToRad(135.0)
+laser_angle_increment = DegToRad(0.25)
+laser_min_range = 0.4
+laser_max_range = 100.0
+
+-- ROBOT FLEET CONFIGURATION
+-- Define robots to simulate: parallel arrays of equal length
+-- Each index corresponds to one robot (robot_types[i], start_poses[i], robot_configs[i])
+
+robot_types = { "DIFF_DRIVE" }
+start_poses = { Vector3(0, 0, 0) }  -- x, y, theta_rad  
+robot_configs = { "config/robots/ut_jackal_config.lua" }
+
+-- Example: Add more robots by extending all three arrays
+-- robot_types = { "DIFF_DRIVE", "ACKERMANN_DRIVE", "OMNIDIRECTIONAL_DRIVE" }
+-- start_poses = { Vector3(0,0,0), Vector3(5,0,0), Vector3(10,0,0) }
+-- robot_configs = {
+--     "config/robots/ut_jackal_config.lua",
+--     "config/robots/ut_automata_config.lua",
+--     "config/robots/cobot_config.lua"
+-- }
+
+-- DYNAMIC OBJECTS (leave empty to disable entities/humans)
 short_term_object_config_list = {}
 human_config_list = {}

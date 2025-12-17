@@ -31,21 +31,77 @@
 
 #include "shared/util/timer.h"
 #include "simulator.h"
+#include "config_reader/config_reader.h"
 
 using ut_multirobot_sim::msg::SimulatorStateMsg;
 
 SimulatorStateMsg sim_state_;
 bool sim_step_ = false;
 
-DEFINE_string(env_config,
+// Load configuration from environment config file
+// Clean structure: each robot has its own type, pose, and config file
+SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
+                                    const std::string& maps_dir) {
+    config_reader::ConfigReader reader({env_config});
+    SimulatorConfig config;
+
+    // ENVIRONMENT: Map and simulation settings
+    CONFIG_STRING(map_name, "map_name");
+    CONFIG_FLOAT(dt, "delta_t");
+    config.maps_dir = maps_dir;
+    config.map_name = CONFIG_map_name;
+    config.dt = CONFIG_dt;
+
+    // SENSORS: Laser scan settings
+    CONFIG_STRING(laser_topic, "laser_topic");
+    CONFIG_STRING(laser_frame, "laser_frame");
+    CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
+    CONFIG_FLOAT(laser_angle_min, "laser_angle_min");
+    CONFIG_FLOAT(laser_angle_max, "laser_angle_max");
+    CONFIG_FLOAT(laser_angle_increment, "laser_angle_increment");
+    CONFIG_FLOAT(laser_min_range, "laser_min_range");
+    CONFIG_FLOAT(laser_max_range, "laser_max_range");
+    config.laser_topic = CONFIG_laser_topic;
+    config.laser_frame = CONFIG_laser_frame;
+    config.laser_stdev = CONFIG_laser_stdev;
+    config.laser_angle_min = CONFIG_laser_angle_min;
+    config.laser_angle_max = CONFIG_laser_angle_max;
+    config.laser_angle_increment = CONFIG_laser_angle_increment;
+    config.laser_min_range = CONFIG_laser_min_range;
+    config.laser_max_range = CONFIG_laser_max_range;
+
+    // ROBOT FLEET: Load parallel arrays (types, poses, config files)
+    CONFIG_STRINGLIST(robot_types, "robot_types");
+    CONFIG_VECTOR3FLIST(start_poses, "start_poses");
+    CONFIG_STRINGLIST(robot_configs, "robot_configs");
+
+    // Build RobotConfig list from parallel arrays
+    if (CONFIG_robot_types.size() != CONFIG_start_poses.size() ||
+        CONFIG_robot_types.size() != CONFIG_robot_configs.size()) {
+        std::cerr << "ERROR: robot_types, start_poses, and robot_configs must have same length!" << std::endl;
+        exit(1);
+    }
+
+    for (size_t i = 0; i < CONFIG_robot_types.size(); ++i) {
+        RobotConfig robot;
+        robot.type = CONFIG_robot_types[i];
+        robot.start_pose = CONFIG_start_poses[i];
+        robot.config_file = CONFIG_robot_configs[i];
+        config.robots.push_back(robot);
+    }
+
+    // DYNAMIC OBJECTS: Humans and short-term objects
+    CONFIG_STRINGLIST(short_term_object_configs, "short_term_object_config_list");
+    CONFIG_STRINGLIST(human_configs, "human_config_list");
+    config.short_term_object_configs = CONFIG_short_term_object_configs;
+    config.human_configs = CONFIG_human_configs;
+
+    return config;
+}
+
+DEFINE_string(config,
               "config/environment/sim_config.lua",
-              "Path to environment config.");
-DEFINE_string(robot_config,
-              "config/robots/ut_jackal_config.lua",
-              "Path to robot config.");
-DEFINE_string(init_config,
-              "config/environment/default_init_config.lua",
-              "Path to config for initial state.");
+              "Path to simulator config (contains all settings).");
 DEFINE_string(maps_dir,
               "",
               "Path to maps directory.");
@@ -64,7 +120,7 @@ void SimStep(const std_msgs::msg::Bool::SharedPtr msg) {
     sim_step_ = sim_step_ || msg->data;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, false);
     printf("\nUT Multi-Robot Simulator\n\n");
@@ -86,10 +142,12 @@ int main(int argc, char **argv) {
         FLAGS_maps_dir = ament_index_cpp::get_package_share_directory("amrl_maps");
     }
     CHECK_NE(FLAGS_maps_dir, string(""));
-    Simulator simulator(FLAGS_env_config,
-                        FLAGS_robot_config,
-                        FLAGS_init_config,
-                        FLAGS_maps_dir);
+
+    // Load all configuration from single config file
+    SimulatorConfig config = LoadSimulatorConfig(FLAGS_config, FLAGS_maps_dir);
+
+    // Create simulator with loaded config
+    Simulator simulator(config);
     if (!simulator.init(node)) {
         return 1;
     }

@@ -45,8 +45,6 @@
 #include "amrl_msgs/msg/localization2_d_msg.hpp"
 #include "vector_map.h"
 
-DEFINE_bool(localize, false, "Publish localization");
-
 using ackermann::AckermannModel;
 using diffdrive::DiffDriveModel;
 using Eigen::Rotation2Df;
@@ -62,73 +60,28 @@ using omnidrive::OmnidirectionalModel;
 using std::atan2;
 using vector_map::VectorMap;
 
-// Used for visualizations
-CONFIG_FLOAT(car_length, "car_length");
-CONFIG_FLOAT(car_width, "car_width");
-CONFIG_FLOAT(car_height, "car_height");
-CONFIG_FLOAT(rear_axle_offset, "rear_axle_offset");
-// Used for transforms
-CONFIG_FLOAT(laser_x, "laser_loc.x");
-CONFIG_FLOAT(laser_y, "laser_loc.y");
-CONFIG_FLOAT(laser_z, "laser_loc.z");
-// Timestep size
-CONFIG_FLOAT(DT, "delta_t");
-CONFIG_FLOAT(laser_stdev, "laser_noise_stddev");
-// TF publications
-CONFIG_BOOL(publish_tfs, "publish_tfs");
-CONFIG_BOOL(publish_map_to_odom, "publish_map_to_odom");
-CONFIG_BOOL(publish_foot_to_base, "publish_foot_to_base");
+// Configuration values accessed via config_ member
 
-// Used for topic names and robot specs
-CONFIG_STRINGLIST(robot_types, "robot_types");
-CONFIG_STRING(laser_topic, "laser_topic");
-CONFIG_STRING(laser_frame, "laser_frame");
-
-// Laser scanner parameters.
-CONFIG_FLOAT(laser_angle_min, "laser_angle_min");
-CONFIG_FLOAT(laser_angle_max, "laser_angle_max");
-CONFIG_FLOAT(laser_angle_increment, "laser_angle_increment");
-CONFIG_FLOAT(laser_min_range, "laser_min_range");
-CONFIG_FLOAT(laser_max_range, "laser_max_range");
-
-CONFIG_STRING(map_name, "map_name");
-// Initial location
-CONFIG_VECTOR3FLIST(start_poses, "start_poses");
-CONFIG_STRINGLIST(short_term_object_config_list, "short_term_object_config_list");
-CONFIG_STRINGLIST(human_config_list, "human_config_list");
-
-Simulator::Simulator(const std::string& env_config,
-                     const std::string& robot_config,
-                     const std::string& init_config,
-                     const std::string& maps_dir) : reader_({env_config, robot_config}),
-                                                    init_config_reader_({init_config}),
-                                                    laser_noise_(0, 1),
-                                                    sim_step_count(0),
-                                                    sim_time(0.0),
-                                                    robot_config_file_(robot_config),
-                                                    maps_dir_(maps_dir) {
-    truePoseMsg.header.frame_id = "map";
-    if (CONFIG_map_name == "") {
-        std::cerr << "Failed to load map from init config file '"
-                  << init_config << "'" << std::endl;
+Simulator::Simulator(const SimulatorConfig& config) : config_(config),
+                                                      laser_noise_(0, 1),
+                                                      sim_step_count(0),
+                                                      sim_time(0.0) {
+    if (config_.map_name == "") {
+        std::cerr << "Failed to load map - map_name not specified in config" << std::endl;
         exit(1);
     }
 }
 
 Simulator::~Simulator() {}
 
-double Simulator::GetStepSize() const {
-    return CONFIG_DT;
-}
-
 robot_model::RobotModel* MakeMotionModel(const std::string& robot_type,
-                                         const std::string& robot_config) {
+                                         const std::string& robot_config_file) {
     if (robot_type == "ACKERMANN_DRIVE") {
-        return new AckermannModel({robot_config});
+        return new AckermannModel(robot_config_file);
     } else if (robot_type == "OMNIDIRECTIONAL_DRIVE") {
-        return new OmnidirectionalModel({robot_config});
+        return new OmnidirectionalModel(robot_config_file);
     } else if (robot_type == "DIFF_DRIVE") {
-        return new DiffDriveModel({robot_config});
+        return new DiffDriveModel(robot_config_file);
     }
     std::cerr << "Robot type \"" << robot_type
               << "\" has no associated motion model!" << std::endl;
@@ -143,12 +96,12 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
     // TODO(jaholtz) Too much hard coding, move to config
     node_ = node;
 
-    scanDataMsg.header.frame_id = CONFIG_laser_frame;
-    scanDataMsg.angle_min = CONFIG_laser_angle_min;
-    scanDataMsg.angle_max = CONFIG_laser_angle_max;
-    scanDataMsg.angle_increment = CONFIG_laser_angle_increment;
-    scanDataMsg.range_min = CONFIG_laser_min_range;
-    scanDataMsg.range_max = CONFIG_laser_max_range;
+    scanDataMsg.header.frame_id = config_.laser_frame;
+    scanDataMsg.angle_min = config_.laser_angle_min;
+    scanDataMsg.angle_max = config_.laser_angle_max;
+    scanDataMsg.angle_increment = config_.laser_angle_increment;
+    scanDataMsg.range_min = config_.laser_min_range;
+    scanDataMsg.range_max = config_.laser_max_range;
     scanDataMsg.intensities.clear();
     scanDataMsg.time_increment = 0.0;
     scanDataMsg.scan_time = 0.05;
@@ -156,27 +109,19 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
     odometryTwistMsg.header.frame_id = "odom";
     odometryTwistMsg.child_frame_id = "base_footprint";
 
-    if (CONFIG_robot_types.size() != CONFIG_start_poses.size()) {
-        std::cerr << "Robot type and robot start pose lists are"
-                     "not the same size!"
-                  << std::endl;
-        return false;
-    }
-
     initSimulatorVizMarkers();
-    map_.Load(maps_dir_ + "/" + CONFIG_map_name);
+    map_.Load(config_.maps_dir + "/" + config_.map_name);
     drawMap();
 
-    // Create motion model based on robot type
-    for (size_t i = 0; i < CONFIG_start_poses.size(); ++i) {
-        const auto& robot_type = CONFIG_robot_types.at(i);
-        const auto& start_pose = CONFIG_start_poses.at(i);
+    // Create motion models for each robot
+    for (size_t i = 0; i < config_.robots.size(); ++i) {
+        const auto& robot = config_.robots[i];
         const auto pf = IndexToPrefix(i);
-        auto* mm = MakeMotionModel(robot_type, robot_config_file_);
+        auto* mm = MakeMotionModel(robot.type, robot.config_file);
         if (mm == nullptr) {
             return false;
         }
-        mm->SetPose(Pose2Df(start_pose.z(), {start_pose.x(), start_pose.y()}));
+        mm->SetPose(Pose2Df(robot.start_pose.z(), {robot.start_pose.x(), robot.start_pose.y()}));
 
         // Initialize ROS interfaces for the motion model
         std::string drive_topic = "/cmd_vel";  // Standardized topic for all robots
@@ -184,8 +129,25 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
             return false;
         }
 
+        // Load robot geometry from its config file
+        config_reader::ConfigReader robot_reader({robot.config_file});
+        CONFIG_FLOAT(car_length, "car_length");
+        CONFIG_FLOAT(car_width, "car_width");
+        CONFIG_FLOAT(car_height, "car_height");
+        CONFIG_FLOAT(rear_axle_offset, "rear_axle_offset");
+        CONFIG_FLOAT(laser_x, "laser_loc.x");
+        CONFIG_FLOAT(laser_y, "laser_loc.y");
+        CONFIG_FLOAT(laser_z, "laser_loc.z");
+
         robot_pub_subs_.emplace_back(RobotPubSub());
         auto& rps = robot_pub_subs_.back();
+        rps.car_length = CONFIG_car_length;
+        rps.car_width = CONFIG_car_width;
+        rps.car_height = CONFIG_car_height;
+        rps.rear_axle_offset = CONFIG_rear_axle_offset;
+        rps.laser_x = CONFIG_laser_x;
+        rps.laser_y = CONFIG_laser_y;
+        rps.laser_z = CONFIG_laser_z;
         rps.motion_model = std::unique_ptr<robot_model::RobotModel>(mm);
 
         rps.initSubscriber = node_->create_subscription<amrl_msgs::msg::Localization2DMsg>(
@@ -196,18 +158,12 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
                 rps.motion_model->SetPose({angle, loc});
             });
         rps.odometryTwistPublisher = node_->create_publisher<nav_msgs::msg::Odometry>(pf + "/odom", 1);
-        rps.laserPublisher = node_->create_publisher<sensor_msgs::msg::LaserScan>(pf + CONFIG_laser_topic, 1);
-        rps.vizLaserPublisher = node_->create_publisher<sensor_msgs::msg::LaserScan>(pf + "/scan", 1);
+        rps.laserPublisher = node_->create_publisher<sensor_msgs::msg::LaserScan>(pf + config_.laser_topic, 1);
         rps.posMarkerPublisher = node_->create_publisher<visualization_msgs::msg::Marker>(
             pf + "/simulator_visualization", 6);
-        rps.truePosePublisher = node_->create_publisher<geometry_msgs::msg::PoseStamped>(
-            pf + "/simulator_true_pose", 1);
-
-        if (FLAGS_localize) {
-            rps.localizationPublisher = node_->create_publisher<amrl_msgs::msg::Localization2DMsg>(
-                pf + "/localization", 1);
-            localizationMsg.header.frame_id = "map";
-        }
+        rps.localizationPublisher = node_->create_publisher<amrl_msgs::msg::Localization2DMsg>(
+            pf + "/localization", 1);
+        localizationMsg.header.frame_id = "map";
     }
 
     mapLinesPublisher = node_->create_publisher<visualization_msgs::msg::Marker>("/simulator_visualization", 6);
@@ -221,12 +177,12 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
 
 // TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
-    for (const string& config_str : CONFIG_short_term_object_config_list) {
+    for (const string& config_str : config_.short_term_object_configs) {
         objects.push_back(
             std::unique_ptr<ShortTermObject>(new ShortTermObject(config_str)));
     }
 
-    for (const string& config_str : CONFIG_human_config_list) {
+    for (const string& config_str : config_.human_configs) {
         objects.push_back(
             std::unique_ptr<HumanObject>(new HumanObject({config_str})));
     }
@@ -312,10 +268,10 @@ void Simulator::initSimulatorVizMarkers() {
                   color);
 
     for (auto& rps : robot_pub_subs_) {
-        p.pose.position.z = 0.5 * CONFIG_car_height;
-        scale.x = CONFIG_car_length;
-        scale.y = CONFIG_car_width;
-        scale.z = CONFIG_car_height;
+        p.pose.position.z = 0.5 * rps.car_height;
+        scale.x = rps.car_length;
+        scale.y = rps.car_width;
+        scale.z = rps.car_height;
         color[0] = 94.0 / 255.0;
         color[1] = 156.0 / 255.0;
         color[2] = 255.0 / 255.0;
@@ -393,10 +349,10 @@ void Simulator::publishOdometry() {
         // TODO(jaholtz) visualization should not always be based on car
         // parameters
         rps.robotPosMarker.pose.position.x =
-            rps.cur_loc.translation.x() - cos(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
+            rps.cur_loc.translation.x() - cos(rps.cur_loc.angle) * rps.rear_axle_offset;
         rps.robotPosMarker.pose.position.y =
-            rps.cur_loc.translation.y() - sin(rps.cur_loc.angle) * CONFIG_rear_axle_offset;
-        rps.robotPosMarker.pose.position.z = 0.5 * CONFIG_car_height;
+            rps.cur_loc.translation.y() - sin(rps.cur_loc.angle) * rps.rear_axle_offset;
+        rps.robotPosMarker.pose.position.z = 0.5 * rps.car_height;
         rps.robotPosMarker.pose.orientation.x = robotQ.x();
         rps.robotPosMarker.pose.orientation.y = robotQ.y();
         rps.robotPosMarker.pose.orientation.z = robotQ.z();
@@ -408,8 +364,8 @@ void Simulator::publishLaser() {
     for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
         auto& rps = robot_pub_subs_[i];
         scanDataMsg.header.stamp = node_->now();
-        scanDataMsg.header.frame_id = IndexToPrefix(i) + CONFIG_laser_frame;
-        const Vector2f laserRobotLoc(CONFIG_laser_x, CONFIG_laser_y);
+        scanDataMsg.header.frame_id = IndexToPrefix(i) + config_.laser_frame;
+        const Vector2f laserRobotLoc(rps.laser_x, rps.laser_y);
         const Vector2f laserLoc =
             rps.cur_loc.translation + Rotation2Df(rps.cur_loc.angle) * laserRobotLoc;
 
@@ -428,22 +384,13 @@ void Simulator::publishLaser() {
                 r = 0;
                 continue;
             }
-            r = max<float>(0.0, r + CONFIG_laser_stdev * laser_noise_(rng_));
+            r = max<float>(0.0, r + config_.laser_stdev * laser_noise_(rng_));
         }
-
-        // TODO Avoid publishing laser twice.
-        // Currently publishes once for the visualizer and once for robot
-        // requirements.
         rps.laserPublisher->publish(scanDataMsg);
-        rps.vizLaserPublisher->publish(scanDataMsg);
     }
 }
 
 void Simulator::publishTransform() {
-    if (!CONFIG_publish_tfs) {
-        return;
-    }
-
     geometry_msgs::msg::TransformStamped transform;
     tf2::Quaternion q;
 
@@ -451,21 +398,22 @@ void Simulator::publishTransform() {
         auto& rps = robot_pub_subs_[i];
         const auto pf = IndexToPrefix(i);
 
-        if (CONFIG_publish_map_to_odom) {
-            transform.header.stamp = node_->now();
-            transform.header.frame_id = "/map";
-            transform.child_frame_id = pf + "/odom";
-            transform.transform.translation.x = 0.0;
-            transform.transform.translation.y = 0.0;
-            transform.transform.translation.z = 0.0;
-            q.setRPY(0.0, 0.0, 0.0);
-            transform.transform.rotation.x = q.x();
-            transform.transform.rotation.y = q.y();
-            transform.transform.rotation.z = q.z();
-            transform.transform.rotation.w = q.w();
-            br->sendTransform(transform);
-        }
+        // Publish standard ROS navigation TF tree: map → odom → base_footprint → base_link → base_laser
+        // map → odom (identity transform - map and odom frames are coincident in simulation)
+        transform.header.stamp = node_->now();
+        transform.header.frame_id = "/map";
+        transform.child_frame_id = pf + "/odom";
+        transform.transform.translation.x = 0.0;
+        transform.transform.translation.y = 0.0;
+        transform.transform.translation.z = 0.0;
+        q.setRPY(0.0, 0.0, 0.0);
+        transform.transform.rotation.x = q.x();
+        transform.transform.rotation.y = q.y();
+        transform.transform.rotation.z = q.z();
+        transform.transform.rotation.w = q.w();
+        br->sendTransform(transform);
 
+        // odom → base_footprint (robot pose in odom frame)
         transform.header.stamp = node_->now();
         transform.header.frame_id = pf + "/odom";
         transform.child_frame_id = pf + "/base_footprint";
@@ -479,27 +427,27 @@ void Simulator::publishTransform() {
         transform.transform.rotation.w = q.w();
         br->sendTransform(transform);
 
-        if (CONFIG_publish_foot_to_base) {
-            transform.header.stamp = node_->now();
-            transform.header.frame_id = pf + "/base_footprint";
-            transform.child_frame_id = pf + "/base_link";
-            transform.transform.translation.x = 0.0;
-            transform.transform.translation.y = 0.0;
-            transform.transform.translation.z = 0.0;
-            q.setRPY(0.0, 0.0, 0.0);
-            transform.transform.rotation.x = q.x();
-            transform.transform.rotation.y = q.y();
-            transform.transform.rotation.z = q.z();
-            transform.transform.rotation.w = q.w();
-            br->sendTransform(transform);
-        }
+        // base_footprint → base_link (identity - same frame in 2D simulation)
+        transform.header.stamp = node_->now();
+        transform.header.frame_id = pf + "/base_footprint";
+        transform.child_frame_id = pf + "/base_link";
+        transform.transform.translation.x = 0.0;
+        transform.transform.translation.y = 0.0;
+        transform.transform.translation.z = 0.0;
+        q.setRPY(0.0, 0.0, 0.0);
+        transform.transform.rotation.x = q.x();
+        transform.transform.rotation.y = q.y();
+        transform.transform.rotation.z = q.z();
+        transform.transform.rotation.w = q.w();
+        br->sendTransform(transform);
 
+        // base_link → base_laser (laser sensor position relative to robot)
         transform.header.stamp = node_->now();
         transform.header.frame_id = pf + "/base_link";
         transform.child_frame_id = pf + "/base_laser";
-        transform.transform.translation.x = CONFIG_laser_x;
-        transform.transform.translation.y = CONFIG_laser_y;
-        transform.transform.translation.z = CONFIG_laser_z;
+        transform.transform.translation.x = rps.laser_x;
+        transform.transform.translation.y = rps.laser_y;
+        transform.transform.translation.z = rps.laser_z;
         q.setRPY(0.0, 0.0, 0.0);
         transform.transform.rotation.x = q.x();
         transform.transform.rotation.y = q.y();
@@ -520,9 +468,9 @@ void Simulator::publishVisualizationMarkers() {
 void Simulator::update() {
     // Step the motion model forward one time step
     ++sim_step_count;
-    sim_time += CONFIG_DT;
+    sim_time += config_.dt;
     for (auto& rps : robot_pub_subs_) {
-        rps.motion_model->Step(CONFIG_DT);
+        rps.motion_model->Step(config_.dt);
         for (const Line2f& line : rps.motion_model->GetLines()) {
             map_.object_lines.push_back(line);
         }
@@ -532,21 +480,18 @@ void Simulator::update() {
         rps.vel = rps.motion_model->GetVel();
 
         // Publishing the ground truth pose
-        truePoseMsg.header.stamp = node_->now();
-        truePoseMsg.pose.position.x = rps.cur_loc.translation.x();
-        truePoseMsg.pose.position.y = rps.cur_loc.translation.y();
-        truePoseMsg.pose.position.z = 0;
-        truePoseMsg.pose.orientation.w = cos(0.5 * rps.cur_loc.angle);
-        truePoseMsg.pose.orientation.z = sin(0.5 * rps.cur_loc.angle);
-        truePoseMsg.pose.orientation.x = 0;
-        truePoseMsg.pose.orientation.y = 0;
-        rps.truePosePublisher->publish(truePoseMsg);
+        localizationMsg.header.stamp = node_->now();
+        localizationMsg.map = GetMapNameFromFilename(map_.file_name);
+        localizationMsg.pose.x = rps.cur_loc.translation.x();
+        localizationMsg.pose.y = rps.cur_loc.translation.y();
+        localizationMsg.pose.theta = rps.cur_loc.angle;
+        rps.localizationPublisher->publish(localizationMsg);
     }
 
     // Update all map objects and get their lines
     map_.object_lines.clear();
     for (size_t i = 0; i < objects.size(); i++) {
-        objects[i]->Step(CONFIG_DT);
+        objects[i]->Step(config_.dt);
         for (const Line2f& line : objects[i]->GetLines()) {
             map_.object_lines.push_back(line);
         }
@@ -580,8 +525,22 @@ void Simulator::Run() {
     publishLaser();
     publishVisualizationMarkers();
     publishTransform();
+    publishLocalization();
+}
 
-    if (FLAGS_localize) {
-        publishLocalization();
+// Extract map name from file path (e.g., "/path/to/GDC1.vectormap" -> "GDC1")
+std::string Simulator::GetMapNameFromFilename(std::string path) {
+    // Find the last '/' and remove extension
+    size_t last_slash = path.find_last_of('/');
+    if (last_slash != std::string::npos) {
+        path = path.substr(last_slash + 1);
     }
+
+    // Remove extension
+    size_t dot_pos = path.find_last_of('.');
+    if (dot_pos != std::string::npos) {
+        path = path.substr(0, dot_pos);
+    }
+
+    return path;
 }

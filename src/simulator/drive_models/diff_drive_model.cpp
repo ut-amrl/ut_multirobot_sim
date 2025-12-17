@@ -29,6 +29,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include "config_reader/config_reader.h"
 #include "simulator/drive_models/diff_drive_model.h"
 #include "shared/util/timer.h"
 
@@ -41,22 +42,32 @@ using std::vector;
 
 namespace diffdrive {
 
-CONFIG_BOOL(invert_x, "invert_linear_vel_cmds");
-CONFIG_BOOL(invert_z, "invert_angular_vel_cmds");
-CONFIG_FLOAT(linear_pos_accel_limit, "linear_pos_accel_limit");
-CONFIG_FLOAT(linear_neg_accel_limit, "linear_neg_accel_limit");
-CONFIG_FLOAT(angular_pos_accel_limit, "angular_pos_accel_limit");
-CONFIG_FLOAT(angular_neg_accel_limit, "angular_neg_accel_limit");
-CONFIG_FLOAT(max_angular_vel, "max_angular");
-CONFIG_FLOAT(max_linear_vel, "max_linear_vel");
-CONFIG_FLOAT(linear_odom_scale, "linear_odom_scale");
-CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
+DiffDriveModel::DiffDriveModel(const std::string& config_file) : RobotModel(),
+                                                                 angular_error_(0, 1) {
+    // Load config from file
+    config_reader::ConfigReader reader({config_file});
 
-// Drive topic standardized to "/cmd_vel" in simulator
+    CONFIG_BOOL(invert_linear_vel_cmds, "invert_linear_vel_cmds");
+    CONFIG_BOOL(invert_angular_vel_cmds, "invert_angular_vel_cmds");
+    CONFIG_FLOAT(linear_pos_accel_limit, "linear_pos_accel_limit");
+    CONFIG_FLOAT(linear_neg_accel_limit, "linear_neg_accel_limit");
+    CONFIG_FLOAT(angular_pos_accel_limit, "angular_pos_accel_limit");
+    CONFIG_FLOAT(angular_neg_accel_limit, "angular_neg_accel_limit");
+    CONFIG_FLOAT(max_angular_vel, "max_angular");
+    CONFIG_FLOAT(max_linear_vel, "max_linear_vel");
+    CONFIG_FLOAT(linear_odom_scale, "linear_odom_scale");
+    CONFIG_FLOAT(angular_odom_scale, "angular_odom_scale");
 
-DiffDriveModel::DiffDriveModel(const vector<string>& config_files) : RobotModel(),
-                                                                     angular_error_(0, 1),
-                                                                     config_reader_(config_files) {
+    invert_linear_vel_cmds_ = CONFIG_invert_linear_vel_cmds;
+    invert_angular_vel_cmds_ = CONFIG_invert_angular_vel_cmds;
+    linear_pos_accel_limit_ = CONFIG_linear_pos_accel_limit;
+    linear_neg_accel_limit_ = CONFIG_linear_neg_accel_limit;
+    angular_pos_accel_limit_ = CONFIG_angular_pos_accel_limit;
+    angular_neg_accel_limit_ = CONFIG_angular_neg_accel_limit;
+    max_angular_vel_ = CONFIG_max_angular_vel;
+    max_linear_vel_ = CONFIG_max_linear_vel;
+    linear_odom_scale_ = CONFIG_linear_odom_scale;
+    angular_odom_scale_ = CONFIG_angular_odom_scale;
     // ROS subscription initialized in Init()
     linear_vel_ = 0.0;
     angular_vel_ = 0.0;
@@ -77,34 +88,34 @@ void DiffDriveModel::Step(const double& dt) {
     // Update the linear velocity based on the linear acceleration limits
     if (linear_vel_ < target_linear_vel_) {
         // Must increase linear speed
-        if (CONFIG_linear_pos_accel_limit == 0.0 || target_linear_vel_ - linear_vel_ < CONFIG_linear_pos_accel_limit) {
+        if (linear_pos_accel_limit_ == 0.0 || target_linear_vel_ - linear_vel_ < linear_pos_accel_limit_) {
             linear_vel_ = target_linear_vel_;
         } else {
-            linear_vel_ += CONFIG_linear_pos_accel_limit;
+            linear_vel_ += linear_pos_accel_limit_;
         }
     } else if (linear_vel_ > target_linear_vel_) {
         // Must decrease linear speed
-        if (CONFIG_linear_neg_accel_limit == 0.0 || linear_vel_ - target_linear_vel_ < CONFIG_linear_neg_accel_limit) {
+        if (linear_neg_accel_limit_ == 0.0 || linear_vel_ - target_linear_vel_ < linear_neg_accel_limit_) {
             linear_vel_ = target_linear_vel_;
         } else {
-            linear_vel_ -= CONFIG_linear_neg_accel_limit;
+            linear_vel_ -= linear_neg_accel_limit_;
         }
     }
 
     // Update the angular velocity based on the angular acceleration limits
     if (angular_vel_ < target_angular_vel_) {
         // Must increase angular speed
-        if (CONFIG_angular_pos_accel_limit == 0.0 || target_angular_vel_ - angular_vel_ < CONFIG_angular_pos_accel_limit) {
+        if (angular_pos_accel_limit_ == 0.0 || target_angular_vel_ - angular_vel_ < angular_pos_accel_limit_) {
             angular_vel_ = target_angular_vel_;
         } else {
-            angular_vel_ += CONFIG_angular_pos_accel_limit;
+            angular_vel_ += angular_pos_accel_limit_;
         }
     } else if (angular_vel_ > target_angular_vel_) {
         // Must decrease angular speed
-        if (CONFIG_angular_neg_accel_limit == 0.0 || angular_vel_ - target_angular_vel_ < CONFIG_angular_neg_accel_limit) {
+        if (angular_neg_accel_limit_ == 0.0 || angular_vel_ - target_angular_vel_ < angular_neg_accel_limit_) {
             angular_vel_ = target_angular_vel_;
         } else {
-            angular_vel_ -= CONFIG_angular_neg_accel_limit;
+            angular_vel_ -= angular_neg_accel_limit_;
         }
     }
 
@@ -130,22 +141,22 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr ms
     double x = msg->linear.x, z = msg->angular.z;
 
     // invert motion, if needed
-    if (CONFIG_invert_x) {
+    if (invert_linear_vel_cmds_) {
         x *= -1;
     }
-    if (CONFIG_invert_z) {
+    if (invert_angular_vel_cmds_) {
         z *= -1;
     }
 
     // cut off velocities to their maximum
-    if (CONFIG_max_linear_vel != 0.0) {
-        if (fabs(x) > CONFIG_max_linear_vel) {
-            x = (x > 0) ? CONFIG_max_linear_vel : -CONFIG_max_linear_vel;
+    if (max_linear_vel_ != 0.0) {
+        if (fabs(x) > max_linear_vel_) {
+            x = (x > 0) ? max_linear_vel_ : -max_linear_vel_;
         }
     }
-    if (CONFIG_max_angular_vel != 0.0) {
-        if (fabs(z) > CONFIG_max_angular_vel) {
-            z = (z > 0) ? CONFIG_max_angular_vel : -CONFIG_max_angular_vel;
+    if (max_angular_vel_ != 0.0) {
+        if (fabs(z) > max_angular_vel_) {
+            z = (z > 0) ? max_angular_vel_ : -max_angular_vel_;
         }
     }
     target_linear_vel_ = x;

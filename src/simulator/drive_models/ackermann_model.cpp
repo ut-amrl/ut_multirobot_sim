@@ -1,4 +1,5 @@
 #include "simulator/drive_models/ackermann_model.h"
+#include "config_reader/config_reader.h"
 #include "shared/util/timer.h"
 #include "shared/math/math_util.h"
 #include <eigen3/Eigen/src/Geometry/Rotation2D.h>
@@ -15,15 +16,24 @@ using std::vector;
 
 namespace ackermann {
 
-CONFIG_FLOAT(min_turn_r, "ak_min_turn_radius");
-CONFIG_FLOAT(max_accel, "ak_max_accel");
-CONFIG_FLOAT(max_speed, "ak_max_speed");
-CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
-CONFIG_FLOAT(angular_error, "ak_angular_error_rate");
+AckermannModel::AckermannModel(const std::string& config_file) : RobotModel() {
+    // Load config from file
+    config_reader::ConfigReader reader({config_file});
 
-AckermannModel::AckermannModel(const vector<string>& config_files) : RobotModel(),
-                                                                     angular_error_(0, 1),
-                                                                     config_reader_(config_files) {
+    CONFIG_FLOAT(min_turn_radius, "ak_min_turn_radius");
+    CONFIG_FLOAT(max_accel, "ak_max_accel");
+    CONFIG_FLOAT(max_speed, "ak_max_speed");
+    CONFIG_FLOAT(angular_bias, "ak_angular_error_bias");
+    CONFIG_FLOAT(angular_error_rate, "ak_angular_error_rate");
+
+    min_turn_radius_ = CONFIG_min_turn_radius;
+    max_accel_ = CONFIG_max_accel;
+    max_speed_ = CONFIG_max_speed;
+    angular_bias_ = CONFIG_angular_bias;
+    angular_error_rate_ = CONFIG_angular_error_rate;
+
+    angular_error_ = std::normal_distribution<float>(angular_bias_, angular_error_rate_);
+
     // ROS subscription initialized in Init()
 }
 
@@ -51,7 +61,7 @@ void AckermannModel::Step(const double& dt) {
     static const float kEpsilonCurvature = 1.0 / 1E3;
     // Commanded speed bounded to motion limit.
     float desired_vel = last_cmd_.linear.x;
-    Bound(-CONFIG_max_speed, CONFIG_max_speed, &desired_vel);
+    Bound(-max_speed_, max_speed_, &desired_vel);
 
     // Convert Twist (velocities) to Ackermann parameters (velocity + curvature)
     // curvature = angular_velocity / linear_velocity (when linear_velocity != 0)
@@ -64,13 +74,13 @@ void AckermannModel::Step(const double& dt) {
     }
 
     // Maximum magnitude of curvature according to turning limits.
-    const float max_curvature = 1.0 / CONFIG_min_turn_r;
+    const float max_curvature = 1.0 / min_turn_radius_;
     // Commanded curvature bounded to turning limit.
     Bound(-max_curvature, max_curvature, &desired_curvature);
     // Indicates if the command is for linear motion.
     const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
 
-    const float dv_max = dt * CONFIG_max_accel;
+    const float dv_max = dt * max_accel_;
     float bounded_dv = desired_vel - vel;
     Bound(-dv_max, dv_max, &bounded_dv);
     // Set velocity
@@ -81,12 +91,12 @@ void AckermannModel::Step(const double& dt) {
     float dtheta = 0;
     if (linear_motion) {
         d_vector.x() = dist;
-        dtheta = dt * CONFIG_angular_bias;
+        dtheta = dt * angular_bias_;
     } else {
         const float r = 1.0 / desired_curvature;
         dtheta = dist * desired_curvature +
-                 angular_error_(rng_) * dt * CONFIG_angular_bias +
-                 angular_error_(rng_) * CONFIG_angular_error * fabs(dist * desired_curvature);
+                 angular_error_(rng_) * dt * angular_bias_ +
+                 angular_error_(rng_) * angular_error_rate_ * fabs(dist * desired_curvature);
         d_vector = {r * sin(dtheta), r * (1.0 - cos(dtheta))};
     }
     // Update the Pose
