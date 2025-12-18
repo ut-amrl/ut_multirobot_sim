@@ -19,11 +19,12 @@
 */
 //========================================================================
 
-#include <libgen.h>
 #include <math.h>
 #include <memory>
-#include <stdio.h>
 #include <random>
+#include <stdio.h>
+#include <fstream>
+#include <vector>
 
 #include "eigen3/Eigen/Dense"
 #include "eigen3/Eigen/Geometry"
@@ -113,7 +114,14 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
     odometryTwistMsg.header.frame_id = "odom";
     odometryTwistMsg.child_frame_id = "base_link";
 
-    map_.Load(config_.maps_dir + "/" + config_.map_name);
+    const std::string map_path =
+        config_.maps_dir + "/" + config_.map_name + "/" + config_.map_name + ".vectormap.txt";
+    if (!std::ifstream(map_path.c_str()).good()) {
+        std::cerr << "Failed to locate map file at \"" << map_path << "\". "
+                  << "Set maps_dir or map_name correctly." << std::endl;
+        return false;
+    }
+    map_.Load(map_path);
 
     // Create motion models for each robot
     for (size_t i = 0; i < config_.robots.size(); ++i) {
@@ -464,7 +472,7 @@ void Simulator::update() {
 
         // Publishing the ground truth pose
         localizationMsg.header.stamp = node_->now();
-        localizationMsg.map = GetMapNameFromFilename(map_.file_name);
+        localizationMsg.map = config_.map_name;
         localizationMsg.pose.x = rps.cur_loc.translation.x();
         localizationMsg.pose.y = rps.cur_loc.translation.y();
         localizationMsg.pose.theta = rps.cur_loc.angle;
@@ -482,27 +490,10 @@ void Simulator::update() {
     this->drawObjects();
 }
 
-string GetMapNameFromFilename(string path) {
-    const size_t last_slash = path.find_last_of('/');
-    if (last_slash != string::npos) {
-        path = path.substr(last_slash + 1);
-    }
-    static const string suffix = ".vectormap.txt";
-    const size_t suffix_pos = path.rfind(suffix);
-    if (suffix_pos != string::npos) {
-        return path.substr(0, suffix_pos);
-    }
-    const size_t dot_pos = path.find_last_of('.');
-    if (dot_pos != string::npos) {
-        return path.substr(0, dot_pos);
-    }
-    return path;
-}
-
 void Simulator::publishLocalization() {
     for (auto& rps : robot_pub_subs_) {
         localizationMsg.header.stamp = node_->now();
-        localizationMsg.map = GetMapNameFromFilename(map_.file_name);
+        localizationMsg.map = config_.map_name;
         localizationMsg.pose.x = rps.cur_loc.translation.x();
         localizationMsg.pose.y = rps.cur_loc.translation.y();
         localizationMsg.pose.theta = rps.cur_loc.angle;
@@ -517,21 +508,4 @@ void Simulator::Run() {
     publishVisualizationMarkers();
     publishTransform();
     publishLocalization();
-}
-
-// Extract map name from file path (e.g., "/path/to/GDC1.vectormap" -> "GDC1")
-std::string Simulator::GetMapNameFromFilename(std::string path) {
-    // Find the last '/' and remove extension
-    size_t last_slash = path.find_last_of('/');
-    if (last_slash != std::string::npos) {
-        path = path.substr(last_slash + 1);
-    }
-
-    // Remove extension
-    size_t dot_pos = path.find_last_of('.');
-    if (dot_pos != std::string::npos) {
-        path = path.substr(0, dot_pos);
-    }
-
-    return path;
 }

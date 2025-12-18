@@ -69,6 +69,14 @@ ros2 run ut_multirobot_sim simulator \
   --maps_dir /path/to/amrl_maps
 ```
 
+## Launch Files
+
+**Single Ideal Robot Drive stack** (`launch/single_ideal_robot_launch.py`):
+- Launches simulator + graph_navigation + webviz with proper topic remappings for `/robot0` namespace
+```bash
+ros2 launch ut_multirobot_sim single_ideal_robot_launch.py
+```
+
 ## Configuration
 
 **Config Structure:**

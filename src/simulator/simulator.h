@@ -71,7 +71,7 @@ struct RobotConfig {
 struct SimulatorConfig {
     // Environment: map and simulation settings
     float dt;         // Simulation timestep
-    string map_name;  // Map filename
+    string map_name;  // Map basename (e.g., "UT_Campus")
     string maps_dir;  // Directory containing map files
 
     // Sensors: laser scan settings
@@ -150,9 +150,6 @@ class Simulator {
     uint64_t sim_step_count;  // Current simulation step
     double sim_time;          // Current simulation time
 
-    // Configuration
-    std::string maps_dir_;
-
     // ROS2 node handle
     rclcpp::Node::SharedPtr node_;
 
@@ -176,9 +173,6 @@ class Simulator {
     // Simulation core
     void update();      // Step physics forward
     void loadObject();  // Load dynamic objects from config
-
-    // Utility functions
-    std::string GetMapNameFromFilename(std::string path);  // Extract map name from file path
 
    public:
     Simulator() = delete;
