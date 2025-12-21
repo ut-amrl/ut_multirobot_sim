@@ -11,6 +11,10 @@ def generate_launch_description():
     amrl_maps_dir = get_package_share_directory('amrl_maps')
     graph_navigation_dir = get_package_share_directory('graph_navigation')
     webviz_dir = get_package_share_directory('webviz')
+    launch_dir = os.path.join(ut_multirobot_sim_dir, 'launch', 'single_ideal_robot')
+    sim_config = os.path.join(launch_dir, 'sim_config.lua')
+    nav_config = os.path.join(launch_dir, 'navigation.lua')
+    webviz_config = os.path.join(launch_dir, 'webviz_config.lua')
 
     return LaunchDescription([
         # Simulator node
@@ -20,9 +24,9 @@ def generate_launch_description():
             name='simulator',
             cwd=ut_multirobot_sim_dir,
             arguments=[
-                '--',
-                '--config', 'config/environment/sim_config.lua',
-                '--maps_dir', amrl_maps_dir
+                '--config', sim_config,
+                '--maps_dir', amrl_maps_dir,
+                '--'  # stop gflags parsing before ROS args
             ],
             output='screen'
         ),
@@ -34,8 +38,8 @@ def generate_launch_description():
             name='navigation',
             cwd=graph_navigation_dir,
             arguments=[
-                '--',
-                '-robot_config', 'config/navigation.lua'
+                '-robot_config', nav_config,
+                '--'  # stop gflags parsing before ROS args
             ],
             output='screen'
         ),
@@ -47,8 +51,8 @@ def generate_launch_description():
             name='websocket',
             cwd=webviz_dir,
             arguments=[
-                '--',
-                '--config_file=config/webviz_config.lua'
+                f'--config_file={webviz_config}',
+                '--'  # stop gflags parsing before ROS args
             ],
             output='screen'
         )

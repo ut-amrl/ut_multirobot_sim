@@ -103,8 +103,8 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
 }
 
 DEFINE_string(config,
-              "config/environment/sim_config.lua",
-              "Path to simulator config (contains all settings).");
+              "",
+              "Path to simulator config (contains all settings) (required).");
 DEFINE_string(maps_dir,
               "",
               "Path to maps directory.");
@@ -126,6 +126,14 @@ void SimStep(const std_msgs::msg::Bool::SharedPtr msg) {
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, false);
+
+    // Check if config was provided
+    if (FLAGS_config.empty()) {
+        fprintf(stderr, "ERROR: --config flag is required. Please specify a simulator config file path.\n");
+        fprintf(stderr, "Usage: %s --config=<path_to_config_file> [other options]\n", argv[0]);
+        exit(1);
+    }
+
     printf("\nUT Multi-Robot Simulator\n\n");
 
     rclcpp::init(argc, argv);
