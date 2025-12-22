@@ -10,8 +10,11 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
--- Map name
-map_name = "UT_Campus"
+-- Map name (initial map before listening to current_map_topic)
+map_name = "EmptyMap"
+
+-- Current map topic for dynamic map switching
+current_map_topic = "/current_map"
 
 -- Simulation timestep
 delta_t = 0.025

@@ -32,6 +32,7 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
@@ -70,9 +71,10 @@ struct RobotConfig {
 // Configuration structure passed from simulator_main to Simulator
 struct SimulatorConfig {
     // Environment: map and simulation settings
-    float dt;         // Simulation timestep
-    string map_name;  // Map basename (e.g., "UT_Campus")
-    string maps_dir;  // Directory containing map files
+    float dt;                  // Simulation timestep
+    string map_name;           // Map basename (e.g., "UT_Campus")
+    string maps_dir;           // Directory containing map files
+    string current_map_topic;  // Topic for current map changes
 
     // Sensors: laser scan settings
     string laser_topic;                      // Laser scan topic name
@@ -121,6 +123,9 @@ class Simulator {
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr mapLinesPublisher;     // Map visualization
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr objectLinesPublisher;  // Dynamic objects
 
+    // Current map subscriber
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_map_subscriber_;  // Map change listener
+
     // All robot states and interfaces
     std::vector<RobotPubSub> robot_pub_subs_;
 
@@ -147,8 +152,9 @@ class Simulator {
     std::normal_distribution<float> laser_noise_;
 
     // Simulation state
-    uint64_t sim_step_count;  // Current simulation step
-    double sim_time;          // Current simulation time
+    uint64_t sim_step_count;        // Current simulation step
+    double sim_time;                // Current simulation time
+    std::string current_map_name_;  // Track current map to avoid redundant reloads
 
     // ROS2 node handle
     rclcpp::Node::SharedPtr node_;
@@ -169,6 +175,9 @@ class Simulator {
     void publishVisualizationMarkers();  // Publish RViz markers
     void publishTransform();             // Publish TF transforms
     void publishLocalization();          // Publish localization data
+
+    // Map management
+    void CurrentMapCallback(const std_msgs::msg::String::SharedPtr msg);  // Handle map changes
 
     // Simulation core
     void update();      // Step physics forward

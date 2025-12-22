@@ -27,6 +27,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/string.hpp>
 #include "ut_multirobot_sim/msg/simulator_state_msg.hpp"
 
 #include "shared/util/timer.h"
@@ -44,6 +45,7 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     // ENVIRONMENT: Map and simulation settings
     CONFIG_STRING(map_name, "map_name");
     CONFIG_FLOAT(dt, "delta_t");
+    CONFIG_STRING(current_map_topic, "current_map_topic");
 
     // SENSORS: Laser scan settings
     CONFIG_STRING(laser_topic, "laser_topic");
@@ -71,6 +73,7 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     config.maps_dir = maps_dir;
     config.map_name = CONFIG_map_name;
     config.dt = CONFIG_dt;
+    config.current_map_topic = CONFIG_current_map_topic;
 
     config.laser_topic = CONFIG_laser_topic;
     config.laser_frame = CONFIG_laser_frame;

@@ -8,6 +8,7 @@ websocket = {
   update_rate_hz = 40.0;           -- Visualization update rate (fps)
   message_timeout_sec = 2.0;       -- Maximum age before messages are dropped
   exit_check_interval_ms = 100;    -- Timer interval for exit signal checking
+  current_map_publish_rate_hz = 1.0; -- Rate to publish current map name
 };
 
 -- ROS Topics Configuration
@@ -25,6 +26,7 @@ ros_topics = {
   initial_pose_amrl = "/robot0/initialpose";   -- AMRL format
   nav_goal_amrl = "/set_nav_target";           -- AMRL format
   reset_nav_goals = "/reset_nav_goals";        -- Reset command
+  current_map = "/current_map";                -- Current active map name
 };
 
 -- ROS Node Configuration  

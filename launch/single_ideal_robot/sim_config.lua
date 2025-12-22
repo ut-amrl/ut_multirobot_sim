@@ -10,8 +10,11 @@ function DegToRad(d)
   return math.pi * d / 180
 end
 
--- Map name
-map_name = "UT_Campus"
+-- Map name (initial map before listening to current_map_topic)
+map_name = "EmptyMap"
+
+-- Current map topic for dynamic map switching
+current_map_topic = "/current_map"
 
 -- Simulation timestep
 delta_t = 0.050
@@ -20,13 +23,13 @@ delta_t = 0.050
 laser_topic = "scan"
 laser_frame = "/base_laser"
 
--- Laser scan settings (sensor specs, same for all robots)
-laser_noise_stddev = 0.01
-laser_angle_min = DegToRad(-135.0)
-laser_angle_max = DegToRad(135.0)
-laser_angle_increment = DegToRad(0.25)
-laser_min_range = 0.4
-laser_max_range = 100.0
+-- Laser scan settings approximating Livox Mid-360
+laser_noise_stddev = 0.02
+laser_angle_min = DegToRad(-180.0)
+laser_angle_max = DegToRad(180.0)
+laser_angle_increment = DegToRad(0.2)
+laser_min_range = 0.1
+laser_max_range = 70.0
 
 -- ROBOT FLEET
 -- Each index corresponds to one robot (robot_types[i], start_poses[i], robot_configs[i])

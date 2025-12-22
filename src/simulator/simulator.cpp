@@ -45,6 +45,7 @@
 #include "shared/ros/ros_helpers.h"
 #include "shared/util/timer.h"
 #include "amrl_msgs/msg/localization2_d_msg.hpp"
+#include <std_msgs/msg/string.hpp>
 #include "vector_map.h"
 
 using ackermann::AckermannModel;
@@ -68,7 +69,8 @@ using vector_map::VectorMap;
 Simulator::Simulator(const SimulatorConfig& config) : config_(config),
                                                       laser_noise_(0, 1),
                                                       sim_step_count(0),
-                                                      sim_time(0.0) {
+                                                      sim_time(0.0),
+                                                      current_map_name_(config.map_name) {
     if (config_.map_name == "") {
         std::cerr << "Failed to load map - map_name not specified in config" << std::endl;
         exit(1);
@@ -177,6 +179,11 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
     objectLinesPublisher = node_->create_publisher<visualization_msgs::msg::Marker>("/simulator_visualization", 6);
 
     br = std::make_shared<tf2_ros::TransformBroadcaster>(node_);
+
+    // Subscribe to current map topic for dynamic map switching
+    current_map_subscriber_ = node_->create_subscription<std_msgs::msg::String>(
+        config_.current_map_topic, 1,
+        std::bind(&Simulator::CurrentMapCallback, this, std::placeholders::_1));
 
     this->loadObject();
     return true;
@@ -472,7 +479,7 @@ void Simulator::update() {
 
         // Publishing the ground truth pose
         localizationMsg.header.stamp = node_->now();
-        localizationMsg.map = config_.map_name;
+        localizationMsg.map = current_map_name_;
         localizationMsg.pose.x = rps.cur_loc.translation.x();
         localizationMsg.pose.y = rps.cur_loc.translation.y();
         localizationMsg.pose.theta = rps.cur_loc.angle;
@@ -493,11 +500,31 @@ void Simulator::update() {
 void Simulator::publishLocalization() {
     for (auto& rps : robot_pub_subs_) {
         localizationMsg.header.stamp = node_->now();
-        localizationMsg.map = config_.map_name;
+        localizationMsg.map = current_map_name_;
         localizationMsg.pose.x = rps.cur_loc.translation.x();
         localizationMsg.pose.y = rps.cur_loc.translation.y();
         localizationMsg.pose.theta = rps.cur_loc.angle;
         rps.localizationPublisher->publish(localizationMsg);
+    }
+}
+
+void Simulator::CurrentMapCallback(const std_msgs::msg::String::SharedPtr msg) {
+    if (current_map_name_ != msg->data) {
+        RCLCPP_INFO(node_->get_logger(), "Simulator map changed to: %s", msg->data.c_str());
+        current_map_name_ = msg->data;
+
+        // Reload the map
+        const std::string map_path = config_.maps_dir + "/" + msg->data + "/" + msg->data + ".vectormap.txt";
+        if (!std::ifstream(map_path.c_str()).good()) {
+            RCLCPP_ERROR(node_->get_logger(), "Failed to locate map file at \"%s\"", map_path.c_str());
+            return;
+        }
+
+        map_.Load(map_path);
+
+        // Update visualization
+        drawMap();
+        RCLCPP_INFO(node_->get_logger(), "Successfully loaded new map: %s", msg->data.c_str());
     }
 }
 
