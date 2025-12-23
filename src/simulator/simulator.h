@@ -27,15 +27,12 @@
 
 #include "eigen3/Eigen/Dense"
 #include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/point32.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
-#include <visualization_msgs/msg/marker.hpp>
 
 #include "amrl_msgs/msg/localization2_d_msg.hpp"
 
@@ -112,16 +109,9 @@ class Simulator {
         rclcpp::Subscription<amrl_msgs::msg::Localization2DMsg>::SharedPtr initSubscriber;      // Initial pose reset
         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometryTwistPublisher;           // Odometry with covariances
         rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laserPublisher;               // Simulated laser scans
-        rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr posMarkerPublisher;       // Robot visualization
         rclcpp::Publisher<amrl_msgs::msg::Localization2DMsg>::SharedPtr localizationPublisher;  // Ground truth localization with map
         std::unique_ptr<robot_model::RobotModel> motion_model;                                  // Kinematics model
-
-        visualization_msgs::msg::Marker robotPosMarker;  // RViz marker for robot
     };
-
-    // Global visualization publishers
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr mapLinesPublisher;     // Map visualization
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr objectLinesPublisher;  // Dynamic objects
 
     // Current map subscriber
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr current_map_subscriber_;  // Map change listener
@@ -140,10 +130,6 @@ class Simulator {
     // Map and environment
     vector_map::VectorMap map_;  // Vector map for collision detection
 
-    // Visualization markers
-    visualization_msgs::msg::Marker lineListMarker;     // Map lines
-    visualization_msgs::msg::Marker objectLinesMarker;  // Object lines
-
     // Simulation timing
     static const float DT;  // Fixed timestep
 
@@ -160,21 +146,11 @@ class Simulator {
     rclcpp::Node::SharedPtr node_;
 
    private:
-    // Visualization helpers
-    void initVizMarker(visualization_msgs::msg::Marker& vizMarker, string ns, int id,  // Initialize RViz marker
-                       string type, geometry_msgs::msg::PoseStamped p,
-                       geometry_msgs::msg::Point32 scale, double duration,
-                       std::vector<float> color);
-    void initSimulatorVizMarkers();  // Setup visualization markers
-    void drawMap();                  // Draw map lines in RViz
-    void drawObjects();              // Draw dynamic objects in RViz
-
     // Publishing methods
-    void publishOdometry();              // Publish odometry for all robots
-    void publishLaser();                 // Publish laser scans for all robots
-    void publishVisualizationMarkers();  // Publish RViz markers
-    void publishTransform();             // Publish TF transforms
-    void publishLocalization();          // Publish localization data
+    void publishOdometry();      // Publish odometry for all robots
+    void publishLaser();         // Publish laser scans for all robots
+    void publishTransform();     // Publish TF transforms
+    void publishLocalization();  // Publish localization data
 
     // Map management
     void CurrentMapCallback(const std_msgs::msg::String::SharedPtr msg);  // Handle map changes

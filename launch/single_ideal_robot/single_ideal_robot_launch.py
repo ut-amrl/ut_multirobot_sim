@@ -39,6 +39,9 @@ def generate_launch_description():
             cwd=graph_navigation_dir,
             arguments=[
                 '-robot_config', nav_config,
+                '-clearance_weight', '-0.5',
+                '-freepath_weight', '-1.0',
+                '-subopt_tolerance', '1.5',
                 '--'  # stop gflags parsing before ROS args
             ],
             output='screen'

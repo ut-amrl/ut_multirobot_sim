@@ -29,7 +29,7 @@ Fixed-timestep ROS2 node that loads configs, builds robots, and steps physics.
 
 ### Core pieces
 - `simulator_main.cpp`: ROS2 entry; publishes `/sim_state`; subscribes to `/sim_start_stop`, `/sim_step`; launches `Simulator`.
-- `simulator.cpp`: loads map/config, creates motion models, loads humans/short-term objects, runs `Run()` each tick (update physics, publish odom/laser/viz/TF, optional localization).
+- `simulator.cpp`: loads map/config, creates motion models, loads humans/short-term objects, runs `Run()` each tick (update physics, publish odom/laser/TF/localization).
 - Drive models (`src/simulator/drive_models`):
    - Ackermann: `/{robot}/cmd_vel` (`geometry_msgs/Twist` → interprets as velocity + angular velocity, converts to curvature internally)
    - Diff drive: `/{robot}/cmd_vel` (`geometry_msgs/Twist` → direct velocity control)
@@ -47,8 +47,8 @@ MAIN LOOP (fixed dt):
   publish sim_state (step count, sim time)
   sleep to maintain dt
 ```
-Robot step: drive timeout → accel limits → integrate pose (+ optional noise) → publish odom/laser/TF/viz/true pose (and localization if enabled).  
-Dynamic objects: step toward goals → update collision lines → publish viz.  
+Robot step: drive timeout → accel limits → integrate pose (+ optional noise) → publish odom/laser/TF/localization.  
+Dynamic objects: step toward goals → update collision lines.  
 Laser: cast rays from laser pose vs map + objects → add noise → publish `LaserScan`.
 
 ## Build
@@ -104,7 +104,7 @@ ros2 launch ut_multirobot_sim single_ideal_robot_launch.py
 - `config/dynamic_objects/...`: optional humans and short-term obstacles.
 
 ## Topics and TF
-- Publishes per robot: `/odom`, `/scan` (or configured laser topic), `/localization` (ground truth with map), `/simulator_visualization`.
+- Publishes per robot: `/odom`, `/scan` (or configured laser topic), `/localization` (ground truth with map).
 - Subscribes per robot: `/{robot}/cmd_vel` (`geometry_msgs/Twist`), `/initialpose`.
 - Global: `/sim_state`, `/sim_start_stop`, `/sim_step`.
 - TF (per robot): `map → odom → base_link → base_laser`.
@@ -129,9 +129,6 @@ ros2 launch ut_multirobot_sim single_ideal_robot_launch.py
   }
   ```
 - Send commands to each namespace independently (e.g., `/robot1/cmd_vel`)
-
-## Visualization
-Use RViz2 (`ros2 run rviz2 rviz2`); fixed frame `map`; add `/simulator_visualization` and `/robot0/scan` (or your laser topic); view TF tree.
 
 ## Scenario generator (scripts/)
 - Define a crowd scenario in `scripts/example.yml` (or your own YAML) and run:
