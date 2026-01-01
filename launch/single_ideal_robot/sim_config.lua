@@ -21,7 +21,7 @@ delta_t = 0.050
 
 -- Laser scan ROS topics and frames
 laser_topic = "scan"
-laser_frame = "/base_laser"
+laser_frame = "base_laser"
 
 -- Laser scan settings approximating Livox Mid-360
 laser_noise_stddev = 0.02
@@ -36,7 +36,7 @@ laser_max_range = 70.0
 
 robot_types = { "IDEAL_DRIVE" }
 start_poses = { Vector3(0, 0, 0) }  -- x, y, theta_rad  
-robot_configs = { "launch/single_ideal_robot/ideal_config.lua" }
+robot_configs = { "config/robots/ideal_config.lua" }
 
 -- Example: Add more robots by extending all three arrays
 -- robot_types = { "DIFF_DRIVE", "ACKERMANN_DRIVE", "OMNIDIRECTIONAL_DRIVE" }

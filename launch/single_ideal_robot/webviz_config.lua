@@ -15,11 +15,11 @@ websocket = {
 ros_topics = {
   -- Input topics (subscribers)
   laser_scan = "/robot0/scan";
-  visualization = "/visualization"; 
+  visualization = "/visualization";
   visualization_local = "/visualization_local";
   localization = "/robot0/localization";
   nav_status = "/navigation_goal_status";
-  
+
   -- Output topics (publishers)
   initial_pose_std = "/initialpose";           -- Standard ROS nav stack
   nav_goal_std = "/move_base_simple/goal";     -- Standard ROS nav stack

@@ -21,7 +21,7 @@ delta_t = 0.025
 
 -- Laser scan ROS topics and frames
 laser_topic = "scan"
-laser_frame = "/base_laser"
+laser_frame = "base_laser"
 
 -- Laser scan settings (sensor specs, same for all robots)
 laser_noise_stddev = 0.01

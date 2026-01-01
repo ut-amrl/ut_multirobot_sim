@@ -192,11 +192,16 @@ void Simulator::loadObject() {
 }
 
 void Simulator::publishOdometry() {
-    for (auto& rps : robot_pub_subs_) {
+    for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
+        auto& rps = robot_pub_subs_[i];
+        const auto pf = IndexToPrefix(i);
+
         tf2::Quaternion robotQ;
         robotQ.setRPY(0, 0, rps.cur_loc.angle);
 
         odometryTwistMsg.header.stamp = node_->now();
+        odometryTwistMsg.header.frame_id = pf + "/odom";
+        odometryTwistMsg.child_frame_id = pf + "/base_link";
         odometryTwistMsg.pose.pose.position.x = rps.cur_loc.translation.x();
         odometryTwistMsg.pose.pose.position.y = rps.cur_loc.translation.y();
         odometryTwistMsg.pose.pose.position.z = 0.0;
@@ -236,7 +241,7 @@ void Simulator::publishLaser() {
     for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
         auto& rps = robot_pub_subs_[i];
         scanDataMsg.header.stamp = node_->now();
-        scanDataMsg.header.frame_id = IndexToPrefix(i) + config_.laser_frame;
+        scanDataMsg.header.frame_id = IndexToPrefix(i) + "/" + config_.laser_frame;
         const Vector2f laserRobotLoc(rps.laser_x, rps.laser_y);
         const Vector2f laserLoc =
             rps.cur_loc.translation + Rotation2Df(rps.cur_loc.angle) * laserRobotLoc;
@@ -273,7 +278,7 @@ void Simulator::publishTransform() {
         // Publish simplified TF tree: map → odom → base_link → base_laser
         // map → odom (identity transform - map and odom frames are coincident in simulation)
         transform.header.stamp = node_->now();
-        transform.header.frame_id = "/map";
+        transform.header.frame_id = "map";
         transform.child_frame_id = pf + "/odom";
         transform.transform.translation.x = 0.0;
         transform.transform.translation.y = 0.0;
