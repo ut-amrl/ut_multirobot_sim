@@ -1,13 +1,8 @@
 function Vector3(x, y, z)
-  return {x, y, z}  -- Return array-style table for Eigen::Vector3f
+  return {x, y, z}
 end
 
--- BWIBOT ROBOT CONFIGURATION
--- Robot-specific dimensions and drive model parameters
-
--- ROBOT GEOMETRY
-car_width = 0.34
-car_length = 0.34
+-- Laser pose relative to base_link
 laser_loc = Vector3(0.15, 0, 0.155)
 
 -- DIFFERENTIAL DRIVE MODEL PARAMETERS

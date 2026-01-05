@@ -1,8 +1,7 @@
-#include <random>
 #include <string>
-#include <rclcpp/rclcpp.hpp>
+
 #include <geometry_msgs/msg/twist.hpp>
-#include "config_reader/config_reader.h"
+
 #include "simulator/drive_models/robot_model.h"
 
 #ifndef SRC_SIMULATOR_OMNIDIRECTIONAL_MODEL_H_
@@ -20,6 +19,7 @@ class OmnidirectionalModel : public robot_model::RobotModel {
     float max_angle_accel_;  // Maximum angular acceleration [rad/s²]
     float max_speed_;        // Maximum linear velocity [m/s]
     float max_angle_vel_;    // Maximum angular velocity [rad/s]
+    bool apply_limits_;      // Enable/disable speed/accel limits
 
     // Standardized drive callback - interprets Twist as omnidirectional command
     void DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) override;

@@ -34,7 +34,7 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # Navigation node (uses sim time in simulation)
+        # Navigation node (remapped to avoid interfering with calibration)
         Node(
             package='graph_navigation',
             executable='navigation',
@@ -43,17 +43,15 @@ def generate_launch_description():
             parameters=[use_sim_time],
             arguments=[
                 '-robot_config', str(nav_config),
-                '-progress_reward', '1.0',
-                '-clearance_reward', '0.5',
-                '-fpl_reward', '0.7',
-                '-smoothness_reward', '0.5',
-                '-subopt_tolerance', '1.5',
                 '--'  # stop gflags parsing before ROS args
+            ],
+            remappings=[
+                ('/robot0/cmd_vel', '/robot0/cmd_vel_dump')  # Remap nav commands to different topic
             ],
             output='screen'
         ),
 
-        # WebViz node (uses sim time in simulation)
+        # WebViz node
         Node(
             package='webviz',
             executable='websocket',
@@ -64,6 +62,15 @@ def generate_launch_description():
                 f'--config_file={webviz_config}',
                 '--'  # stop gflags parsing before ROS args
             ],
+            output='screen'
+        ),
+
+        # Actuation latency calibration script (uses sim time)
+        Node(
+            package='ut_multirobot_sim',
+            executable='calibrate_actuation_latency.py',
+            name='calibrate_actuation_latency',
+            parameters=[use_sim_time],
             output='screen'
         )
     ])

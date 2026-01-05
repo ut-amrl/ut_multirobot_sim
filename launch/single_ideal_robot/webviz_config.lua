@@ -1,8 +1,3 @@
--- WebViz Configuration File
--- This file contains all configurable parameters for WebViz
--- Compatible with ROS1, ROS2, C++, and integrates with AMRL lab config-reader
-
--- WebSocket Server Configuration
 websocket = {
   port = 10272;                    -- WebSocket server port
   update_rate_hz = 40.0;           -- Visualization update rate (fps)
@@ -11,7 +6,6 @@ websocket = {
   current_map_publish_rate_hz = 1.0; -- Rate to publish current map name
 };
 
--- ROS Topics Configuration
 ros_topics = {
   -- Input topics (subscribers)
   laser_scan = "/robot0/scan";
@@ -29,7 +23,6 @@ ros_topics = {
   current_map = "/current_map";                -- Current active map name
 };
 
--- ROS Node Configuration  
 ros_node = {
   name = "websocket";              -- ROS node name
   queue_sizes = {

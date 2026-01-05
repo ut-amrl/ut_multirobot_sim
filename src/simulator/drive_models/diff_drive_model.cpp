@@ -21,24 +21,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <iostream>
-#include <sstream>
-#include <cmath>
-
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <geometry_msgs/msg/twist.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include "config_reader/config_reader.h"
 #include "simulator/drive_models/diff_drive_model.h"
-#include "shared/util/timer.h"
 
-using Eigen::Rotation2Df;
+#include <cmath>
+#include <cstdio>
+
+#include "config_reader/config_reader.h"
+#include "shared/math/geometry.h"
+
 using Eigen::Vector2f;
-using Eigen::Vector3f;
 using math_util::AngleMod;
-using std::string;
-using std::vector;
 
 namespace diffdrive {
 
@@ -73,9 +65,8 @@ DiffDriveModel::DiffDriveModel(const std::string& config_file) : RobotModel() {
 }
 
 void DiffDriveModel::Step(const double& dt) {
-    // TODO(joydeepb): Make the 0.1 either a flag or config.
-    static const double kMaxCommandAge = 0.1;
-    if (IsCommandTimedOut(node_->now().seconds(), kMaxCommandAge)) {
+    // Check command timeout (uses simulation time)
+    if (IsCommandTimedOut()) {
         target_angular_vel_ = 0;
         target_linear_vel_ = 0;
     }
@@ -133,12 +124,13 @@ void DiffDriveModel::Step(const double& dt) {
 
 void DiffDriveModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
     if (!std::isfinite(msg->linear.x) || !std::isfinite(msg->angular.z)) {
-        printf("Ignoring non-finite drive values: linear.x=%f, angular.z=%f\n",
-               msg->linear.x, msg->angular.z);
+        std::printf("Ignoring non-finite drive values: linear.x=%f, angular.z=%f\n",
+                    msg->linear.x, msg->angular.z);
         return;
     }
+    StoreCommandTimestamp(msg);
     last_cmd_ = *msg;
-    t_last_cmd_ = node_->now().seconds();
+    new_cmd_received_ = true;
 
     double x = msg->linear.x, z = msg->angular.z;
 
@@ -152,12 +144,12 @@ void DiffDriveModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr ms
 
     // cut off velocities to their maximum
     if (max_linear_vel_ != 0.0) {
-        if (fabs(x) > max_linear_vel_) {
+        if (std::fabs(x) > max_linear_vel_) {
             x = (x > 0) ? max_linear_vel_ : -max_linear_vel_;
         }
     }
     if (max_angular_vel_ != 0.0) {
-        if (fabs(z) > max_angular_vel_) {
+        if (std::fabs(z) > max_angular_vel_) {
             z = (z > 0) ? max_angular_vel_ : -max_angular_vel_;
         }
     }

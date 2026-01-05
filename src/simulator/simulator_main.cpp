@@ -19,8 +19,10 @@
  */
 //========================================================================
 
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <iostream>
+#include <string>
 
 #include "glog/logging.h"
 #include "gflags/gflags.h"
@@ -28,6 +30,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <rosgraph_msgs/msg/clock.hpp>
 #include "ut_multirobot_sim/msg/simulator_state_msg.hpp"
 
 #include "shared/util/timer.h"
@@ -45,6 +48,7 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     // ENVIRONMENT: Map and simulation settings
     CONFIG_STRING(map_name, "map_name");
     CONFIG_FLOAT(dt, "delta_t");
+    CONFIG_FLOAT(command_timeout, "command_timeout");
     CONFIG_STRING(current_map_topic, "current_map_topic");
 
     // SENSORS: Laser scan settings
@@ -73,6 +77,7 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     config.maps_dir = maps_dir;
     config.map_name = CONFIG_map_name;
     config.dt = CONFIG_dt;
+    config.command_timeout = CONFIG_command_timeout;
     config.current_map_topic = CONFIG_current_map_topic;
 
     config.laser_topic = CONFIG_laser_topic;
@@ -88,7 +93,7 @@ SimulatorConfig LoadSimulatorConfig(const std::string& env_config,
     if (CONFIG_robot_types.size() != CONFIG_start_poses.size() ||
         CONFIG_robot_types.size() != CONFIG_robot_configs.size()) {
         std::cerr << "ERROR: robot_types, start_poses, and robot_configs must have same length!" << std::endl;
-        exit(1);
+        std::exit(1);
     }
 
     for (size_t i = 0; i < CONFIG_robot_types.size(); ++i) {
@@ -134,7 +139,7 @@ int main(int argc, char** argv) {
     if (FLAGS_config.empty()) {
         fprintf(stderr, "ERROR: --config flag is required. Please specify a simulator config file path.\n");
         fprintf(stderr, "Usage: %s --config=<path_to_config_file> [other options]\n", argv[0]);
-        exit(1);
+        std::exit(1);
     }
 
     printf("\nUT Multi-Robot Simulator\n\n");
@@ -144,18 +149,19 @@ int main(int argc, char** argv) {
 
     auto sim_state_pub = node->create_publisher<SimulatorStateMsg>(
         "sim_state", 1);
+    auto clock_pub = node->create_publisher<rosgraph_msgs::msg::Clock>("/clock", 10);
     sim_state_.sim_state = SimulatorStateMsg::SIM_RUNNING;
 
     auto start_stop_sub = node->create_subscription<std_msgs::msg::Bool>(
-        "sim_start_stop", 1, SimStartStop);
+        "sim_start_stop", 10, SimStartStop);
 
     auto step_sub = node->create_subscription<std_msgs::msg::Bool>(
-        "sim_step", 1, SimStep);
+        "sim_step", 10, SimStep);
 
     if (FLAGS_maps_dir.empty()) {
         FLAGS_maps_dir = ament_index_cpp::get_package_share_directory("amrl_maps");
     }
-    CHECK_NE(FLAGS_maps_dir, string(""));
+    CHECK(!FLAGS_maps_dir.empty());
 
     // Load all configuration from single config file
     SimulatorConfig config = LoadSimulatorConfig(FLAGS_config, FLAGS_maps_dir);
@@ -191,6 +197,12 @@ int main(int argc, char** argv) {
         sim_state_.sim_step_count = simulator.GetSimStepCount();
         sim_state_.sim_time = simulator.GetSimTime();
         sim_state_pub->publish(sim_state_);
+
+        // Publish /clock with simulation time
+        rosgraph_msgs::msg::Clock clock_msg;
+        clock_msg.clock = rclcpp::Time(static_cast<int64_t>(sim_state_.sim_time * 1e9));
+        clock_pub->publish(clock_msg);
+
         rate.Sleep();
     }
 

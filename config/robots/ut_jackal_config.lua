@@ -1,21 +1,8 @@
-function Vector2(x, y)
-  return {x = x, y = y}
-end
-
 function Vector3(x, y, z)
-  return {x, y, z}  -- Return array-style table for Eigen::Vector3f
+  return {x, y, z}
 end
 
-function DegToRad(d)
-  return math.pi * d / 180
-end
-
--- UT JACKAL ROBOT CONFIGURATION
--- Robot-specific dimensions and drive model parameters
-
--- ROBOT GEOMETRY
-car_width = 0.43
-car_length = 0.50
+-- Laser pose relative to base_link
 laser_loc = Vector3(0.07, 0, 0.5)
 
 -- DIFFERENTIAL DRIVE MODEL PARAMETERS

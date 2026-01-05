@@ -71,7 +71,7 @@ ros2 run ut_multirobot_sim simulator \
 
 ## Launch Files
 
-**Single Ideal Robot Drive stack** (`launch/single_ideal_robot_launch.py`):
+Single omni-drive stack (`launch/single_ideal_robot_launch.py`):
 - Launches simulator + graph_navigation + webviz with proper topic remappings for `/robot0` namespace
 ```bash
 ros2 launch ut_multirobot_sim single_ideal_robot_launch.py
@@ -89,7 +89,7 @@ ros2 launch ut_multirobot_sim single_ideal_robot_launch.py
     - `robot_configs`: Config file path per robot
   - Dynamic objects: humans and obstacles
 - `config/robots/*.lua` - Per-robot configs containing:
-  - Robot geometry: dimensions (`car_width`, `car_length`), laser location (`laser_loc`)
+  - Laser location (`laser_loc`)
   - Drive model parameters: speeds, accelerations, odometry scales, etc.
 
 **Common Edits:**
@@ -113,7 +113,7 @@ ros2 launch ut_multirobot_sim single_ideal_robot_launch.py
 - Ground truth localization: `/robot{N}/localization` (`amrl_msgs/Localization2DMsg`) includes pose and map name.
 - Commands: all robots use `/robot{N}/cmd_vel` (`geometry_msgs/Twist`).
 - Odometry: `/robot{N}/odom` (`nav_msgs/Odometry`) with pose and twist covariance.
-- Geometry: Configurable via robot config: `car_width`, `car_length`, `laser_loc`.
+- Laser pose: Configurable via robot config: `laser_loc`.
 
 ## Multi-robot
 - In `sim_config.lua`, set parallel arrays (`robot_types`, `start_poses`, `robot_configs`) of equal length

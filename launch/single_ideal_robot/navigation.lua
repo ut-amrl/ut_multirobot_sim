@@ -3,28 +3,29 @@ function deg2rad(deg)
 end
 
 NavigationParameters = {
-  dt = 0.025;
+  dt = 0.04;
   linear_limits = {
     max_acceleration = 0.9;
     max_deceleration = 0.9;
-    max_speed = 1.0;
+    max_speed = 1.5;
   };
   angular_limits = {
-    max_acceleration = 0.7;
-    max_deceleration = 0.7;
-    max_speed = 1.0;
+    max_acceleration = 1.7;
+    max_deceleration = 1.7;
+    max_speed = 1.3;
   };
-  actuation_latency = 0.24;
-  obstacle_margin = 0.15;
+  actuation_latency = 0.07;
   num_options = 31;
-  robot_width = 0.7;
-  robot_length = 0.5;
+  robot_width = 0.71;
+  robot_length = 0.53;
   geometric_center_offset = {
     x = 0;
-    y = 0;
+    y = -0.09;
   };
-  max_free_path_length = 6.0;
-  max_clearance = 1.0;
+  obstacle_margin = 0.15;
+  max_rollout_length = 6.0;
+  max_lookahead_fpl = 6.0;
+  clearance_band = 0.6;
   lidar_fov_half_angle = deg2rad(75);
   can_traverse_stairs = false;
   target_dist_tolerance = 0.1;
@@ -33,15 +34,14 @@ NavigationParameters = {
   target_angle_tolerance = deg2rad(5);
   target_omega_tolerance = 0.15;
   evaluator_type = "linear";
-  carrot_dist = 10.5;
+  carrot_dist = 3.5;
   motion_primitives_mode = "omni";
-  do_ang_toc = false;
+  do_ang_toc = true;
 };
 
 ROSTopics = {
   laser_topics = {
     "/robot0/scan",
-    -- "/kinect_laserscan",
   };
   odom_topic = "/robot0/odom";
   localization_topic = "/robot0/localization";

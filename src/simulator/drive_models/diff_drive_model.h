@@ -1,10 +1,7 @@
-#include <math.h>
-#include <random>
 #include <string>
 
-#include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include "config_reader/config_reader.h"
+
 #include "simulator/drive_models/robot_model.h"
 
 #ifndef SRC_SIMULATOR_DIFFDRIVE_MODEL_H_

@@ -1,18 +1,15 @@
 #include "simulator/drive_models/ackermann_model.h"
-#include "config_reader/config_reader.h"
-#include "shared/util/timer.h"
-#include "shared/math/math_util.h"
-#include <eigen3/Eigen/src/Geometry/Rotation2D.h>
 
-using Eigen::Rotation2Df;
+#include <cmath>
+#include <cstdio>
+
+#include "eigen3/Eigen/Geometry"
+#include "config_reader/config_reader.h"
+#include "shared/math/math_util.h"
+
 using Eigen::Vector2f;
-using geometry_msgs::msg::Twist;
-using math_util::AngleDiff;
 using math_util::AngleMod;
 using math_util::Bound;
-using std::isfinite;
-using std::string;
-using std::vector;
 
 namespace ackermann {
 
@@ -32,26 +29,25 @@ AckermannModel::AckermannModel(const std::string& config_file) : RobotModel() {
     turning_error_bias_ = CONFIG_turning_error_bias;
     turning_error_rate_ = CONFIG_turning_error_rate;
 
-    turning_error_ = std::normal_distribution<float>(turning_error_bias_, turning_error_rate_);
+    turning_error_ = std::normal_distribution<float>(0.0f, turning_error_rate_);
 
     // ROS subscription initialized in Init()
 }
 
 void AckermannModel::DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    if (!isfinite(msg->linear.x) || !isfinite(msg->angular.z)) {
-        printf("Ignoring non-finite drive values: linear.x=%f, angular.z=%f\n",
-               msg->linear.x, msg->angular.z);
+    if (!std::isfinite(msg->linear.x) || !std::isfinite(msg->angular.z)) {
+        std::printf("Ignoring non-finite drive values: linear.x=%f, angular.z=%f\n",
+                    msg->linear.x, msg->angular.z);
         return;
     }
+    StoreCommandTimestamp(msg);
     last_cmd_ = *msg;
-    t_last_cmd_ = node_->now().seconds();
+    new_cmd_received_ = true;
 }
 
 void AckermannModel::Step(const double& dt) {
-    // TODO(jaholtz) For faster than real time simulation we may need
-    // a wallclock invariant method for this.
-    static const double kMaxCommandAge = 0.1;
-    if (IsCommandTimedOut(node_->now().seconds(), kMaxCommandAge)) {
+    // Check command timeout (uses simulation time)
+    if (IsCommandTimedOut()) {
         last_cmd_.linear.x = 0;
         last_cmd_.angular.z = 0;
     }
@@ -66,7 +62,7 @@ void AckermannModel::Step(const double& dt) {
     // Convert Twist (velocities) to Ackermann parameters (velocity + curvature)
     // curvature = angular_velocity / linear_velocity (when linear_velocity != 0)
     float desired_curvature = 0.0f;
-    if (fabs(last_cmd_.linear.x) < 1e-6) {
+    if (std::fabs(last_cmd_.linear.x) < 1e-6f) {
         // If velocity is near zero, set curvature to zero (stop turning)
         desired_curvature = 0.0f;
     } else {
@@ -78,7 +74,7 @@ void AckermannModel::Step(const double& dt) {
     // Commanded curvature bounded to turning limit.
     Bound(-max_curvature, max_curvature, &desired_curvature);
     // Indicates if the command is for linear motion.
-    const bool linear_motion = (fabs(desired_curvature) < kEpsilonCurvature);
+    const bool linear_motion = (std::fabs(desired_curvature) < kEpsilonCurvature);
 
     const float dv_max = dt * max_accel_;
     float bounded_dv = desired_vel - vel;
@@ -91,15 +87,15 @@ void AckermannModel::Step(const double& dt) {
     float dtheta = 0;
     if (linear_motion) {
         d_vector.x() = dist;
-        dtheta = turning_error_(rng_) * dt * turning_error_bias_;
+        dtheta = turning_error_bias_ * dt + turning_error_(rng_) * dt;
     } else {
         const float r = 1.0 / desired_curvature;
         const float base_dtheta = dist * desired_curvature;
         const float error_sample = turning_error_(rng_);
         dtheta = base_dtheta +
-                 error_sample * dt * turning_error_bias_ +
-                 error_sample * turning_error_rate_ * fabs(base_dtheta);
-        d_vector = {r * sin(dtheta), r * (1.0 - cos(dtheta))};
+                 turning_error_bias_ * dt +
+                 error_sample * std::fabs(base_dtheta);
+        d_vector = {r * std::sin(dtheta), r * (1.0f - std::cos(dtheta))};
     }
     // Track angular velocity for downstream odometry publication
     vel_.angle = (dt > 0.0) ? dtheta / dt : 0.0f;

@@ -19,74 +19,62 @@
 */
 //========================================================================
 
-#include <stdio.h>
-#include <iostream>
 #include <memory>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "eigen3/Eigen/Dense"
-#include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_ros/transform_broadcaster.h>
-#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include "amrl_msgs/msg/localization2_d_msg.hpp"
-
-#include <string>
-#include <vector>
-#include <memory>
-
-#include "eigen3/Eigen/Dense"
 #include "shared/math/geometry.h"
-#include "shared/util/timer.h"
-#include "simulator/vector_map.h"
-
+#include "simulator/drive_models/robot_model.h"
 #include "simulator/entities/entity_base.h"
 #include "simulator/entities/human_object.h"
-#include "simulator/drive_models/robot_model.h"
 #include "simulator/entities/short_term_object.h"
+#include "simulator/vector_map.h"
 
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
-
-using namespace std;
 using pose_2d::Pose2Df;
 
 // Drive models load their configurations directly from config files
 
 // Individual robot configuration
 struct RobotConfig {
-    string type;                 // Robot type (DIFF_DRIVE, ACKERMANN_DRIVE, OMNIDIRECTIONAL_DRIVE)
+    std::string type;            // Robot type (DIFF_DRIVE, ACKERMANN_DRIVE, OMNIDIRECTIONAL_DRIVE)
     Eigen::Vector3f start_pose;  // Initial pose (x, y, theta)
-    string config_file;          // Path to robot-specific config file
+    std::string config_file;     // Path to robot-specific config file
 };
 
 // Configuration structure passed from simulator_main to Simulator
 struct SimulatorConfig {
     // Environment: map and simulation settings
-    float dt;                  // Simulation timestep
-    string map_name;           // Map basename (e.g., "UT_Campus")
-    string maps_dir;           // Directory containing map files
-    string current_map_topic;  // Topic for current map changes
+    float dt;                     // Simulation timestep
+    float command_timeout;        // Command timeout before robot stops [seconds]
+    std::string map_name;         // Map basename (e.g., "UT_Campus")
+    std::string maps_dir;         // Directory containing map files
+    std::string current_map_topic;  // Topic for current map changes
 
     // Sensors: laser scan settings
-    string laser_topic;                      // Laser scan topic name
-    string laser_frame;                      // Laser frame ID
+    std::string laser_topic;                  // Laser scan topic name
+    std::string laser_frame;                  // Laser frame ID
     float laser_angle_min, laser_angle_max;  // Laser angular range
     float laser_angle_increment;             // Laser angular resolution
     float laser_min_range, laser_max_range;  // Laser distance range
     float laser_stdev;                       // Laser noise std deviation
 
     // Robot fleet: list of robots to simulate
-    vector<RobotConfig> robots;  // Each robot with type, pose, and config file
+    std::vector<RobotConfig> robots;  // Each robot with type, pose, and config file
 
     // Dynamic objects: humans and short-term obstacles
-    vector<string> short_term_object_configs;  // Short-term object config files
-    vector<string> human_configs;              // Human config files
+    std::vector<std::string> short_term_object_configs;  // Short-term object config files
+    std::vector<std::string> human_configs;              // Human config files
 };
 
 class Simulator {
@@ -101,9 +89,8 @@ class Simulator {
         Pose2Df vel;      // Current velocity (linear + angular)
         Pose2Df cur_loc;  // Current pose (x,y,theta)
 
-        // Robot geometry (loaded from robot's config file)
-        float car_length, car_width;      // Robot dimensions
-        float laser_x, laser_y, laser_z;  // Laser position relative to base_link
+        // Laser position relative to base_link
+        float laser_x, laser_y, laser_z;
 
         // ROS interfaces
         rclcpp::Subscription<amrl_msgs::msg::Localization2DMsg>::SharedPtr initSubscriber;      // Initial pose reset
@@ -129,9 +116,6 @@ class Simulator {
 
     // Map and environment
     vector_map::VectorMap map_;  // Vector map for collision detection
-
-    // Simulation timing
-    static const float DT;  // Fixed timestep
 
     // Random number generation for sensor noise
     std::default_random_engine rng_;
@@ -162,11 +146,17 @@ class Simulator {
    public:
     Simulator() = delete;
     explicit Simulator(const SimulatorConfig& config);           // Constructor with loaded config
-    ~Simulator();                                                // Destructor
+    ~Simulator() = default;                                      // Destructor
     bool init(rclcpp::Node::SharedPtr node);                     // Initialize ROS interfaces
     void Run();                                                  // Main simulation loop
     double GetSimTime() const { return sim_time; }               // Get current simulation time
     uint64_t GetSimStepCount() const { return sim_step_count; }  // Get simulation step count
     double GetStepSize() const { return config_.dt; }            // Get simulation timestep
+
+   private:
+    // Convert sim_time to ROS Time for message timestamps
+    rclcpp::Time GetSimTimeROS() const {
+        return rclcpp::Time(static_cast<int64_t>(sim_time * 1e9));
+    }
 };
 #endif  // SIMULATOR_H

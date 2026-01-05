@@ -20,8 +20,11 @@
 */
 //========================================================================
 
-#include <rclcpp/rclcpp.hpp>
+#include <string>
+
 #include <geometry_msgs/msg/twist.hpp>
+#include <rclcpp/rclcpp.hpp>
+
 #include "simulator/entities/entity_base.h"
 
 #ifndef SRC_SIMULATOR_ROBOT_MODEL_H_
@@ -32,25 +35,38 @@ class RobotModel : public EntityBase {
    protected:
     Pose2Df vel_;
     geometry_msgs::msg::Twist last_cmd_;
-    double t_last_cmd_;
+    double sim_time_at_last_cmd_;  // Simulation time when last command was received
+    double current_sim_time_;      // Current simulation time (set by simulator)
+    bool new_cmd_received_;        // Flag to track new command arrival
+    double command_timeout;        // Command timeout duration [seconds]
+    rclcpp::Time cmd_timestamp_;   // Timestamp from command message header
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr drive_subscriber_;
     rclcpp::Node::SharedPtr node_;
 
     // Standardized drive callback for all models
     virtual void DriveCallback(const geometry_msgs::msg::Twist::SharedPtr msg) = 0;
 
+    // Store command timestamp for external calibration
+    void StoreCommandTimestamp(const geometry_msgs::msg::Twist::SharedPtr msg);
+
+    // Check if drive command has timed out (using simulation time)
+    bool IsCommandTimedOut();
+
    public:
     RobotModel();
     virtual ~RobotModel() = default;
 
     // Initialize with ROS node and topic
-    virtual bool Init(rclcpp::Node::SharedPtr node, const std::string& topic_prefix, const std::string& drive_topic);
+    virtual bool Init(rclcpp::Node::SharedPtr node, const std::string& topic_prefix, const std::string& drive_topic, double command_timeout = 0.1);
 
     virtual void SetVel(const pose_2d::Pose2Df& vel);
     virtual pose_2d::Pose2Df GetVel();
 
-    // Check if drive command has timed out
-    bool IsCommandTimedOut(double current_time, double max_age = 0.1) const;
+    // Set current simulation time (called by simulator before Step)
+    void SetCurrentSimTime(double sim_time) { current_sim_time_ = sim_time; }
+
+    // Get the timestamp of the last command for external calibration
+    rclcpp::Time GetLastCommandTimestamp() const { return cmd_timestamp_; }
 };
 }  // namespace robot_model
 
