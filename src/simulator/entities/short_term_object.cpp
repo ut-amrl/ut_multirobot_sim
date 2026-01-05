@@ -23,50 +23,48 @@
 #include "simulator/entities/short_term_object.h"
 
 ShortTermObject::ShortTermObject() {
-  // angle, (x, y)
-  pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
+    // angle, (x, y)
+    pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
 
-  // Example of a simple shape
-  const float r = 0.5;
-  const float eps = 0.001;
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
-  pose_lines_ = template_lines_;
+    // Example of a simple shape
+    const float r = 0.5;
+    const float eps = 0.001;
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
+    pose_lines_ = template_lines_;
 }
 
 ShortTermObject::ShortTermObject(const std::string& config_file) {
-  pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
-  // TODO(yifeng) replace manually defined in the code with loading initial locations
+    pose_ = Pose2Df(0., Eigen::Vector2f(0., 0.));
+    // TODO(yifeng) replace manually defined in the code with loading initial locations
 
-  potential_initial_locs.push_back(Pose2Df(0., Eigen::Vector2f(-15., 8.6)));
-  potential_initial_locs.push_back(Pose2Df(0., Eigen::Vector2f(-24., 8.6)));
+    potential_initial_locs.push_back(Pose2Df(0., Eigen::Vector2f(-15., 8.6)));
+    potential_initial_locs.push_back(Pose2Df(0., Eigen::Vector2f(-24., 8.6)));
 
-  if (potential_initial_locs.size() > 0) {
-    srand(time(0));
-    const int rand_loc_idx = rand() % potential_initial_locs.size();
-    pose_ = potential_initial_locs[rand_loc_idx];
-  }
+    if (potential_initial_locs.size() > 0) {
+        srand(time(0));
+        const int rand_loc_idx = rand() % potential_initial_locs.size();
+        pose_ = potential_initial_locs[rand_loc_idx];
+    }
 
-  // TODO(yifeng): Load the shape from a config file, replace the example in the future
-  const double r = 0.5;
-  const double eps = 0.001;
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
-  template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
+    // TODO(yifeng): Load the shape from a config file, replace the example in the future
+    const double r = 0.5;
+    const double eps = 0.001;
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r - eps, r), Eigen::Vector2f(-r + eps, r)));
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r, r - eps), Eigen::Vector2f(-r, -r + eps)));
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(-r + eps, -r), Eigen::Vector2f(r - eps, -r)));
+    template_lines_.push_back(geometry::Line2f(Eigen::Vector2f(r, -r + eps), Eigen::Vector2f(r, r - eps)));
 
-  Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
-  Eigen::Vector2f T = pose_.translation;
-  pose_lines_.resize(template_lines_.size());
-  for (size_t i=0; i < template_lines_.size(); i++) {
-    pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
-    pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
-  }  
+    Eigen::Rotation2Df R(math_util::AngleMod(pose_.angle));
+    Eigen::Vector2f T = pose_.translation;
+    pose_lines_.resize(template_lines_.size());
+    for (size_t i = 0; i < template_lines_.size(); i++) {
+        pose_lines_[i].p0 = R * (template_lines_[i].p0) + T;
+        pose_lines_[i].p1 = R * (template_lines_[i].p1) + T;
+    }
 }
-
-
 
 ShortTermObject::~ShortTermObject() {
 }

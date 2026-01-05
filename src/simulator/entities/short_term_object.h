@@ -31,16 +31,16 @@
 
 using pose_2d::Pose2Df;
 
-class ShortTermObject: public EntityBase{
- protected:
-  std::vector<Pose2Df> potential_initial_locs;
- public:
-  // Initialize a default object, probably a simple cylinder?
-  ShortTermObject();
-  // Intialize a default object reading from a file
-  explicit ShortTermObject(const std::string& config_file);
-  ~ShortTermObject();
-};
+class ShortTermObject : public EntityBase {
+   protected:
+    std::vector<Pose2Df> potential_initial_locs;
 
+   public:
+    // Initialize a default object, probably a simple cylinder?
+    ShortTermObject();
+    // Intialize a default object reading from a file
+    explicit ShortTermObject(const std::string& config_file);
+    ~ShortTermObject();
+};
 
 #endif  // SRC_SIMULATOR_SHORT_TERM_OBJECT_H_

@@ -31,14 +31,15 @@
 
 using pose_2d::Pose2Df;
 
-class EntityBase{
- protected:
+class EntityBase {
+   protected:
     Pose2Df pose_;
     // template lines always assuming at pose (0., 0., 0.)
     std::vector<geometry::Line2f> template_lines_;
     // actual line position given current pose pose_
     std::vector<geometry::Line2f> pose_lines_;
- public:
+
+   public:
     EntityBase();
     virtual ~EntityBase() = default;
     // simulate a step for the object

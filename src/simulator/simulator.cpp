@@ -83,7 +83,6 @@ std::string IndexToPrefix(const size_t index) {
 }
 
 bool Simulator::init(rclcpp::Node::SharedPtr node) {
-    // TODO(jaholtz) Too much hard coding, move to config
     node_ = node;
 
     scanDataMsg.header.frame_id = config_.laser_frame;
@@ -159,7 +158,6 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
     return true;
 }
 
-// TODO(yifeng): Change this into a general way
 void Simulator::loadObject() {
     for (const std::string& config_str : config_.short_term_object_configs) {
         objects.push_back(std::make_unique<ShortTermObject>(config_str));

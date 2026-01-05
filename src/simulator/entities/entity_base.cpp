@@ -29,17 +29,17 @@ void EntityBase::Step(const double& dt) {
 }
 
 void EntityBase::SetPose(const Pose2Df& pose) {
-  pose_ = pose;
+    pose_ = pose;
 }
 
 Pose2Df EntityBase::GetPose() {
-  return pose_;
+    return pose_;
 }
 
 std::vector<geometry::Line2f> EntityBase::GetTemplateLines() {
-  return template_lines_;
+    return template_lines_;
 }
 
 std::vector<geometry::Line2f> EntityBase::GetLines() {
-  return pose_lines_;
+    return pose_lines_;
 }
