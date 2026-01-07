@@ -45,7 +45,7 @@ def generate_launch_description():
                 '-robot_config', str(nav_config),
                 '-progress_reward', '1.0',
                 '-clearance_reward', '0.5',
-                '-fpl_reward', '0.7',
+                '-fpl_reward', '2.0',
                 '-smoothness_reward', '0.5',
                 '-subopt_tolerance', '1.5',
                 '--'  # stop gflags parsing before ROS args

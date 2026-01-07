@@ -81,3 +81,18 @@ echo "Starting test 4..."
 publish_initial_pose -5.556819915771484 22.864652633666992 -1.5120404958724976
 wait_seconds 5
 publish_goal -4.624310493469238 19.606487274169922 0.0 0.0 0.0 -0.7496781783634315 0.6618025603499029
+
+# Ask user if they want to proceed to test 5
+echo "Test 4 completed. Proceed to test 5? (y/n)"
+read -r response
+if [[ ! "$response" =~ ^[Yy]$ ]]; then
+  echo "Exiting after test 4."
+  exit 0
+fi
+
+echo "Starting test 5..."
+
+# Test 5
+publish_initial_pose -13.826395034790039 19.141769409179688 0.34877100586891174
+wait_seconds 5
+publish_goal -10.878838539123535 22.14983367919922 0.0 0.0 0.0 -0.5547002116846947 0.832050284031533
