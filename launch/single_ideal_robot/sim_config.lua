@@ -17,11 +17,11 @@ command_timeout = 0.4
 -- Laser
 laser_topic = "scan"
 laser_frame = "base_laser"
-laser_noise_stddev = 0.02
-laser_angle_min = DegToRad(-180.0)
-laser_angle_max = DegToRad(180.0)
+laser_noise_stddev = 0.04
+laser_angle_min = DegToRad(-135.0)
+laser_angle_max = DegToRad(135.0)
 laser_angle_increment = DegToRad(0.2)
-laser_min_range = 0.1
+laser_min_range = 0.3
 laser_max_range = 70.0
 
 -- Robots

@@ -43,10 +43,12 @@ def generate_launch_description():
             parameters=[use_sim_time],
             arguments=[
                 '-robot_config', str(nav_config),
+                '-k_escape_length', '0.0',
+                '-min_ang_toc_sample_length', '1.0',
                 '-progress_reward', '1.0',
                 '-clearance_reward', '0.5',
                 '-fpl_reward', '2.0',
-                '-smoothness_reward', '0.5',
+                '-smoothness_reward', '1.5',
                 '-subopt_tolerance', '1.5',
                 '--'  # stop gflags parsing before ROS args
             ],
