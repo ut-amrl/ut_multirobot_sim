@@ -16,13 +16,13 @@ NavigationParameters = {
   };
   actuation_latency = 0.07;
   num_options = 31;
-  robot_width = 0.71;
+  robot_width = 0.66;
   robot_length = 0.53;
   geometric_center_offset = {
     x = 0;
     y = -0.09;
   };
-  obstacle_margin = 0.15;
+  obstacle_margin = 0.12;
   max_rollout_length = 6.0;
   max_lookahead_fpl = 6.0;
   clearance_band = 0.6;
@@ -40,9 +40,9 @@ NavigationParameters = {
   max_plan_deviation = 0.5;
   laser_height = 0.324;
   stuck_meta_control = {
-    override_obstacle_margin = 0.03;
+    override_obstacle_margin = 0.06;
     stuck_timeout_sec = 5.0;
-    improve_eps = 0.02;
+    improve_eps = 0.2;
   };
 };
 

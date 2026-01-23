@@ -40,9 +40,18 @@ void TrimOcclusion(const Eigen::Vector2f& loc,
                   std::vector<geometry::Line2f>* scene_lines_ptr);
 
 struct VectorMap {
-  VectorMap() {}
+  VectorMap() : grid_cell_size_(1.0f),
+                grid_min_(0.0f, 0.0f),
+                grid_cols_(0),
+                grid_rows_(0),
+                grid_valid_(false) {}
   explicit VectorMap(const std::vector<geometry::Line2f>& lines) :
-      lines(lines) {}
+      lines(lines),
+      grid_cell_size_(1.0f),
+      grid_min_(0.0f, 0.0f),
+      grid_cols_(0),
+      grid_rows_(0),
+      grid_valid_(false) {}
   explicit VectorMap(const std::string& file) {
     Load(file);
   }
@@ -69,10 +78,11 @@ struct VectorMap {
                         float angle_min,
                         float angle_max,
                         int num_rays,
-                        std::vector<float>* scan);
+                        std::vector<float>* scan) const;
   void Cleanup();
 
   void Load(const std::string& file);
+  void BuildSpatialIndex();
 
   bool Intersects(const Eigen::Vector2f& v0, const Eigen::Vector2f& v1) const ;
   std::vector<geometry::Line2f> lines;
@@ -80,6 +90,14 @@ struct VectorMap {
   // for all kinds of obstacles
   std::vector<geometry::Line2f> object_lines;
   std::string file_name;
+
+  // Spatial index for static lines.
+  float grid_cell_size_;
+  Eigen::Vector2f grid_min_;
+  int grid_cols_;
+  int grid_rows_;
+  std::vector<std::vector<int>> grid_cells_;
+  bool grid_valid_;
 };
 
 

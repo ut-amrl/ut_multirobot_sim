@@ -25,6 +25,7 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -54,7 +55,6 @@ using omnidrive::OmnidirectionalModel;
 // Configuration values accessed via config_ member
 
 Simulator::Simulator(const SimulatorConfig& config) : config_(config),
-                                                      laser_noise_(0, 1),
                                                       sim_step_count(0),
                                                       sim_time(0.0),
                                                       current_map_name_(config.map_name) {
@@ -84,16 +84,6 @@ std::string IndexToPrefix(const size_t index) {
 
 bool Simulator::init(rclcpp::Node::SharedPtr node) {
     node_ = node;
-
-    scanDataMsg.header.frame_id = config_.laser_frame;
-    scanDataMsg.angle_min = config_.laser_angle_min;
-    scanDataMsg.angle_max = config_.laser_angle_max;
-    scanDataMsg.angle_increment = config_.laser_angle_increment;
-    scanDataMsg.range_min = config_.laser_min_range;
-    scanDataMsg.range_max = config_.laser_max_range;
-    scanDataMsg.intensities.clear();
-    scanDataMsg.time_increment = 0.0;
-    scanDataMsg.scan_time = 0.05;
 
     odometryTwistMsg.header.frame_id = "odom";
     odometryTwistMsg.child_frame_id = "base_link";
@@ -133,7 +123,23 @@ bool Simulator::init(rclcpp::Node::SharedPtr node) {
         rps.laser_x = CONFIG_laser_loc.x();
         rps.laser_y = CONFIG_laser_loc.y();
         rps.laser_z = CONFIG_laser_loc.z();
+        rps.laser_loc = Vector2f(rps.laser_x, rps.laser_y);
         rps.motion_model = std::move(mm);
+        rps.scan_msg.header.frame_id = pf + "/" + config_.laser_frame;
+        rps.scan_msg.angle_min = config_.laser_angle_min;
+        rps.scan_msg.angle_max = config_.laser_angle_max;
+        rps.scan_msg.angle_increment = config_.laser_angle_increment;
+        rps.scan_msg.range_min = config_.laser_min_range;
+        rps.scan_msg.range_max = config_.laser_max_range;
+        rps.scan_msg.intensities.clear();
+        rps.scan_msg.time_increment = 0.0;
+        rps.scan_msg.scan_time = 0.05;
+        rps.num_rays = static_cast<int>(
+            1.0 + (rps.scan_msg.angle_max - rps.scan_msg.angle_min) /
+                      rps.scan_msg.angle_increment);
+        rps.scan_msg.ranges.resize(rps.num_rays);
+        rps.laser_noise = std::normal_distribution<float>(0.0f, 1.0f);
+        rps.laser_rng.seed(rng_());
 
         rps.initSubscriber = node_->create_subscription<amrl_msgs::msg::Localization2DMsg>(
             pf + "/initialpose", 10,
@@ -215,32 +221,46 @@ void Simulator::publishOdometry() {
 }
 
 void Simulator::publishLaser() {
-    for (size_t i = 0; i < robot_pub_subs_.size(); ++i) {
-        auto& rps = robot_pub_subs_[i];
-        scanDataMsg.header.stamp = GetSimTimeROS();
-        scanDataMsg.header.frame_id = IndexToPrefix(i) + "/" + config_.laser_frame;
-        const Vector2f laserRobotLoc(rps.laser_x, rps.laser_y);
+    const auto stamp = GetSimTimeROS();
+    auto compute_scan = [this, stamp](RobotPubSub& rps) {
+        rps.scan_msg.header.stamp = stamp;
         const Vector2f laserLoc =
-            rps.cur_loc.translation + Rotation2Df(rps.cur_loc.angle) * laserRobotLoc;
+            rps.cur_loc.translation + Rotation2Df(rps.cur_loc.angle) * rps.laser_loc;
 
-        const int num_rays = static_cast<int>(
-            1.0 + (scanDataMsg.angle_max - scanDataMsg.angle_min) /
-                      scanDataMsg.angle_increment);
         map_.GetPredictedScan(laserLoc,
-                              scanDataMsg.range_min,
-                              scanDataMsg.range_max,
-                              scanDataMsg.angle_min + rps.cur_loc.angle,
-                              scanDataMsg.angle_max + rps.cur_loc.angle,
-                              num_rays,
-                              &scanDataMsg.ranges);
-        for (float& r : scanDataMsg.ranges) {
-            if (r > scanDataMsg.range_max - 0.1f) {
+                              rps.scan_msg.range_min,
+                              rps.scan_msg.range_max,
+                              rps.scan_msg.angle_min + rps.cur_loc.angle,
+                              rps.scan_msg.angle_max + rps.cur_loc.angle,
+                              rps.num_rays,
+                              &rps.scan_msg.ranges);
+        for (float& r : rps.scan_msg.ranges) {
+            if (r > rps.scan_msg.range_max - 0.1f) {
                 r = 0;
                 continue;
             }
-            r = std::max(0.0f, r + config_.laser_stdev * laser_noise_(rng_));
+            r = std::max(0.0f, r + config_.laser_stdev * rps.laser_noise(rps.laser_rng));
         }
-        rps.laserPublisher->publish(scanDataMsg);
+    };
+
+    if (robot_pub_subs_.size() <= 1) {
+        for (auto& rps : robot_pub_subs_) {
+            compute_scan(rps);
+            rps.laserPublisher->publish(rps.scan_msg);
+        }
+        return;
+    }
+
+    std::vector<std::thread> workers;
+    workers.reserve(robot_pub_subs_.size());
+    for (auto& rps : robot_pub_subs_) {
+        workers.emplace_back(compute_scan, std::ref(rps));
+    }
+    for (auto& worker : workers) {
+        worker.join();
+    }
+    for (auto& rps : robot_pub_subs_) {
+        rps.laserPublisher->publish(rps.scan_msg);
     }
 }
 

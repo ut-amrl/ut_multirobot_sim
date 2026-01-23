@@ -91,6 +91,8 @@ class Simulator {
 
         // Laser position relative to base_link
         float laser_x, laser_y, laser_z;
+        Eigen::Vector2f laser_loc;
+        int num_rays;
 
         // ROS interfaces
         rclcpp::Subscription<amrl_msgs::msg::Localization2DMsg>::SharedPtr initSubscriber;      // Initial pose reset
@@ -98,6 +100,9 @@ class Simulator {
         rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr laserPublisher;               // Simulated laser scans
         rclcpp::Publisher<amrl_msgs::msg::Localization2DMsg>::SharedPtr localizationPublisher;  // Ground truth localization with map
         std::unique_ptr<robot_model::RobotModel> motion_model;                                  // Kinematics model
+        sensor_msgs::msg::LaserScan scan_msg;                                                   // Per-robot scan buffer
+        std::default_random_engine laser_rng;                                                   // Per-robot RNG
+        std::normal_distribution<float> laser_noise;                                            // Per-robot noise generator
     };
 
     // Current map subscriber
@@ -110,7 +115,6 @@ class Simulator {
     std::shared_ptr<tf2_ros::TransformBroadcaster> br;
 
     // Reusable message objects
-    sensor_msgs::msg::LaserScan scanDataMsg;            // Laser scan data
     nav_msgs::msg::Odometry odometryTwistMsg;           // Odometry data
     amrl_msgs::msg::Localization2DMsg localizationMsg;  // Localization data
 
@@ -119,7 +123,6 @@ class Simulator {
 
     // Random number generation for sensor noise
     std::default_random_engine rng_;
-    std::normal_distribution<float> laser_noise_;
 
     // Simulation state
     uint64_t sim_step_count;        // Current simulation step
